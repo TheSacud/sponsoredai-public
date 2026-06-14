@@ -1,0 +1,20 @@
+{
+  "name": "@sponsoredai/cli-linux-x64",
+  "version": "0.1.11",
+  "description": "Linux x64 binary for @sponsoredai/cli.",
+  "license": "MIT",
+  "homepage": "https://sponsoredai.dev",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

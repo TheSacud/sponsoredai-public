@@ -1,0 +1,38 @@
+{
+  "name": "@sponsoredai/cli",
+  "version": "0.1.11",
+  "description": "SAI CLI launcher.",
+  "license": "MIT",
+  "homepage": "https://sponsoredai.dev",
+  "bin": {
+    "sai": "bin/sai.js"
+  },
+  "scripts": {
+    "preinstall": "node scripts/preinstall.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/preinstall.js",
+    "README.md"
+  ],
+  "optionalDependencies": {
+    "@sponsoredai/cli-darwin-arm64": "0.1.11",
+    "@sponsoredai/cli-linux-x64": "0.1.11",
+    "@sponsoredai/cli-win32-x64": "0.1.11"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

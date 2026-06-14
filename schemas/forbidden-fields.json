@@ -1,0 +1,37 @@
+{
+  "forbidden_event_keys": [
+    "api_key",
+    "args",
+    "argv",
+    "command",
+    "cwd",
+    "email",
+    "env",
+    "environment",
+    "environment_variables",
+    "file_path",
+    "file_paths",
+    "git_remote",
+    "hostname",
+    "model_response",
+    "prompt",
+    "repo_url",
+    "shell_history",
+    "source_code",
+    "stderr",
+    "stdout",
+    "terminal_output",
+    "username",
+    "working_directory"
+  ],
+  "guarantees": [
+    "No code upload",
+    "No prompt upload",
+    "No model response upload",
+    "No terminal log upload",
+    "No full file paths",
+    "No shell history",
+    "No screenshots",
+    "No window titles or contents"
+  ]
+}

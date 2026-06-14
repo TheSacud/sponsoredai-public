@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Trust Boundary - SAI</title>
+<meta name="description" content="The public SAI trust boundary: what stays local, what sponsor events can send, how the Windows/macOS overlay qualifies placements, and how users stay in control.">
+<meta property="og:title" content="SAI - Trust Boundary">
+<meta property="og:description" content="SAI measures the wait, not the work. Prompts, code, terminal output, model responses, screenshots, and window contents stay local.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sponsoredai.dev/trust">
+<meta property="og:image" content="https://sponsoredai.dev/social-card.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<style>
+  :root{
+    --paper:#f3efe5;
+    --card:#fbf8f1;
+    --ink:#1b1812;
+    --ink-soft:#6b6453;
+    --rule:#d8d1bd;
+    --rule-soft:rgba(27,24,18,.09);
+    --accent:#ffd83d;
+    --earn:#1d7a44;
+    --spend:#bf3a2b;
+    --term:#16140f;
+    --term-ink:#efe9d6;
+    --term-soft:#9a937d;
+    --mono:ui-monospace,"Cascadia Code","Cascadia Mono","JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style",Charter,"Bitstream Charter",Georgia,Cambria,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scrollbar-gutter:stable}
+  body{
+    font:15px/1.68 var(--mono);
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+    overflow-x:clip;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:radial-gradient(rgba(27,24,18,.05) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  ::selection{background:var(--accent);color:var(--ink)}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  a{color:inherit}
+  code{font-family:var(--mono);font-size:.95em}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 28px}
+  header.top{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:1px solid var(--ink)}
+  .bar{max-width:1040px;margin:0 auto;padding:13px 28px;display:flex;align-items:center;gap:14px}
+  .logo{background:var(--ink);color:var(--accent);padding:3px 9px;font-weight:700;letter-spacing:.1em;font-size:14px;text-decoration:none}
+  .wordmark{font-size:10px;letter-spacing:.26em;color:var(--ink-soft);text-transform:uppercase}
+  nav.links{margin-left:auto;display:flex;align-items:center;gap:18px;font-size:12px}
+  nav.links a{text-decoration:none;color:var(--ink-soft)}
+  nav.links a:hover{color:var(--ink);box-shadow:inset 0 -2px 0 0 var(--accent)}
+  .btn{display:inline-block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;border:1.5px solid var(--ink);background:transparent;padding:6px 13px;cursor:pointer;text-decoration:none;font-weight:700}
+  .btn.yellow{background:var(--accent);border-color:var(--ink);color:var(--ink)}
+  .btn:hover,.btn.yellow:hover{background:var(--ink);color:var(--accent)}
+  .hero{padding:58px 0 24px;border-bottom:2px solid var(--ink)}
+  .label{display:inline-block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px}
+  h1{font-family:var(--serif);font-size:clamp(36px,5.4vw,64px);line-height:1.06;letter-spacing:-.01em}
+  .dek{margin-top:18px;max-width:72ch;color:var(--ink-soft);font-size:15px}
+  .meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;color:var(--ink-soft);font-size:12px}
+  .meta span{border:1px solid var(--rule);background:var(--card);padding:5px 9px}
+  .trust-grid{display:grid;grid-template-columns:250px minmax(0,1fr);gap:38px;padding:34px 0 80px;align-items:start}
+  .toc{position:sticky;top:72px;border:1px solid var(--ink);background:var(--card);padding:18px}
+  .toc h2{font-family:var(--serif);font-size:22px;margin-bottom:10px}
+  .toc ol{list-style:none;counter-reset:item;display:grid;gap:8px}
+  .toc li{counter-increment:item}
+  .toc a{display:grid;grid-template-columns:24px 1fr;gap:8px;text-decoration:none;color:var(--ink-soft);font-size:12px}
+  .toc a::before{content:counter(item,decimal-leading-zero);color:var(--ink);font-weight:700}
+  .toc a:hover{color:var(--ink)}
+  .doc{min-width:0}
+  section.clause{padding:30px 0;border-bottom:1px solid var(--rule)}
+  section.clause:first-child{padding-top:0}
+  h2{font-family:var(--serif);font-size:clamp(24px,3vw,34px);line-height:1.2;letter-spacing:-.01em;margin-bottom:14px}
+  h3{font-family:var(--serif);font-size:20px;margin:22px 0 8px}
+  p{margin:12px 0;color:var(--ink-soft)}
+  p strong, li strong{color:var(--ink)}
+  ul{margin:12px 0 0 0;list-style:none;display:grid;gap:8px}
+  li{position:relative;padding-left:18px;color:var(--ink-soft)}
+  li::before{content:"";position:absolute;left:0;top:.75em;width:6px;height:6px;background:var(--accent);border:1px solid var(--ink)}
+  .never{border:1.5px solid var(--ink);background:var(--card);padding:18px 20px;margin:20px 0;display:grid;gap:10px}
+  .never div{display:flex;gap:10px;align-items:baseline;color:var(--ink-soft)}
+  .never strong{color:var(--ink)}
+  .never span{margin-left:auto;color:var(--spend);font-size:10px;letter-spacing:.14em;font-weight:700}
+  .schema{background:var(--term);color:var(--term-ink);border:1px solid var(--ink);padding:18px 20px;overflow-x:auto;font-size:12px;line-height:1.7;margin:18px 0}
+  .schema .hd{color:var(--term-soft);margin-bottom:8px}
+  .schema .k{color:#d7af5f}
+  .schema .v{color:#efe9d6}
+  .schema .b{color:#7fbf8f}
+  .callout{border-left:6px solid var(--accent);background:var(--card);padding:18px 20px;margin:20px 0;color:var(--ink-soft)}
+  footer.end{border-top:1px solid var(--ink)}
+  footer.end .wrap{padding-top:22px;padding-bottom:48px;display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;font-size:11px;color:var(--ink-soft)}
+  footer.end a{color:var(--ink-soft)}
+  footer.end a:hover{color:var(--ink)}
+  footer.end .right{margin-left:auto}
+  @media (max-width:860px){
+    .trust-grid{grid-template-columns:1fr;gap:22px}
+    .toc{position:static}
+  }
+  @media (max-width:560px){
+    .wrap,.bar{padding-left:18px;padding-right:18px}
+    .wordmark{display:none}
+    .bar{gap:10px;flex-wrap:wrap}
+    nav.links{gap:10px;margin-left:0}
+    .hero{padding-top:42px}
+    .never div{align-items:flex-start;flex-wrap:wrap}
+    .never span{margin-left:0}
+    footer.end .right{margin-left:0}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="logo" href="/">SAI</a>
+    <span class="wordmark">Sponsored AI Credits</span>
+    <nav class="links" aria-label="Trust pages">
+      <a href="/">Home</a>
+      <a href="/market">Market</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a class="btn yellow" href="/sponsor">Become a sponsor</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero">
+      <span class="label">Trust Boundary</span>
+      <h1>SAI measures the wait, not the work.</h1>
+      <p class="dek">This is the public data-boundary contract for the SAI CLI, Windows/macOS desktop overlay, sponsor placements, and credit gateway. It explains what stays local, what can be sent, and how you can verify or stop sponsor surfaces.</p>
+      <div class="meta">
+        <span>Overlay tested locally on Windows x64 and macOS arm64</span>
+        <span>Terminal CLI available on Windows, macOS, and Linux</span>
+      </div>
+    </section>
+
+    <div class="trust-grid">
+      <aside class="toc" aria-label="Contents">
+        <h2>Contents</h2>
+        <ol>
+          <li><a href="#local">What Stays Local</a></li>
+          <li><a href="#sent">What Can Be Sent</a></li>
+          <li><a href="#overlay">Overlay Qualification</a></li>
+          <li><a href="#gateway">Gateway Traffic</a></li>
+          <li><a href="#controls">User Controls</a></li>
+          <li><a href="#sponsors">What Sponsors See</a></li>
+        </ol>
+      </aside>
+
+      <article class="doc">
+        <section class="clause" id="local">
+          <h2>What stays local</h2>
+          <p>SAI does not upload developer work context. The terminal runner watches output timing; the desktop overlay checks local window state; neither sends prompts or code to SAI.</p>
+          <div class="never">
+            <div><strong>Prompts</strong><span>NEVER SENT</span></div>
+            <div><strong>Source code</strong><span>NEVER SENT</span></div>
+            <div><strong>Terminal output and logs</strong><span>NEVER SENT</span></div>
+            <div><strong>Model responses</strong><span>NEVER SENT</span></div>
+            <div><strong>Full paths, repo URLs, shell history</strong><span>NEVER SENT</span></div>
+            <div><strong>Window titles, contents, screenshots</strong><span>NEVER SENT</span></div>
+          </div>
+        </section>
+
+        <section class="clause" id="sent">
+          <h2>What can be sent</h2>
+          <p>Sponsor placement events are limited to operational metadata needed to issue, cap, bill, and settle a placement.</p>
+          <pre class="schema"><span class="hd">$ sai privacy schema</span>
+{
+  <span class="k">"surface"</span>: <span class="v">"desktop_overlay"</span>,
+  <span class="k">"tool"</span>: <span class="v">"codex"</span>,
+  <span class="k">"event"</span>: <span class="v">"qualified_5s"</span>,
+  <span class="k">"duration_bucket"</span>: <span class="v">"10-30s"</span>,
+  <span class="k">"attended_interactive"</span>: <span class="b">true</span>,
+  <span class="k">"ci"</span>: <span class="b">false</span>,
+  <span class="k">"country"</span>: <span class="v">"PT"</span>,
+  <span class="k">"code_uploaded"</span>: <span class="b">false</span>,
+  <span class="k">"prompt_uploaded"</span>: <span class="b">false</span>,
+  <span class="k">"logs_uploaded"</span>: <span class="b">false</span>
+}</pre>
+          <p>Transport identifiers can include installation hash, session ID, placement ID, campaign ID, CLI version, signature fields, and click tokens. They identify placements and prevent replay; they are not developer work.</p>
+        </section>
+
+        <section class="clause" id="overlay">
+          <h2>How the overlay qualifies</h2>
+          <p>The overlay can show one sponsor banner over a supported desktop app. A paid placement qualifies only after local checks pass.</p>
+          <ul>
+            <li>A supported app is in the foreground.</li>
+            <li>The banner is actually visible on screen.</li>
+            <li>The banner is on the same monitor as the supported app.</li>
+            <li>There was recent keyboard or mouse input.</li>
+            <li>The banner stayed visible for at least five continuous seconds.</li>
+            <li>Frequency and campaign caps allow another placement.</li>
+          </ul>
+          <p>The raw foreground app state, visibility geometry, and input timing stay on the machine. Only the allowlisted placement result reaches the backend.</p>
+        </section>
+
+        <section class="clause" id="gateway">
+          <h2>Gateway and model traffic</h2>
+          <p>Credits can be spent through the local OpenAI-compatible gateway. When wallet spend is used, SAI provisions or updates a provider key limit and the developer machine calls the provider directly. Prompt and response bodies are not proxied through the SAI backend for wallet spend.</p>
+          <div class="callout">If a developer explicitly configures their own upstream provider key, that local provider configuration wins.</div>
+        </section>
+
+        <section class="clause" id="controls">
+          <h2>User controls</h2>
+          <p>Every sponsor surface can be stopped locally.</p>
+          <pre class="schema"><span class="hd">$ stop sponsor surfaces</span>
+sai config kill-switch on --reason "local preview"
+sai config set frequency off
+npm uninstall -g @sponsoredai/cli</pre>
+          <p>Desktop overlays can also be scoped to a supported app.</p>
+          <pre class="schema"><span class="hd">$ choose desktop surfaces</span>
+sai overlay codex
+sai overlay claude
+sai overlay both</pre>
+        </section>
+
+        <section class="clause" id="sponsors">
+          <h2>What sponsors see</h2>
+          <p>Sponsors receive aggregate campaign reporting: served, rendered, qualified, clicked, spent, and remaining placement volume.</p>
+          <p>They do not receive prompts, code, terminal output, shell history, repository URLs, full file paths, model responses, screenshots, window titles, or window contents.</p>
+          <p>This is the first public trust surface before more of the project is opened. Backend anti-abuse internals, fraud thresholds, and sponsor accounting internals are not published here because exposing them would make qualified-placement spoofing easier.</p>
+        </section>
+      </article>
+    </div>
+  </div>
+</main>
+
+<footer class="end">
+  <div class="wrap">
+    <span>SAI &middot; public trust boundary</span>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms of Service</a>
+    <span class="right"><a href="/">Back to home</a></span>
+  </div>
+</footer>
+</body>
+</html>
