@@ -59,20 +59,34 @@ try {
   process.exit(1);
 }
 
-const child = spawn(binaryPath, process.argv.slice(2), {
-  stdio: "inherit",
-  windowsHide: false
-});
+function startBinary(retriedAfterChmod = false) {
+  const child = spawn(binaryPath, process.argv.slice(2), {
+    stdio: "inherit",
+    windowsHide: false
+  });
 
-child.on("error", (error) => {
-  console.error(`Failed to start SAI: ${error.message}`);
-  process.exit(1);
-});
+  child.on("error", (error) => {
+    if (error && error.code === "EACCES" && process.platform !== "win32" && !retriedAfterChmod) {
+      try {
+        fs.chmodSync(binaryPath, 0o755);
+        startBinary(true);
+        return;
+      } catch (chmodError) {
+        console.error(`Failed to make SAI executable: ${chmodError.message}`);
+      }
+    }
 
-child.on("close", (code, signal) => {
-  if (signal) {
-    console.error(`SAI exited from signal ${signal}`);
+    console.error(`Failed to start SAI: ${error.message}`);
     process.exit(1);
-  }
-  process.exit(code == null ? 1 : code);
-});
+  });
+
+  child.on("close", (code, signal) => {
+    if (signal) {
+      console.error(`SAI exited from signal ${signal}`);
+      process.exit(1);
+    }
+    process.exit(code == null ? 1 : code);
+  });
+}
+
+startBinary();

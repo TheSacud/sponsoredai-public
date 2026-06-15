@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Terms of Service - SAI</title>
+<meta name="description" content="Terms of Service for SAI, the Sponsored AI Credits CLI and sponsor-funded developer credit marketplace.">
+<meta property="og:title" content="SAI - Terms of Service">
+<meta property="og:description" content="Terms for using Sponsored AI Credits as a developer, sponsor, or visitor.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sponsoredai.dev/terms">
+<meta property="og:image" content="https://sponsoredai.dev/social-card-v2.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<style>
+  :root{
+    --paper:#f3efe5;
+    --card:#fbf8f1;
+    --ink:#1b1812;
+    --ink-soft:#6b6453;
+    --rule:#d8d1bd;
+    --rule-soft:rgba(27,24,18,.09);
+    --accent:#ffd83d;
+    --earn:#1d7a44;
+    --spend:#bf3a2b;
+    --term:#16140f;
+    --term-ink:#efe9d6;
+    --mono:ui-monospace,"Cascadia Code","Cascadia Mono","JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style",Charter,"Bitstream Charter",Georgia,Cambria,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scrollbar-gutter:stable}
+  body{
+    font:15px/1.68 var(--mono);
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+    overflow-x:clip;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:radial-gradient(rgba(27,24,18,.05) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  ::selection{background:var(--accent);color:var(--ink)}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  a{color:inherit}
+  code{font-family:var(--mono);font-size:.95em}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 28px}
+  header.top{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:1px solid var(--ink)}
+  .bar{max-width:1040px;margin:0 auto;padding:13px 28px;display:flex;align-items:center;gap:14px}
+  .logo{background:var(--ink);color:var(--accent);padding:3px 9px;font-weight:700;letter-spacing:.1em;font-size:14px;text-decoration:none}
+  .wordmark{font-size:10px;letter-spacing:.26em;color:var(--ink-soft);text-transform:uppercase}
+  nav.links{margin-left:auto;display:flex;align-items:center;gap:18px;font-size:12px}
+  nav.links a{text-decoration:none;color:var(--ink-soft)}
+  nav.links a:hover{color:var(--ink);box-shadow:inset 0 -2px 0 0 var(--accent)}
+  .btn{display:inline-block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;border:1.5px solid var(--ink);background:transparent;padding:6px 13px;cursor:pointer;text-decoration:none;font-weight:700}
+  .btn.yellow{background:var(--accent);border-color:var(--ink);color:var(--ink)}
+  .btn:hover,.btn.yellow:hover{background:var(--ink);color:var(--accent)}
+  .hero{padding:58px 0 24px;border-bottom:2px solid var(--ink)}
+  .label{display:inline-block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px}
+  h1{font-family:var(--serif);font-size:clamp(36px,5.4vw,64px);line-height:1.06;letter-spacing:-.01em}
+  .dek{margin-top:18px;max-width:68ch;color:var(--ink-soft);font-size:15px}
+  .meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;color:var(--ink-soft);font-size:12px}
+  .meta span{border:1px solid var(--rule);background:var(--card);padding:5px 9px}
+  .legal{display:grid;grid-template-columns:250px minmax(0,1fr);gap:38px;padding:34px 0 80px;align-items:start}
+  .toc{position:sticky;top:72px;border:1px solid var(--ink);background:var(--card);padding:18px}
+  .toc h2{font-family:var(--serif);font-size:22px;margin-bottom:10px}
+  .toc ol{list-style:none;counter-reset:item;display:grid;gap:8px}
+  .toc li{counter-increment:item;padding-left:0;color:inherit}
+  .toc li::before{content:none}
+  .toc a{display:grid;grid-template-columns:24px 1fr;gap:8px;text-decoration:none;color:var(--ink-soft);font-size:12px}
+  .toc a::before{content:counter(item,decimal-leading-zero);color:var(--ink);font-weight:700}
+  .toc a:hover{color:var(--ink)}
+  .doc{min-width:0}
+  section.clause{padding:30px 0;border-bottom:1px solid var(--rule)}
+  section.clause:first-child{padding-top:0}
+  h2{font-family:var(--serif);font-size:clamp(24px,3vw,34px);line-height:1.2;letter-spacing:-.01em;margin-bottom:14px}
+  h3{font-family:var(--serif);font-size:20px;margin:22px 0 8px}
+  p{margin:12px 0;color:var(--ink-soft)}
+  p strong, li strong{color:var(--ink)}
+  ul{margin:12px 0 0 0;list-style:none;display:grid;gap:8px}
+  li{position:relative;padding-left:18px;color:var(--ink-soft)}
+  li::before{content:"";position:absolute;left:0;top:.75em;width:6px;height:6px;background:var(--accent);border:1px solid var(--ink)}
+  .notice{border:1.5px solid var(--ink);background:var(--card);padding:18px 20px;margin:18px 0}
+  .notice strong{color:var(--ink)}
+  .callout{border-left:6px solid var(--accent);background:var(--card);padding:18px 20px;margin:20px 0;color:var(--ink-soft)}
+  footer.end{border-top:1px solid var(--ink)}
+  footer.end .wrap{padding-top:22px;padding-bottom:48px;display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;font-size:11px;color:var(--ink-soft)}
+  footer.end a{color:var(--ink-soft)}
+  footer.end a:hover{color:var(--ink)}
+  footer.end .right{margin-left:auto}
+  @media (max-width:860px){
+    .legal{grid-template-columns:1fr;gap:22px}
+    .toc{position:static}
+  }
+  @media (max-width:560px){
+    .wrap,.bar{padding-left:18px;padding-right:18px}
+    .wordmark{display:none}
+    .bar{gap:10px;flex-wrap:wrap}
+    nav.links{gap:10px;margin-left:0}
+    .hero{padding-top:42px}
+    footer.end .right{margin-left:0}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="logo" href="/">SAI</a>
+    <span class="wordmark">Sponsored AI Credits</span>
+    <nav class="links" aria-label="Legal pages">
+      <a href="/">Home</a>
+      <a href="/trust">Trust</a>
+      <a href="/privacy">Privacy</a>
+      <a class="btn yellow" href="/sponsor">Become a sponsor</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero">
+      <span class="label">Legal</span>
+      <h1>Terms of Service</h1>
+      <p class="dek">Plain-English rules for the SAI CLI, the sponsor market, the developer credit ledger, the model gateway, and the website.</p>
+      <div class="meta">
+        <span>Last updated: June 14, 2026</span>
+        <span>Version 1.1</span>
+      </div>
+    </section>
+
+    <div class="legal">
+      <aside class="toc" aria-label="Contents">
+        <h2>Contents</h2>
+        <ol>
+          <li><a href="#acceptance">Acceptance</a></li>
+          <li><a href="#definitions">Definitions</a></li>
+          <li><a href="#eligibility">Eligibility</a></li>
+          <li><a href="#service">The Service</a></li>
+          <li><a href="#accounts">Accounts</a></li>
+          <li><a href="#credits">Developer Credits</a></li>
+          <li><a href="#sponsors">Sponsor Program</a></li>
+          <li><a href="#payments">Payments</a></li>
+          <li><a href="#abuse">Fraud and Abuse</a></li>
+          <li><a href="#privacy">Privacy</a></li>
+          <li><a href="#third-party">Third Parties</a></li>
+          <li><a href="#termination">Termination</a></li>
+          <li><a href="#ip">Intellectual Property</a></li>
+          <li><a href="#disclaimers">Disclaimers</a></li>
+          <li><a href="#liability">Liability</a></li>
+          <li><a href="#indemnity">Indemnity</a></li>
+          <li><a href="#disputes">Disputes</a></li>
+          <li><a href="#rights">Privacy Rights</a></li>
+          <li><a href="#copyright">Copyright Complaints</a></li>
+          <li><a href="#changes">Changes</a></li>
+          <li><a href="#general">General</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ol>
+      </aside>
+
+      <article class="doc">
+        <section class="clause" id="acceptance">
+          <h2>1. Acceptance of Terms</h2>
+          <p>Using SAI means you accept these terms and the <a href="/privacy">Privacy Policy</a>. "Using" includes installing the CLI, signing in, wrapping an agent command, opening the gateway, visiting sponsoredai.dev, or creating a sponsor campaign.</p>
+          <p>If you are using SAI for a company, client, or employer, make sure you are allowed to do that. If you are not allowed, or if you do not accept these terms, stop using the Service and uninstall the CLI.</p>
+          <div class="notice"><strong>Early access.</strong> SAI is still settling into its final shape. Checkout, market mechanics, credit settlement, caps, and gateway spend can change as the product hardens.</div>
+        </section>
+
+        <section class="clause" id="definitions">
+          <h2>2. Definitions</h2>
+          <p><strong>"SAI," "we," "us," or "our"</strong> means the Sponsored AI Credits project and the people or entity operating sponsoredai.dev. If a Stripe checkout, invoice, order form, or signed agreement names a specific legal entity, that entity controls that transaction.</p>
+          <p><strong>"Service"</strong> means the CLI, website, sponsor console, backend APIs, gateway, developer ledger, sponsor market, dashboards, and documentation.</p>
+          <p><strong>"Developer"</strong> means someone who runs SAI around a supported terminal workflow.</p>
+          <p><strong>"Sponsor"</strong> means someone who creates or funds campaigns in the sponsor console.</p>
+          <p><strong>"Qualified Placement" or "QP"</strong> means a real paid unit: one sponsor line issued by the backend, shown on a supported surface &mdash; an interactive supported terminal, or the SAI desktop overlay floated over a supported desktop app &mdash; during a real, attended wait, visible for at least five continuous seconds, and accepted by the metric contract.</p>
+          <p><strong>"Credits"</strong> means ledger value created from paid qualified placements and usable, where supported, for AI model calls through the gateway. Credits are not cash, deposits, gift cards, securities, or a promise of payout.</p>
+        </section>
+
+        <section class="clause" id="eligibility">
+          <h2>3. Eligibility</h2>
+          <p>You must be at least 18 and able to enter a contract. You are also responsible for checking whether SAI is allowed where you live, work, and run your terminal.</p>
+          <p>If the machine belongs to an employer, school, client, or managed fleet, get the required approval first. SAI is designed to keep work content local, but it still changes terminal behavior and can show sponsored text.</p>
+          <p>We can block or limit accounts, networks, devices, or regions when continuing service would create legal, security, sanctions, payment, or abuse risk.</p>
+        </section>
+
+        <section class="clause" id="service">
+          <h2>4. Description of the Service</h2>
+          <p>SAI wraps terminal workflows such as Codex CLI, Claude Code, and long-running commands. When the agent is quiet long enough, SAI can show one sponsor line and record the small set of event fields needed to bill and settle it. An optional desktop overlay (<code>sai overlay</code>) can float one sponsor banner over a supported desktop app, such as Claude Desktop or the Codex app, using local window state to show it only while you are actively attending that app; it is dismissable and controlled from the tray menu and <code>sai config</code>.</p>
+          <p>For Developers, the backend ledger is the source of truth. A local wallet display is just a cache of what the backend believes can be pending, available, settled, spent, or revoked.</p>
+          <p>For Sponsors, SAI provides campaign creation, review, bids, Stripe checkout, funded balance, delivery rules, and aggregate reporting for qualified placements and eligible clicks.</p>
+          <p>There may be days with no funded demand. There may be no available provider spend. Supported AI tools may change. SAI does not guarantee earnings, delivery, compatibility, uptime, or return on ad spend.</p>
+        </section>
+
+        <section class="clause" id="accounts">
+          <h2>5. Accounts and Registration</h2>
+          <p>Some flows need an account, an installation registration, or a checkout identity. Use accurate information, especially for sponsor billing and any future settlement flow.</p>
+          <p>You are responsible for your credentials, browser sessions, local SAI config, and installation secret. Tell us if something looks compromised.</p>
+          <p>Do not sell, rent, farm, or rotate accounts and installations to get around caps, fraud checks, campaign review, or payment obligations.</p>
+        </section>
+
+        <section class="clause" id="credits">
+          <h2>6. Developer Credits</h2>
+          <h3>6.1 How Credits Accrue</h3>
+          <p>Credits only come from real sponsor money. A campaign must be live, approved, funded, selected by the backend, rendered locally, visible long enough, and accepted by the current metric contract. Example cards, seeded dev data, duplicate events, expired placements, invalid clicks, and fraud-filtered events pay nothing.</p>
+          <h3>6.2 No Cash Value</h3>
+          <p>Credits are meant to pay for model usage through supported gateway flows. They are not a cash balance. Unless SAI launches a separate payout program in writing, there is no cash-out right.</p>
+          <h3>6.3 Settlement, Caps, and Corrections</h3>
+          <p>Credits can sit in pending state before becoming available. Settlement holds, hourly caps, campaign caps, account caps, fraud reviews, corrections, and clawbacks are part of the product. Refunds, disputes, failed payments, duplicate events, invalid clicks, sponsor non-payment, or abuse can freeze, reduce, revoke, or reverse credits.</p>
+          <h3>6.4 Spend Through the Gateway</h3>
+          <p>When wallet spend is enabled, the gateway can provision a provider key with a limit tied to your spendable balance. Provider outages, usage counters, pricing, rate limits, model availability, and policy decisions can all affect whether a credit can be spent at a given moment.</p>
+          <h3>6.5 Taxes</h3>
+          <p>You are responsible for any tax treatment that applies to credits, benefits, sponsor purchases, or future payout programs. SAI does not provide tax, accounting, or legal advice.</p>
+        </section>
+
+        <section class="clause" id="sponsors">
+          <h2>7. Sponsor Program</h2>
+          <p>Sponsors submit the parts of the card: brand name, short copy, destination URL, bid, budget, and related campaign details. You are responsible for making sure those materials are lawful, truthful, non-deceptive, and yours to use.</p>
+          <p>Do not run campaigns that contain malware, phishing, illegal products, deceptive claims, impersonation, adult content, hate or harassment, discriminatory material, or content that violates someone else's rights.</p>
+          <p>SAI can reject, pause, remove, edit for formatting, or send a campaign back to review. Reasons include brand safety, legal risk, user complaints, payment status, destination risk, technical issues, or a terms violation.</p>
+          <p>Sponsors see aggregate campaign results. They do not receive Developers' prompts, code, terminal output, shell history, file paths, repository URLs, or model responses.</p>
+        </section>
+
+        <section class="clause" id="payments">
+          <h2>8. Payment Terms</h2>
+          <p>Sponsor checkout runs through Stripe unless SAI names another processor. By starting checkout, you authorize the processor to charge the payment method for the campaign, wallet top-up, or other purchase you selected.</p>
+          <p>Once a placement or eligible click has been served, that spend is normally final. SAI can still issue refunds or internal credits for undelivered inventory, duplicate charges, verified processing errors, or where the law requires it.</p>
+          <p>Chargebacks, disputes, refunds, failed payments, sanctions flags, or suspected fraud can pause campaigns, zero remaining impressions, reverse sponsor balance, and revoke developer credits that have not settled cleanly.</p>
+        </section>
+
+        <section class="clause" id="abuse">
+          <h2>9. Fraud Prevention, Abuse, and Enforcement</h2>
+          <p>Do not fake the market. That includes fake waits, fake installs, fake clicks, fake OAuth identities, fake viewability, fake provider usage, forged events, or payment games.</p>
+          <p>Examples: click fraud, scripted wait loops, CI or headless earning attempts, account farming, tampering with local viewability checks, replaying placement events, hiding the real destination, cap evasion, and abusive chargebacks.</p>
+          <p>When something looks wrong, SAI can rate limit, investigate, suspend, terminate, withhold or revoke credits, reject campaigns, block devices or networks, and keep the records needed to understand what happened.</p>
+        </section>
+
+        <section class="clause" id="privacy">
+          <h2>10. Privacy and Telemetry</h2>
+          <p>The <a href="/privacy">Privacy Policy</a> explains the data boundary in more detail. The short version: SAI measures the wait, not the work. Prompts, code, model responses, terminal logs, full file paths, repository URLs, shell history, and the titles or contents of any window are not uploaded to SAI.</p>
+          <p>SAI can process the limited event schema, technical transport identifiers, account data, campaign data, payment references, access logs, and fraud signals needed to operate the Service.</p>
+        </section>
+
+        <section class="clause" id="third-party">
+          <h2>11. Third-Party Platforms and Services</h2>
+          <p>SAI sits between several systems it does not control: terminals, Codex, Claude Code, the Claude Desktop and Codex desktop apps, model providers, Stripe, Google OAuth, npm, operating systems and their window APIs, browsers, hosting, and networks.</p>
+          <p>If those services change APIs, pricing, policies, rate limits, billing status, model behavior, or account access, SAI may break or behave differently. Their terms still apply to your use of them.</p>
+        </section>
+
+        <section class="clause" id="termination">
+          <h2>12. Termination and Suspension</h2>
+          <p>You can stop using SAI whenever you want. SAI can suspend or terminate access if you violate these terms, create risk, fail to pay, trigger fraud controls, or if continuing service is impractical or unlawful.</p>
+          <p>Suspension or termination can disable accounts, campaigns, placement issuance, gateway provisioning, and access to credits. Some records stay in the system for reconciliation, fraud review, legal compliance, and disputes, as described in the Privacy Policy.</p>
+        </section>
+
+        <section class="clause" id="ip">
+          <h2>13. Intellectual Property</h2>
+          <p>SAI, sponsoredai.dev, product names, hosted software, page designs, dashboards, docs, and service content belong to SAI or its licensors, except for open-source parts released under their own licenses.</p>
+          <p>You get a limited, revocable, non-exclusive, non-transferable right to use the Service as intended. Do not bypass access controls, scrape non-public data, attack the service, or reverse engineer hosted pieces to avoid limits or controls.</p>
+          <p>Sponsors give SAI permission to use campaign materials to run the campaign: display them, format them, route clicks, measure results, secure the platform, and report aggregate performance.</p>
+        </section>
+
+        <section class="clause" id="disclaimers">
+          <h2>14. Disclaimers</h2>
+          <p>SAI is provided "as is" and "as available." It can have bugs, downtime, incomplete docs, changing prices, empty sponsor inventory, and gateway gaps.</p>
+          <p>To the extent the law allows, SAI disclaims warranties of merchantability, fitness for a particular purpose, title, non-infringement, accuracy, availability, uninterrupted operation, and error-free operation. We do not promise earnings, sponsor demand, delivery, clicks, return on ad spend, gateway availability, or compatibility with every terminal and AI tool.</p>
+        </section>
+
+        <section class="clause" id="liability">
+          <h2>15. Limitation of Liability</h2>
+          <p>To the extent the law allows, SAI is not liable for indirect, incidental, special, consequential, exemplary, or punitive damages, including lost profits, lost revenue, lost data, lost goodwill, business interruption, or replacement services.</p>
+          <p>For any claim related to the Service, SAI's total liability is capped at the greater of the amount you paid to SAI in the three months before the claim or USD 100. Some places do not allow every limitation, so a limit may not apply to you.</p>
+        </section>
+
+        <section class="clause" id="indemnity">
+          <h2>16. Indemnification</h2>
+          <p>If your use of SAI, your campaign, your payment dispute, your legal violation, or your infringement of someone else's rights creates a claim against SAI, you agree to defend and cover SAI for the resulting losses, costs, damages, and reasonable fees.</p>
+        </section>
+
+        <section class="clause" id="disputes">
+          <h2>17. Disputes and Governing Law</h2>
+          <p>Before filing a claim, contact us with enough detail to investigate. Most product, billing, and campaign problems should be possible to resolve without a formal dispute.</p>
+          <p>These terms are governed by the laws of Portugal, excluding conflict-of-law rules and subject to mandatory consumer or data-protection rights that cannot be waived. Courts in Lisbon, Portugal have jurisdiction unless applicable law requires another venue.</p>
+        </section>
+
+        <section class="clause" id="rights">
+          <h2>18. Privacy Rights</h2>
+          <p>Depending on your location, you may be able to access, correct, delete, export, restrict, or object to the processing of personal information. Some U.S. state laws, including California privacy law, add rights to know, correct, delete, and opt out of sale or sharing.</p>
+          <p>SAI does not sell personal information. Contact us to exercise rights. We may verify the request before acting.</p>
+        </section>
+
+        <section class="clause" id="copyright">
+          <h2>19. Copyright and IP Complaints</h2>
+          <p>If a campaign or Service page appears to infringe your copyright or other IP rights, contact us with enough detail to identify the work, the disputed material, where it appears, your contact information, and why you believe the use is unauthorized.</p>
+          <p>SAI can remove or disable disputed material while it reviews the issue and can terminate repeat infringers where appropriate.</p>
+        </section>
+
+        <section class="clause" id="changes">
+          <h2>20. Changes to These Terms</h2>
+          <p>These terms will change as SAI changes. Updates take effect when posted unless a later date is shown. For material changes to developer credits, sponsor pricing, data practices, or dispute terms, SAI will try to give advance notice through the website, account interface, CLI, or email.</p>
+          <p>If you keep using the Service after an update takes effect, you accept the updated terms.</p>
+        </section>
+
+        <section class="clause" id="general">
+          <h2>21. General Provisions</h2>
+          <p>These terms, the Privacy Policy, and any checkout, order, or campaign-specific terms are the agreement for the Service.</p>
+          <p>If part of the agreement is unenforceable, the rest still applies. Not enforcing a provision once is not a waiver. You cannot assign these terms without consent. SAI can assign them as part of a merger, acquisition, reorganization, sale of assets, or transfer of the Service to another operator.</p>
+          <p>Neither side is responsible for delay or failure caused by events outside reasonable control, including provider outages, network failures, strikes, war, government action, natural disasters, or major technical incidents.</p>
+        </section>
+
+        <section class="clause" id="contact">
+          <h2>22. Contact</h2>
+          <p>Questions, notices, privacy requests, and IP complaints can go to <a href="mailto:support@sponsoredai.dev">support@sponsoredai.dev</a>.</p>
+        </section>
+      </article>
+    </div>
+  </div>
+</main>
+
+<footer class="end">
+  <div class="wrap">
+    <span>SAI &middot; backend-authoritative sponsored earnings</span>
+    <a href="/trust">Trust Boundary</a>
+    <a href="/privacy">Privacy Policy</a>
+    <span class="right"><a href="/">Back to home</a></span>
+  </div>
+</footer>
+</body>
+</html>

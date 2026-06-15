@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sai-credits"
+version = "0.2.2"
+description = "Sponsored AI Credits CLI wrapper, local wallet, and OpenAI-compatible gateway MVP."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+authors = [{ name = "SAI" }]
+keywords = ["ai", "cli", "wallet", "gateway", "sponsored-credits"]
+dependencies = [
+    'pywinpty>=2.0; sys_platform == "win32"',
+    'pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"',
+    'pyobjc-framework-Quartz>=10.0; sys_platform == "darwin"',
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[project.scripts]
+sai = "sai.cli:main"
+
+[project.urls]
+Homepage = "https://sponsoredai.dev"
+Repository = "https://github.com/TheSacud/sponsoredai-public"
+Issues = "https://github.com/TheSacud/sponsoredai-public/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,1518 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>SAI &mdash; Sponsored AI Credits</title>
+<meta name="description" content="SAI is a launch-ready CLI wrapper and desktop overlay for sponsor-card wait states, sponsor-funded AI credits, and an OpenAI-compatible gateway. Your code never leaves the machine.">
+<meta property="og:title" content="SAI - Sponsored AI Credits">
+<meta property="og:description" content="Local-first sponsored-credit network for terminal and desktop AI agents. Paid sponsor campaigns fund credits through qualified wait-state placements.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sponsoredai.dev/">
+<meta property="og:image" content="https://sponsoredai.dev/social-card-v2.png">
+<meta property="og:image:secure_url" content="https://sponsoredai.dev/social-card-v2.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="SAI earns sponsored AI credits while Claude Desktop or the Codex app thinks, without uploading prompts, code, logs, paths, or output.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SAI - Sponsored AI Credits">
+<meta name="twitter:description" content="A local-first sponsored-credit network that turns qualified terminal and desktop coding-agent wait states into AI credits without uploading prompts, code, logs, or terminal output.">
+<meta name="twitter:image" content="https://sponsoredai.dev/social-card-v2.png">
+<meta name="twitter:image:alt" content="SAI earns sponsored AI credits while Claude Desktop or the Codex app thinks, without uploading prompts, code, logs, paths, or output.">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<style>
+  :root{
+    --paper:#f3efe5;
+    --card:#fbf8f1;
+    --ink:#1b1812;
+    --ink-soft:#6b6453;
+    --rule:#d8d1bd;
+    --rule-soft:rgba(27,24,18,.09);
+    --accent:#ffd83d;
+    --earn:#1d7a44;
+    --spend:#bf3a2b;
+    --term:#16140f;
+    --term-ink:#efe9d6;
+    --term-soft:#9a937d;
+    --amber:#d7af5f;
+    --claude:#d97757;
+    --mono:ui-monospace,"Cascadia Code","Cascadia Mono","JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style",Charter,"Bitstream Charter",Georgia,Cambria,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scrollbar-gutter:stable}
+  body{
+    font:15px/1.65 var(--mono);
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+    overflow-x:clip;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:radial-gradient(rgba(27,24,18,.05) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  ::selection{background:var(--accent);color:var(--ink)}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  a{color:inherit}
+  button{font:inherit;color:inherit}
+  img,svg{display:block}
+  code{overflow-wrap:anywhere}
+
+  .label{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
+  .muted{color:var(--ink-soft)}
+  .num{font-variant-numeric:tabular-nums}
+  .hl{box-shadow:inset 0 -.18em 0 0 var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+
+  /* ---------- top bar ---------- */
+  header.top{
+    position:sticky;top:0;z-index:40;
+    background:var(--paper);
+    border-bottom:1px solid var(--ink);
+  }
+  .bar{
+    max-width:1180px;margin:0 auto;padding:13px 28px;
+    display:flex;align-items:center;gap:14px;
+  }
+  .logo{
+    background:var(--ink);color:var(--accent);
+    padding:3px 9px;font-weight:700;letter-spacing:.1em;font-size:14px;
+    text-decoration:none;
+  }
+  .wordmark{font-size:10px;letter-spacing:.26em;color:var(--ink-soft);text-transform:uppercase}
+  nav.links{margin-left:auto;display:flex;align-items:center;gap:20px;font-size:12px}
+  nav.links a{text-decoration:none;color:var(--ink-soft)}
+  nav.links a:hover{color:var(--ink);box-shadow:inset 0 -2px 0 0 var(--accent)}
+  .btn{
+    display:inline-block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    border:1.5px solid var(--ink);background:transparent;padding:8px 16px;
+    cursor:pointer;text-decoration:none;font-weight:700;
+  }
+  .btn:hover{background:var(--ink);color:var(--paper)}
+  .btn.solid{background:var(--ink);color:var(--paper)}
+  .btn.solid:hover{background:transparent;color:var(--ink)}
+  .btn.yellow{background:var(--accent);border-color:var(--ink);color:var(--ink)}
+  .btn.yellow:hover{background:var(--ink);color:var(--accent)}
+  .bar .btn:not(.yellow):hover{background:var(--accent);color:var(--ink)}
+  .bar .btn{padding:6px 13px}
+
+  /* ---------- hero ---------- */
+  .hero{
+    display:grid;grid-template-columns:minmax(0,8fr) minmax(0,12fr);gap:44px;
+    align-items:center;padding:76px 0 64px;
+  }
+  .kicker{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:22px;
+  }
+  .kicker .tag{
+    font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    border:1.5px solid var(--ink);padding:2px 9px;background:var(--card);
+  }
+  .kicker .tag.spin{transform:rotate(-1.6deg);border-color:var(--earn);color:var(--earn)}
+  h1{
+    font-family:var(--serif);font-weight:700;
+    font-size:clamp(38px,5.4vw,64px);line-height:1.06;letter-spacing:-.015em;
+  }
+  .hero-sub{
+    margin-top:20px;max-width:49ch;color:var(--ink-soft);font-size:14.5px;
+  }
+  .hero-sub b{color:var(--ink);font-weight:700}
+  .hero-ctas{margin-top:24px;display:flex;gap:18px;flex-wrap:wrap;align-items:stretch}
+  .cta-note{font-size:11px;color:var(--ink-soft)}
+  .cta-side{display:flex;flex-direction:column;gap:10px;justify-content:center}
+  .cta-side .cta-note{max-width:32ch}
+  .cta-side .btn{align-self:flex-start}
+
+  /* ---------- hero earn hook ---------- */
+  .earn-cta{
+    display:inline-block;text-decoration:none;
+    background:var(--accent);border:2px solid var(--ink);
+    padding:14px 20px 12px;
+    box-sizing:border-box;max-width:100%;
+    box-shadow:5px 5px 0 0 rgba(27,24,18,.18);
+    transition:transform .15s,box-shadow .15s;
+  }
+  .earn-cta:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 0 rgba(27,24,18,.18)}
+  .earn-cta .ec-top{display:block;font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+  .earn-cta .ec-est{display:block;margin-top:6px;font-size:14px}
+  .earn-cta .ec-est b{font-size:23px;color:var(--earn);font-variant-numeric:tabular-nums}
+  .earn-cta .ec-note{display:block;margin-top:5px;font-size:10px;color:rgba(27,24,18,.62);letter-spacing:.04em}
+
+  /* ---------- terminal demo ---------- */
+  .term{
+    background:var(--term);color:var(--term-ink);
+    border:1px solid var(--ink);
+    box-shadow:6px 6px 0 0 rgba(27,24,18,.14);
+    position:relative;
+    min-width:0;
+  }
+  .term-bar{
+    display:flex;align-items:center;gap:8px;
+    padding:9px 14px;border-bottom:1px solid rgba(239,233,214,.14);
+    font-size:11px;color:var(--term-soft);letter-spacing:.08em;
+  }
+  .term-bar i{width:9px;height:9px;border-radius:50%;background:var(--term-soft);opacity:.5}
+  .term-bar i:first-child{background:var(--spend);opacity:.9}
+  .term-bar i:nth-child(2){background:var(--accent);opacity:.9}
+  .term-bar i:nth-child(3){background:var(--earn);opacity:.9}
+  .term-bar span{margin-left:6px}
+  .screen{position:relative;height:300px}
+  .term-body{
+    position:absolute;inset:0 0 40px;
+    padding:16px 18px 0;overflow:hidden;font-size:13px;line-height:1.72;
+    font-family:var(--mono);overflow-wrap:anywhere;
+  }
+  .t-dim{color:var(--term-soft)}
+  .t-ok{color:#7fbf8f}
+  .ag{color:var(--claude);font-weight:700}
+  .tree{color:var(--term-soft)}
+  .t-cursor{
+    display:inline-block;width:8px;height:15px;background:var(--term-ink);
+    vertical-align:-2px;animation:blink 1.05s steps(1) infinite;
+  }
+  @keyframes blink{50%{opacity:0}}
+  /* Claude Code welcome box — mirrors the real CLI splash */
+  .cc-box{border:1px solid var(--claude);padding:9px 13px;margin:2px 0 10px}
+  .cc-box .ttl{color:var(--claude);font-weight:700}
+  .cc-box .ver{color:var(--term-soft);font-weight:400}
+  .cc-box .sub{color:var(--term-soft)}
+  /* one sponsor line pinned to the bottom row (== physical row H) */
+  .pin{
+    position:absolute;left:0;right:0;bottom:0;height:40px;
+    display:flex;align-items:center;gap:6px;padding:0 18px;font-size:13px;
+    border-top:1px solid rgba(239,233,214,.14);
+    background:linear-gradient(0deg,rgba(255,216,61,.05),transparent);
+  }
+  .pin.hidden{display:none}
+  .pin.flash{animation:pinflash .9s ease}
+  @keyframes pinflash{0%{background:rgba(127,191,143,.16)}100%{background:transparent}}
+  /* name + payout never shrink; the creative ellipsizes first, then the link */
+  .pin-head{flex:0 0 auto;white-space:nowrap}
+  .pin-mid{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pin-tail{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pin-pay{flex:0 0 auto;white-space:nowrap}
+  .t-card{margin:6px 0;padding:4px 0;animation:cardin .35s ease}
+  @keyframes cardin{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .s-rail{color:var(--amber)}
+  .s-tag{color:var(--term-soft)}
+  .s-name{color:var(--amber);font-weight:700}
+  .s-sep{color:var(--term-soft)}
+  .s-msg{color:var(--term-ink)}
+  .s-link{color:var(--amber);text-decoration:underline;text-underline-offset:2px}
+  .s-pay{color:#7fbf8f;font-weight:700}
+  @media (max-width:420px){
+    .pin{padding:0 12px;font-size:12px;gap:4px}
+    .pin-mid{display:none}
+    .pin-pay{margin-left:auto;text-align:right}
+    .s-link{display:none}
+  }
+  .wallet-chip{
+    position:absolute;right:-13px;top:-15px;
+    background:var(--card);border:1.5px solid var(--ink);
+    padding:7px 13px;transform:rotate(1.6deg);
+    box-shadow:3px 3px 0 0 rgba(27,24,18,.14);
+    text-align:right;
+  }
+  .wallet-chip b{display:block;font-size:19px;font-variant-numeric:tabular-nums}
+	  .wallet-chip b small{font-size:11px;font-weight:400;color:var(--ink-soft)}
+	  .wallet-chip.bump b{color:var(--earn)}
+
+	  /* ---------- desktop overlay hero demo ---------- */
+	  .app-demo{
+	    background:var(--card);border:1px solid var(--ink);
+	    box-shadow:8px 8px 0 0 rgba(27,24,18,.14);
+	    position:relative;min-width:0;overflow:hidden;
+	  }
+	  .app-demo .wallet-chip{display:none}
+	  .app-titlebar{
+	    height:44px;display:flex;align-items:center;gap:8px;
+	    padding:0 16px;border-bottom:1px solid var(--rule);background:var(--paper);
+	    font-size:13px;color:var(--ink-soft);
+	  }
+	  .app-titlebar i{width:9px;height:9px;border-radius:50%;background:var(--term-soft);opacity:.5}
+	  .app-titlebar i:first-child{background:var(--claude);opacity:.95}
+	  .app-titlebar i:nth-child(2){background:var(--accent);opacity:.85}
+	  .app-titlebar i:nth-child(3){background:var(--earn);opacity:.7}
+	  .app-title{margin-left:8px;font-weight:700;color:var(--ink)}
+	  .app-support{margin-left:auto;border:1px solid var(--rule);background:#fffaf0;padding:3px 9px;font-size:10px;white-space:nowrap}
+	  .app-surface{position:relative;display:grid;grid-template-columns:144px minmax(0,1fr);min-height:348px;background:#fffaf2}
+	  .app-nav{border-right:1px solid var(--rule);background:#eee7d6;padding:70px 14px 18px;color:var(--ink-soft)}
+	  .app-name{display:flex;align-items:center;gap:8px;font-weight:800;color:var(--ink);margin-bottom:12px}
+	  .app-mark{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:var(--ink);color:var(--accent);font-size:13px;font-weight:800}
+	  .app-nav-item{font-size:12px;font-weight:700;padding:7px 8px;margin-top:5px}
+	  .app-nav-item.active{background:var(--card);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
+	  .app-main{min-width:0;padding:70px 24px 20px;display:flex;flex-direction:column;gap:16px}
+	  .app-chips{display:flex;gap:8px;flex-wrap:wrap}
+	  .app-chip{border:1px solid var(--rule);background:#f0ead9;color:var(--ink);padding:4px 9px;font-size:11px;font-weight:800}
+	  .app-chip.alt{background:transparent;color:var(--ink-soft)}
+	  .agent-thread{flex:1;display:flex;flex-direction:column;gap:16px;min-height:0}
+	  .agent-bubble{align-self:flex-end;max-width:78%;background:#f0ead9;border:1px solid var(--rule);padding:14px 16px;font-size:15px}
+	  .agent-working{display:flex;align-items:center;gap:10px;color:var(--ink-soft);font-weight:700;font-size:13px}
+	  .agent-spin{width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--ink) 0 70%,rgba(27,24,18,.08) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));animation:spin 1s linear infinite}
+	  @keyframes spin{to{transform:rotate(360deg)}}
+	  .app-composer{display:flex;align-items:center;gap:10px;border:1px solid var(--rule);background:var(--paper);padding:12px 13px;font-size:13px;color:var(--ink-soft)}
+	  .app-composer span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+	  .send-dot{width:28px;height:28px;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+	  .overlay-card{position:absolute;left:14px;right:14px;top:12px;z-index:3;display:flex;align-items:center;gap:7px;min-width:0;background:rgba(24,24,27,.95);color:#d6d6db;border:1px solid rgba(255,255,255,.10);padding:12px 14px 12px 18px;font-size:13px;box-shadow:0 14px 34px rgba(0,0,0,.24)}
+	  .overlay-card::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;background:#7d9cff}
+	  .ovl-icon{width:30px;height:30px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto}
+	  .ovl-icon img{width:100%;height:100%;object-fit:cover}
+	  .ovl-dim{color:#8b8b92;white-space:nowrap;flex:0 0 auto}.ovl-sep{color:#46464d;white-space:nowrap;flex:0 0 auto}.ovl-brand,.ovl-host{color:#7d9cff;font-weight:700;white-space:nowrap;flex:0 0 auto}
+	  .ovl-msg{min-width:0;flex:0 0 auto;overflow:visible;white-space:nowrap}
+	  .ovl-tail{margin-left:auto;display:flex;align-items:center;gap:10px;flex:0 0 auto}
+	  .ovl-ring{width:26px;height:26px;border-radius:50%;background:conic-gradient(#7d9cff 72%,rgba(255,255,255,.16) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 4px))}
+	  .ovl-x{color:#8b8b92;font-size:18px;line-height:1}
+	  .demo-hidden{display:none}
+
+  /* ---------- tape marquee ---------- */
+  .tapeline{
+    border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);
+    background:var(--card);overflow:hidden;white-space:nowrap;
+    padding:6px 0;font-size:11px;
+  }
+  .tapeline .reel{display:inline-block;animation:reel 38s linear infinite}
+  @keyframes reel{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .tapeline span{margin:0 20px;color:var(--ink-soft)}
+  .tapeline b.e{color:var(--earn);font-weight:700}
+  .tapeline b.s{color:var(--spend);font-weight:700}
+
+  /* ---------- live auction strip ---------- */
+  .auction{border-bottom:1px solid var(--ink);background:var(--card)}
+  .aux-wrap{max-width:1180px;margin:0 auto;padding:10px 28px;display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;font-size:12px}
+  .aux-state{display:inline-flex;align-items:center;gap:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:10px}
+  .aux-dot{width:8px;height:8px;border-radius:50%;background:var(--earn);animation:pulse 1.7s ease infinite}
+  .aux-stat{color:var(--ink-soft)}
+  .aux-stat b{color:var(--ink);font-weight:700}
+  .aux-stat b.earn-c{color:var(--earn)}
+  .aux-sep{color:var(--rule)}
+  .aux-cta{margin-left:auto;font-weight:700;text-transform:uppercase;letter-spacing:.12em;font-size:10px;border:1.5px solid var(--ink);padding:6px 12px;text-decoration:none;background:var(--accent);color:var(--ink)}
+  .aux-cta:hover{background:var(--ink);color:var(--accent)}
+  @media (max-width:560px){.aux-wrap{padding:10px 18px}.aux-sep{display:none}.aux-cta{margin-left:0}}
+
+  /* ---------- sections ---------- */
+  section.block{padding:74px 0 0}
+  .sec-head{display:flex;align-items:baseline;gap:16px;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:30px}
+  .sec-head h2{font-family:var(--serif);font-size:clamp(24px,3vw,34px);font-weight:700;letter-spacing:-.01em;min-width:0}
+  .sec-head .note{margin-left:auto;font-size:11px;color:var(--ink-soft)}
+
+  /* install strip */
+  .install{display:grid;grid-template-columns:minmax(0,860px);gap:12px;align-items:start}
+  .cmds{border:1px solid var(--ink);background:var(--term);color:var(--term-ink);padding:6px 0}
+  .cmd{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 18px;font-size:13.5px;
+  }
+  .cmd + .cmd{border-top:1px dashed rgba(239,233,214,.16)}
+  .cmd .ps1{color:var(--term-soft)}
+  .cmd code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap}
+  .cmd .y{color:var(--accent)}
+  .copy{
+    flex:0 0 auto;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    border:1px solid var(--term-soft);background:transparent;color:var(--term-soft);
+    padding:3px 9px;cursor:pointer;
+  }
+  .copy:hover{border-color:var(--term-ink);color:var(--term-ink)}
+  .copy.ok{border-color:#7fbf8f;color:#7fbf8f}
+	  .works{border:1px solid var(--rule);background:var(--card);overflow:hidden}
+	  .works .label{display:block;padding:11px 16px;border-bottom:1px solid var(--rule);background:var(--paper)}
+	  .works-table{width:100%;border-collapse:collapse;font-size:13px}
+	  .works-table th{
+	    padding:8px 16px;border-bottom:1px solid var(--rule-soft);
+	    color:var(--ink-soft);font-size:10px;letter-spacing:.14em;text-transform:uppercase;text-align:left;
+	  }
+	  .works-table td{padding:12px 16px;border-bottom:1px solid var(--rule-soft);vertical-align:middle}
+	  .works-table tr:last-child td{border-bottom:0}
+	  .works-table .surface{font-weight:700;color:var(--ink);white-space:nowrap}
+	  .works-table code{background:var(--paper);border:1px solid var(--rule);padding:2px 7px;font-size:12px;white-space:nowrap}
+	  .works-table .muted{color:var(--ink-soft)}
+
+  /* how it works */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .step{
+    border:1px solid var(--ink);background:var(--card);padding:22px;position:relative;
+  }
+  .step .n{
+    position:absolute;top:-13px;left:16px;
+    background:var(--accent);border:1.5px solid var(--ink);
+    font-size:11px;font-weight:700;letter-spacing:.14em;padding:2px 9px;
+    transform:rotate(-1.6deg);
+  }
+  .step h3{font-family:var(--serif);font-size:21px;margin:8px 0 10px}
+  .step p{font-size:13px;color:var(--ink-soft)}
+  .step p code{color:var(--ink);background:var(--paper);border:1px solid var(--rule);padding:0 5px;font-size:12px}
+  .step .fine{margin-top:14px;padding-top:10px;border-top:1px dashed var(--rule);font-size:11px;color:var(--ink-soft)}
+
+  /* credit definition */
+  .cred-def{
+    display:grid;grid-template-columns:minmax(0,9fr) minmax(0,11fr);gap:28px;align-items:center;
+    border:1px solid var(--ink);border-left:6px solid var(--accent);
+    background:var(--card);padding:24px 26px;margin-bottom:28px;
+  }
+  .cred-def .cd-main p{font-family:var(--serif);font-size:clamp(19px,2.2vw,24px);line-height:1.4;margin-top:8px}
+  .cd-facts{list-style:none}
+  .cd-facts li{padding:9px 0;border-bottom:1px solid var(--rule-soft);font-size:13px;color:var(--ink-soft)}
+  .cd-facts li:last-child{border-bottom:0}
+  .cd-facts b{color:var(--ink)}
+
+  /* calculator */
+  .calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:stretch}
+  .calc-in{border:1px solid var(--ink);background:var(--card);padding:26px}
+  .calc-in h3{font-family:var(--serif);font-size:21px;margin-bottom:6px}
+  .calc-in p{font-size:13px;color:var(--ink-soft)}
+  .calc-read{font-size:34px;font-weight:700;margin:22px 0 4px;font-variant-numeric:tabular-nums}
+  .calc-read small{font-size:13px;font-weight:400;color:var(--ink-soft)}
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;cursor:pointer;margin-top:6px;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:8px;background:repeating-linear-gradient(90deg,var(--rule) 0 4px,transparent 4px 9px);
+  }
+  input[type=range]::-moz-range-track{
+    height:8px;background:repeating-linear-gradient(90deg,var(--rule) 0 4px,transparent 4px 9px);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:22px;height:22px;margin-top:-7px;
+    background:var(--accent);border:2px solid var(--ink);border-radius:0;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;background:var(--accent);border:2px solid var(--ink);border-radius:0;
+  }
+  .calc-out{border:1px solid var(--ink);background:var(--card);padding:26px;display:flex;flex-direction:column}
+  .calc-row{display:flex;align-items:baseline;gap:12px;padding:11px 0;border-bottom:1px dashed var(--rule)}
+  .calc-row .k{font-size:12px;color:var(--ink-soft)}
+  .calc-row .lead{flex:1;border-bottom:2px dotted var(--rule);transform:translateY(-4px)}
+  .calc-row .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .calc-row .v.earn{color:var(--earn)}
+  .calc-big{margin-top:auto;padding-top:18px;text-align:right}
+  .calc-big b{font-size:clamp(30px,3.4vw,42px);font-variant-numeric:tabular-nums}
+  .calc-big b .hl{box-shadow:inset 0 -.16em 0 0 var(--accent)}
+  .calc-big .cap{display:block;font-size:11px;color:var(--ink-soft);margin-top:2px}
+  .cap-flag{font-size:10px;letter-spacing:.14em;border:1.5px solid var(--earn);color:var(--earn);padding:1px 7px;transform:rotate(-1.6deg);display:none}
+  .cap-flag.on{display:inline-block}
+  .cap-flag.off{border-color:var(--spend);color:var(--spend)}
+  .calc-fine{margin-top:16px;font-size:11px;color:var(--ink-soft)}
+  /* settlement flow */
+  .flow{margin-top:18px;display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:12px;align-items:stretch}
+  .flow-step{border:1px solid var(--ink);background:var(--card);padding:16px 18px 14px}
+  .flow-step .f-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.14em;background:var(--accent);border:1.5px solid var(--ink);padding:1px 8px;transform:rotate(-1.2deg);margin-bottom:9px}
+  .flow-step p{font-size:12.5px;color:var(--ink-soft)}
+  .flow-step p b{color:var(--ink)}
+  .flow-arrow{align-self:center;font-weight:700;font-size:18px;color:var(--ink-soft)}
+
+  /* market section */
+  .mkt-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .mkt-stat{border:1px solid var(--ink);background:var(--card);padding:14px 16px 12px}
+  .mkt-stat b{display:block;margin-top:8px;font-size:clamp(22px,2.6vw,30px);line-height:1.1;font-variant-numeric:tabular-nums}
+  .mkt-stat.earn b{color:var(--earn)}
+  .pill{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.12em;padding:1px 7px;border:1px solid currentColor;text-transform:uppercase;color:var(--ink-soft)}
+  .pill.live{color:var(--earn);background:rgba(29,122,68,.08)}
+  .pill.limited,.pill.exhausted,.pill.paused{color:var(--spend);background:rgba(191,58,43,.07)}
+  .rem{display:inline-flex;align-items:center;gap:8px}
+  .rembar{width:52px;height:7px;border:1px solid var(--ink);background:var(--paper)}
+  .rembar i{display:block;height:100%;background:var(--earn)}
+
+  .market-board{margin-top:16px;border:1px solid var(--ink);background:var(--card);padding:18px;overflow-x:auto}
+  .market-board .market-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .market-board table{width:100%;border-collapse:collapse;font-size:12px}
+  .market-board th,.market-board td{text-align:left;padding:9px 8px;border-bottom:1px dashed var(--rule);vertical-align:top}
+  .market-board th{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);white-space:nowrap}
+  .market-board td:last-child,.market-board th:last-child{text-align:right}
+  .market-status{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+  .market-status.live{color:var(--earn);font-weight:700}
+  .market-status.limited{color:var(--spend);font-weight:700}
+  .market-empty{font-size:12px;color:var(--ink-soft);padding-top:2px}
+
+  /* market price chart (top bid / 1,000 QP over time) */
+  .market-chart{border:1px solid var(--ink);background:var(--card);padding:16px 18px 12px;margin-top:16px}
+  .market-chart figcaption{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--ink-soft)}
+  .market-chart .mc-title{font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+  .market-chart .mc-now{margin-left:auto;font-weight:700;color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
+  .market-chart .mc-now small{font-size:11px;font-weight:400;color:var(--ink-soft)}
+  .mc-legend{display:inline-flex;align-items:center;gap:6px}
+  .mc-legend i{display:inline-block;width:16px;height:0;border-top:2px solid var(--amber)}
+  .mc-legend.dev i{border-top-style:dashed;border-top-color:var(--earn)}
+  .market-chart svg{width:100%;height:auto;display:block}
+  .mc-grid{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 4}
+  .mc-axis-label{fill:var(--ink-soft);font-size:9px;font-family:var(--mono)}
+  .mc-dev{fill:none;stroke:var(--earn);stroke-width:1.5;stroke-dasharray:4 3;opacity:.65;stroke-linejoin:round}
+  .mc-bid{fill:none;stroke:var(--amber);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+  .mc-dot{fill:var(--amber);stroke:var(--ink);stroke-width:1.5}
+  .mc-empty{font-size:12.5px;color:var(--ink-soft);text-align:center;padding:22px 8px 14px}
+  .mc-empty b{color:var(--ink)}
+
+  /* privacy */
+  .priv{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+  .never-card{border:1px solid var(--ink);background:var(--card);padding:24px}
+  .never{list-style:none}
+  .never li{display:flex;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--rule-soft);font-size:15px}
+  .never li:last-child{border-bottom:0}
+  .never s{text-decoration-color:var(--spend);text-decoration-thickness:2px}
+  .never .lead{flex:1;border-bottom:2px dotted var(--rule);transform:translateY(-3px)}
+  .never .no{font-size:10px;letter-spacing:.14em;color:var(--spend);font-weight:700;white-space:nowrap}
+  .priv-note{margin-top:16px;font-size:13px;color:var(--ink-soft)}
+  .priv-note code{background:var(--paper);border:1px solid var(--rule);padding:1px 7px;font-size:12px;color:var(--ink)}
+  .schema{
+    border:1px solid var(--ink);background:var(--term);color:var(--term-ink);
+    padding:20px;font-size:12.5px;line-height:1.8;overflow-x:auto;
+    white-space:pre-wrap;
+  }
+  .schema .hd{color:var(--term-soft);margin-bottom:8px}
+  .schema .k{color:var(--accent)}
+  .schema .v{color:#7fbf8f}
+  .schema .b{color:#d9a0e8}
+  .kill-note{
+    margin-top:18px;border:1.5px dashed var(--spend);padding:14px 18px;
+    font-size:13px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;
+  }
+  .kill-note b{color:var(--spend);font-size:10px;letter-spacing:.16em}
+  .kill-note code{background:var(--paper);border:1px solid var(--rule);padding:1px 7px;font-size:12px}
+
+  /* sponsors */
+  .sp-grid{display:grid;grid-template-columns:minmax(0,10fr) minmax(0,9fr);gap:36px;align-items:start}
+  .sp-pitch p{margin-bottom:14px;font-size:15px}
+  .sp-pitch p.big{font-family:var(--serif);font-size:21px;line-height:1.45}
+  .sp-facts{list-style:none;margin:22px 0;border:1px solid var(--ink);background:var(--card)}
+  .sp-facts li{display:flex;gap:12px;align-items:baseline;padding:12px 18px;border-bottom:1px solid var(--rule-soft);font-size:13px}
+  .sp-facts li:last-child{border-bottom:0}
+  .sp-facts .chk{color:var(--earn);font-weight:700;flex:0 0 auto}
+  .sp-facts b{font-weight:700}
+  .sp-anatomy .label{margin-bottom:10px}
+  .anat-note{margin-top:14px;font-size:12px;color:var(--ink-soft)}
+  .sponsor-status{
+    margin-top:22px;border:1.5px solid var(--ink);background:var(--accent);
+    padding:22px;box-shadow:5px 5px 0 0 rgba(27,24,18,.16);
+  }
+  .sponsor-status .label{color:rgba(27,24,18,.65)}
+  .sponsor-status h3{font-family:var(--serif);font-size:22px;margin:4px 0 8px}
+  .sponsor-status p{font-size:13px;margin-bottom:16px}
+  .sponsor-status .btn{border-color:var(--ink);background:var(--ink);color:var(--accent)}
+  .sponsor-status .btn:hover{background:transparent;color:var(--ink)}
+
+  /* faq */
+  .faq{max-width:840px}
+  details{border:1px solid var(--rule);background:var(--card);margin-bottom:12px}
+  details summary{
+    cursor:pointer;list-style:none;padding:16px 20px;
+    font-weight:700;font-size:14px;display:flex;align-items:baseline;gap:14px;
+  }
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"+";font-weight:700;color:var(--ink-soft)}
+  details[open] summary::before{content:"\2212"}
+  details[open] summary{border-bottom:1px dashed var(--rule)}
+  details .a{padding:16px 20px 20px 44px;font-size:13.5px;color:var(--ink-soft)}
+  details .a code{background:var(--paper);border:1px solid var(--rule);padding:1px 6px;font-size:12px;color:var(--ink)}
+  details .a b{color:var(--ink)}
+
+  /* final cta */
+  .fin{
+    margin-top:80px;border-top:2px solid var(--ink);
+    padding:60px 0 70px;text-align:center;
+  }
+  .fin h2{font-family:var(--serif);font-size:clamp(28px,4vw,44px);letter-spacing:-.01em}
+  .fin p{margin:14px auto 28px;max-width:52ch;color:var(--ink-soft);font-size:14px}
+  .fin .hero-ctas{justify-content:center}
+
+  .tear{
+    text-align:center;font-size:11px;letter-spacing:.7em;
+    color:var(--ink-soft);user-select:none;padding:36px 0 0;
+    max-width:100%;overflow:hidden;white-space:nowrap;
+  }
+
+  footer.end{
+    margin-top:46px;border-top:1px solid var(--ink);
+  }
+  footer.end .wrap{
+    padding-top:22px;padding-bottom:48px;
+    display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;
+    font-size:11px;color:var(--ink-soft);
+  }
+  footer.end a{color:var(--ink-soft)}
+  footer.end a:hover{color:var(--ink)}
+  footer.end .right{margin-left:auto}
+
+  /* ---------- sticky earn bar ---------- */
+  .sticky-earn{
+    position:fixed;right:22px;bottom:22px;z-index:45;
+    display:flex;align-items:stretch;
+    background:var(--card);border:2px solid var(--ink);
+    box-shadow:5px 5px 0 0 rgba(27,24,18,.2);
+    font-size:12px;
+    opacity:0;transform:translateY(14px);pointer-events:none;
+    transition:opacity .25s,transform .25s;
+  }
+  .sticky-earn.show{opacity:1;transform:none;pointer-events:auto}
+  .sticky-earn a{display:flex;align-items:center;gap:9px;padding:10px 14px;text-decoration:none}
+  .sticky-earn .se-dot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--earn);animation:pulse 1.7s ease infinite}
+  @keyframes pulse{50%{opacity:.3}}
+  .sticky-earn b{color:var(--earn);font-size:15px;font-variant-numeric:tabular-nums}
+  .sticky-earn .se-go{
+    margin:-10px -14px;margin-left:5px;align-self:stretch;
+    display:flex;align-items:center;padding:0 13px;
+    background:var(--accent);border-left:2px solid var(--ink);
+    font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:10px;
+  }
+  .sticky-earn .se-x{
+    border:0;border-left:2px solid var(--ink);background:transparent;
+    padding:0 11px;cursor:pointer;color:var(--ink-soft);font-size:15px;
+  }
+  .sticky-earn .se-x:hover{color:var(--ink);background:var(--paper)}
+
+  #toast{
+    position:fixed;left:24px;bottom:24px;z-index:50;
+    background:var(--ink);color:var(--paper);padding:10px 16px;
+    font-size:12px;letter-spacing:.05em;
+    opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;
+    pointer-events:none;
+  }
+  #toast.show{opacity:1;transform:none}
+
+  @media (max-width:980px){
+    .hero{grid-template-columns:1fr;gap:40px;padding-top:52px}
+    .install,.calc,.priv,.sp-grid,.cred-def{grid-template-columns:minmax(0,1fr)}
+    .steps{grid-template-columns:minmax(0,1fr)}
+    .mkt-stats{grid-template-columns:repeat(2,1fr)}
+    .flow{grid-template-columns:minmax(0,1fr)}
+    .flow-arrow{display:none}
+    .sec-head{align-items:flex-start;flex-wrap:wrap}
+    .sec-head .note{flex-basis:100%;margin-left:0}
+    nav.links a.anchor{display:none}
+  }
+  @media (max-width:560px){
+    .wordmark{display:none}
+    .wrap,.bar{padding-left:18px;padding-right:18px}
+    .bar{gap:10px;flex-wrap:wrap;align-items:flex-start}
+    nav.links{margin-left:0;flex:1 1 0;gap:10px;flex-wrap:wrap;justify-content:flex-start;min-width:0}
+    nav.links a{flex:0 0 auto}
+    .bar .btn{padding-left:10px;padding-right:10px}
+    .bar .btn.yellow{font-size:10px;letter-spacing:.08em}
+    .kicker{gap:8px}
+    .kicker .tag{flex:0 0 auto;font-size:9px;letter-spacing:.12em;padding-left:7px;padding-right:7px;max-width:100%;white-space:nowrap}
+    .hero-sub{max-width:100%}
+    h1{font-size:clamp(32px,10vw,38px)}
+    section.block{padding-top:56px}
+    .hero{gap:30px;padding:42px 0 50px}
+    .hero > *{width:calc(100vw - 36px);max-width:100%}
+    .hero-ctas{align-items:stretch}
+    .hero-ctas .btn{text-align:center}
+    .earn-cta{width:100%}
+    .cta-side{width:100%}
+    .cta-side .btn{align-self:stretch}
+    .mkt-stats{grid-template-columns:1fr 1fr;gap:10px}
+    .mkt-stat{padding:12px 12px 10px}
+    .mkt-stat b{font-size:20px}
+    .sticky-earn{left:12px;right:12px;bottom:12px}
+    .sticky-earn a{flex:1}
+    .term,.app-demo{box-shadow:3px 3px 0 0 rgba(27,24,18,.14)}
+    .term-bar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .screen{height:280px}
+    .term-body{padding:14px 14px 0;font-size:12px}
+    .t-card{padding:8px 10px}
+    .wallet-chip{right:8px}
+    .app-titlebar{padding:0 12px}
+    .app-support{display:none}
+    .app-surface{grid-template-columns:1fr;min-height:280px}
+    .app-nav{display:none}
+    .app-main{padding:62px 14px 14px}
+    .overlay-card{left:10px;right:10px;gap:6px;padding:9px 10px 9px 14px;font-size:12px}
+    .ovl-icon{width:24px;height:24px}
+    .ovl-host{display:none}
+    .agent-bubble{font-size:13px;max-width:92%}
+    .app-composer{font-size:12px}
+    .sec-head{gap:8px 12px}
+    .cmd{align-items:flex-start;gap:9px;padding:10px 12px;font-size:12px}
+    .copy{padding-left:7px;padding-right:7px}
+    .works-table,.works-table tbody,.works-table tr,.works-table td{display:block}
+    .works-table thead{display:none}
+    .works-table tr{padding:10px 14px;border-bottom:1px solid var(--rule-soft)}
+    .works-table tr:last-child{border-bottom:0}
+    .works-table td{padding:2px 0;border-bottom:0}
+    .works-table td[data-label]::before{
+      content:attr(data-label);display:block;margin-top:6px;
+      color:var(--ink-soft);font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+    }
+    .step,.calc-in,.calc-out,.never-card,.sponsor-status{padding:18px}
+    .cred-def{padding:18px;gap:14px}
+    .calc-read{font-size:30px;line-height:1.2}
+    .calc-read small{display:block;margin-top:4px}
+    .calc-row{align-items:flex-start;flex-wrap:wrap;gap:4px 10px}
+    .calc-row .lead{display:none}
+    .calc-row .k{flex:1 1 100%}
+    .calc-row .v,.cap-flag{margin-left:auto}
+    .calc-big{text-align:left}
+    .never li{align-items:flex-start;flex-wrap:wrap}
+    .never .lead{display:none}
+    .never .no{margin-left:auto}
+    .schema{padding:16px;font-size:11.5px}
+    .kill-note{align-items:flex-start}
+    .sp-facts li{align-items:flex-start}
+    details summary{align-items:flex-start;padding:14px 16px}
+    details .a{padding:14px 16px 18px 34px}
+    .fin{margin-top:64px;padding:46px 0 56px}
+    .tear{letter-spacing:.32em}
+    footer.end .right{margin-left:0}
+    .tapeline{font-size:10px;padding:5px 0}
+    .tapeline span{margin:0 14px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    *,*::before,*::after{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <a class="logo" href="#">SAI</a>
+    <span class="wordmark">Sponsored AI Credits</span>
+    <nav class="links" aria-label="Sections">
+      <a class="anchor" href="#install">Install</a>
+      <a class="anchor" href="#how">How it works</a>
+      <a class="anchor" href="#calc">Earnings</a>
+      <a class="anchor" href="#privacy">Privacy</a>
+      <a href="/trust">Trust</a>
+      <a href="/market">Market</a>
+      <a class="btn" href="/auth/login">Sign in</a>
+      <a class="btn yellow" href="/sponsor">Become a sponsor</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ HERO ============ -->
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <div class="kicker">
+          <span class="tag spin">You keep 60%</span>
+          <span class="tag">Code never leaves your machine</span>
+          <span class="tag">Claude + Codex</span>
+          <span class="tag">Windows + macOS overlay</span>
+        </div>
+        <h1>Your wait is<br><span class="hl">real estate</span>.</h1>
+        <p class="hero-sub">
+          SAI shows one quiet sponsor card while your agent waits &mdash; in the terminal or as a
+          <b>desktop overlay</b> over Claude Desktop and the Codex app. You keep <b>60%</b>.
+          <b>Your code never leaves the machine.</b>
+        </p>
+        <div class="hero-ctas">
+          <a class="earn-cta" href="#install">
+            <span class="ec-top">Get SAI &rarr;</span>
+            <span class="ec-est">earn &asymp; <b class="num" id="heroMonth">+32.40</b> credits / month while it thinks</span>
+            <span class="ec-note">at <span class="num" id="heroMin">45</span> min/day of agent wait &middot; <span id="heroRate">launch pricing</span> &middot; not a guarantee</span>
+          </a>
+          <div class="cta-side">
+            <a class="btn" href="/sponsor">Buy the wait &rarr;</a>
+            <span class="cta-note">no code upload &middot; 1 credit funds USD 1 of model usage &middot; one command to stop it</span>
+          </div>
+        </div>
+      </div>
+      <div class="app-demo" aria-label="Desktop overlay demo">
+        <div class="wallet-chip" id="walletChip">
+          <span class="label">AI credits</span>
+          <b><span id="demoWallet" class="num">0.000</span> <small>credits</small></b>
+        </div>
+        <div class="app-titlebar">
+          <i></i><i></i><i></i>
+          <span class="app-title">Codex app</span>
+          <span class="app-support">also Claude Desktop</span>
+        </div>
+        <div class="app-surface">
+          <div class="overlay-card">
+            <span class="ovl-icon" aria-hidden="true"><img src="favicon.png" alt=""></span>
+            <span class="ovl-dim">sponsored</span>
+            <span class="ovl-sep">&middot;</span>
+            <span class="ovl-brand">Your Brand</span>
+            <span class="ovl-sep">&middot;</span>
+            <span class="ovl-msg">Ship faster AI agents</span>
+            <span class="ovl-sep">&middot;</span>
+            <span class="ovl-host">yourbrand.dev</span>
+            <span class="ovl-tail">
+              <span class="ovl-ring" aria-hidden="true"></span>
+              <span class="ovl-x">&times;</span>
+            </span>
+          </div>
+          <aside class="app-nav" aria-hidden="true">
+            <div class="app-name"><span class="app-mark">C</span><span>Codex</span></div>
+            <div class="app-nav-item active">Agent chat</div>
+            <div class="app-nav-item">Repo</div>
+            <div class="app-nav-item">Tasks</div>
+          </aside>
+          <div class="app-main">
+            <div class="app-chips">
+              <span class="app-chip">Codex desktop app</span>
+              <span class="app-chip alt">Claude Desktop supported</span>
+            </div>
+            <div class="agent-thread">
+              <div class="agent-bubble">Refactor the auth module and add tests</div>
+              <div class="agent-working"><span class="agent-spin"></span><span>Working in the app...</span></div>
+            </div>
+            <div class="app-composer">
+              <span>Refactor the auth module and add tests</span>
+              <span class="send-dot">&uarr;</span>
+            </div>
+          </div>
+        </div>
+        <div class="demo-hidden" aria-hidden="true">
+          <div id="termBody"></div>
+          <div id="termPin" class="hidden"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ TAPE MARQUEE ============ -->
+  <div class="tapeline" aria-hidden="true">
+    <div class="reel" id="reel">
+      <span>09:41 <b class="e">EARN</b> sponsor&middot;build_cache <b class="e">+0.013</b></span>
+      <span>09:44 <b class="e">PENDING</b> developer&middot;hold <b class="e">+0.013</b></span>
+      <span>09:52 <b class="e">EARN</b> sponsor&middot;trace_debug <b class="e">+0.011</b></span>
+      <span>10:07 <b class="e">EARN</b> sponsor&middot;secret_review <b class="e">+0.009</b></span>
+      <span>10:18 <b class="e">AVAILABLE</b> developer&middot;settled <b class="e">+0.011</b></span>
+      <span>10:26 <b class="e">EARN</b> sponsor&middot;build_cache <b class="e">+0.013</b></span>
+      <span>10:31 <b class="e">EARN</b> sponsor&middot;trace_debug <b class="e">+0.011</b></span>
+      <span>10:55 <b class="e">PENDING</b> developer&middot;hold <b class="e">+0.009</b></span>
+      <span>11:02 <b class="e">EARN</b> sponsor&middot;secret_review <b class="e">+0.009</b></span>
+      <span>11:09 <b class="e">EARN</b> sponsor&middot;build_cache <b class="e">+0.013</b></span>
+    </div>
+  </div>
+
+  <!-- ============ LIVE AUCTION STRIP ============ -->
+  <div class="auction">
+    <div class="aux-wrap">
+      <span class="aux-state"><span class="aux-dot"></span> <span id="auxState">live auction</span></span>
+      <span class="aux-stat"><b class="num" id="auxLive">0</b> campaigns funded</span>
+      <span class="aux-sep">&middot;</span>
+      <span class="aux-stat">top bid <b class="num" id="auxBid">$30.00</b> / 1,000 cards</span>
+      <span class="aux-sep">&middot;</span>
+      <span class="aux-stat">you earn <b class="num earn-c" id="auxCard">+0.018</b> / card</span>
+      <a class="aux-cta" href="/market">Bid live &rarr;</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- ============ INSTALL ============ -->
+    <section class="block" id="install">
+      <div class="sec-head">
+        <h2>Install SAI</h2>
+        <span class="note">npm launcher &middot; terminal wrapper &middot; Windows/macOS overlay</span>
+      </div>
+      <div class="install">
+        <div class="cmds">
+          <div class="cmd"><span class="ps1">$</span><code>npm install <span class="y">-g @sponsoredai/cli</span></code><button class="copy" data-cmd="npm install -g @sponsoredai/cli">copy</button></div>
+          <div class="cmd"><span class="ps1">$</span><code>sai <span class="y">claude</span> <span class="t-dim"># Claude Code in your terminal</span></code><button class="copy" data-cmd="sai claude">copy</button></div>
+          <div class="cmd"><span class="ps1">$</span><code>sai overlay <span class="y">both</span> <span class="t-dim"># Claude Desktop + Codex app</span></code><button class="copy" data-cmd="sai overlay both">copy</button></div>
+        </div>
+        <aside class="works compact">
+          <span class="label">Run it where your agent lives</span>
+          <table class="works-table">
+            <thead>
+              <tr><th>Surface</th><th>Command</th><th>Runs in</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="surface" data-label="Surface">Both desktop apps</td>
+                <td data-label="Command"><code>sai overlay both</code></td>
+                <td class="muted" data-label="Runs in">Claude Desktop + Codex app</td>
+              </tr>
+              <tr>
+                <td class="surface" data-label="Surface">Claude Desktop</td>
+                <td data-label="Command"><code>sai overlay claude</code></td>
+                <td class="muted" data-label="Runs in">Claude Desktop only</td>
+              </tr>
+              <tr>
+                <td class="surface" data-label="Surface">Codex app</td>
+                <td data-label="Command"><code>sai overlay codex</code></td>
+                <td class="muted" data-label="Runs in">Codex app only</td>
+              </tr>
+              <tr>
+                <td class="surface" data-label="Surface">Terminal</td>
+                <td data-label="Command"><code>sai claude / sai codex</code></td>
+                <td class="muted" data-label="Runs in">Claude Code or Codex CLI</td>
+              </tr>
+              <tr>
+                <td class="surface" data-label="Surface">API clients</td>
+                <td data-label="Command"><code>base_url</code></td>
+                <td class="muted" data-label="Runs in">OpenAI&#8209;compatible clients</td>
+              </tr>
+            </tbody>
+          </table>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="block" id="how">
+      <div class="sec-head">
+        <h2>The ledger stays honest</h2>
+        <span class="note">earn &rarr; hold &rarr; settle, backend authoritative</span>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <span class="n">01 &middot; WRAP</span>
+          <h3>Run the same agent command</h3>
+          <p>Start with <code>sai claude</code> or <code>sai codex</code> in the terminal, or run <code>sai overlay both</code> for Claude Desktop and the Codex app. SAI measures <b>idle/visibility timing only &mdash; not prompts, code, or output</b>.</p>
+          <p class="fine">No agent patches, no forks. CI and headless runs are left alone.</p>
+        </div>
+        <div class="step">
+          <span class="n">02 &middot; WAIT</span>
+          <h3>Quiet waits become cards</h3>
+          <p>After a real attended wait, SAI can render one sponsor line in the terminal or one small desktop banner over a supported app. <b>At most one card every 45&nbsp;seconds</b> &mdash; tune it or shut it off.</p>
+          <p class="fine">A card pays only after it stays visible &ge;5s. Desktop overlays verify foreground app, same monitor, visibility, and recent input locally.</p>
+        </div>
+        <div class="step">
+          <span class="n">03 &middot; SETTLE</span>
+          <h3>Earnings stay server-side</h3>
+          <p>Qualified paid placements credit the backend developer ledger after sponsor funds are verified. <b>The local wallet is display-only.</b></p>
+          <p class="fine">You spend the credits on model calls from the same terminal &mdash; your prompts and code never pass through SAI.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CALCULATOR ============ -->
+    <section class="block" id="calc">
+      <div class="sec-head">
+        <h2>What does waiting pay?</h2>
+        <span class="note">market bid split, not a guarantee</span>
+      </div>
+      <div class="cred-def">
+        <div class="cd-main">
+          <span class="label">What is a credit?</span>
+          <p>One credit pays for <b>one US dollar of AI model usage</b> &mdash; prepaid by a sponsor, spent from your terminal.</p>
+        </div>
+        <ul class="cd-facts">
+          <li><b>Earned from real campaigns.</b> Sponsors pay per qualified placement; 60% of net spend lands in your ledger.</li>
+          <li><b>Spent like normal credit.</b> Model calls bill the sponsor&rsquo;s money, not your card.</li>
+          <li><b>Never minted from thin air.</b> No funded campaign means cards pay zero &mdash; the ledger only credits what a sponsor paid for.</li>
+        </ul>
+      </div>
+      <div class="calc">
+        <div class="calc-in">
+          <h3>Your agent&rsquo;s idle time</h3>
+          <p>How long does your agent think per day &mdash; spinners, test runs, long diffs? With no funded campaign, the wait pays zero.</p>
+          <div class="calc-read num"><span id="calcMin">45</span><small> min / day of agent wait</small></div>
+          <input type="range" id="calcSlider" min="5" max="180" step="5" value="45"
+                 aria-label="Minutes of agent waiting per day">
+          <p class="calc-fine">Normal frequency: a card needs &ge;10s of quiet, cards sit &ge;45s apart, and only qualified five-second placements pay.</p>
+        </div>
+        <div class="calc-out">
+          <div class="calc-row"><span class="k">payout / qualified card</span><span class="lead"></span><span class="cap-flag on off" id="calcLiveFlag">PROJECTED</span><span class="v num earn" id="calcPayout">+0.018</span></div>
+          <div class="calc-row"><span class="k">cards / day</span><span class="lead"></span><span class="v num" id="calcCards">60</span></div>
+          <div class="calc-row"><span class="k">developer credits / day</span><span class="lead"></span><span class="cap-flag on">60% NET</span><span class="v num earn" id="calcDay">+1.080</span></div>
+          <div class="calc-row"><span class="k">bonus / qualified click</span><span class="lead"></span><span class="cap-flag on">50&times;</span><span class="v num earn" id="calcClick">+0.90</span></div>
+          <div class="calc-big">
+            <b class="num"><span class="hl" id="calcMonth">+32.40</span></b>
+            <span class="cap">developer credits / month when funded &middot; &asymp; <span class="num" id="calcUsd">USD 32.40</span> of model usage</span>
+          </div>
+          <p class="calc-fine" id="calcMarketNote">Projected at launch pricing. Real payouts track live sponsor bids &mdash; see the <a href="/market">public market &rarr;</a></p>
+	          <p class="calc-fine">Beta cap: developer credits are capped at <b>USD 5 per installation per hour</b> &mdash; earnings above the cap in a rolling hour are not credited.</p>
+        </div>
+      </div>
+      <div class="flow" aria-label="How a credit reaches you">
+        <div class="flow-step">
+          <span class="f-tag">1 &middot; EARNED</span>
+          <p>A sponsor card stays visible <b>&ge;5 seconds</b> during a real wait. The payout was printed on the card &mdash; that exact amount is yours.</p>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+        <div class="flow-step">
+          <span class="f-tag">2 &middot; PENDING</span>
+          <p>The backend ledger holds it while the sponsor&rsquo;s payment is verified. <b>No sponsor funds, no credit</b> &mdash; nothing imaginary gets minted.</p>
+        </div>
+        <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+        <div class="flow-step">
+          <span class="f-tag">3 &middot; AVAILABLE</span>
+          <p>Spend it on model calls from the same terminal &mdash; the gateway <b>bills your balance instead of your card</b>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PRIVACY ============ -->
+    <section class="block" id="privacy">
+      <div class="sec-head">
+        <h2>Never leaves your machine</h2>
+        <span class="note">the schema is the contract</span>
+      </div>
+      <div class="priv" style="grid-template-columns:minmax(0,1fr)">
+        <div>
+          <div class="never-card">
+            <ul class="never">
+              <li><s>prompts</s><span class="lead"></span><span class="no">NEVER SENT</span></li>
+              <li><s>source code</s><span class="lead"></span><span class="no">NEVER SENT</span></li>
+              <li><s>file paths</s><span class="lead"></span><span class="no">NEVER SENT</span></li>
+              <li><s>terminal output</s><span class="lead"></span><span class="no">NEVER SENT</span></li>
+              <li><s>shell history</s><span class="lead"></span><span class="no">NEVER SENT</span></li>
+              <li><s>repository URLs</s><span class="lead"></span><span class="no">NEVER SENT</span></li>
+            </ul>
+          </div>
+          <p class="priv-note">
+            The runner tracks <b>when</b> output happens, not <b>what</b> it says. Anything outside an
+            eleven-field event schema is stripped before it exists. Audit it with <code>sai privacy schema</code>,
+            or read the <a href="/privacy">full event schema &amp; privacy boundary &rarr;</a>
+          </p>
+          <div class="kill-note">
+            <b>KILL SWITCH</b>
+            <span>One command hard&#8209;stops every sponsor surface, with a reason on the record: <code>sai config kill-switch on</code></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SPONSORS ============ -->
+    <section class="block" id="sponsors">
+      <div class="sec-head">
+        <h2>For sponsors: buy qualified developer attention</h2>
+        <span class="note">Stripe checkout &middot; public bids &middot; paid placements</span>
+      </div>
+      <div class="sp-grid">
+        <div class="sp-pitch">
+          <p class="big">Reach developers during real coding-agent wait states, counted only when the placement is visible and attended.</p>
+          <p class="muted">Buy blocks of 1,000 qualified five-second placements via Stripe Checkout. 60% of net spend funds developer credits; SAI retains 40% for platform operations.</p>
+          <ul class="sp-facts">
+            <li><span class="chk">&#10003;</span><span><b>Qualified only.</b> Cards render after a real wait in an interactive terminal or attended desktop overlay, never in CI.</span></li>
+            <li><span class="chk">&#10003;</span><span><b>Frequency-capped.</b> Placements sit &ge;45s apart, with per-campaign and per-install caps, so inventory stays scarce.</span></li>
+            <li><span class="chk">&#10003;</span><span><b>Clicks are premium.</b> Eligible click-throughs bill at 50&times; the placement rate, and developers keep the same 60% share.</span></li>
+            <li><span class="chk">&#10003;</span><span><b>Developer-aligned.</b> The placement rewards the developer in credits instead of interrupting their workflow.</span></li>
+            <li><span class="chk">&#10003;</span><span><b>Privacy-bounded reporting.</b> Campaign reporting follows the event schema: no prompts, code, logs, or terminal output.</span></li>
+          </ul>
+          <p class="muted" style="margin-top:16px">The sponsor market is public &mdash; <a href="/market" class="hl" style="text-decoration:none;white-space:nowrap">see live pricing &amp; the order book &rarr;</a></p>
+        </div>
+        <div class="sp-anatomy">
+          <div class="label">What you buy, exactly</div>
+          <div class="term">
+            <div class="term-bar"><i></i><i></i><i></i><span>developer surface &middot; live</span></div>
+            <div class="term-body" style="min-height:0">
+<span class="t-dim">&#10022; thinking&hellip; 14s</span>
+<div class="t-card"><span class="s-rail">▌</span> <span class="s-tag">sponsored</span> <span class="s-name" id="liveAnatomySponsor">Your Brand</span> <span class="s-sep">&middot;</span> <span class="s-msg" id="liveAnatomyMsg">Ship faster agent workflows</span> <span class="s-sep">&middot;</span> <span class="s-link" id="liveAnatomyUrl">sponsoredai.dev/sponsor ↗</span>  <span class="s-pay" id="liveAnatomyPay">+0.018 AI credits</span></div>
+<span class="t-dim">&#10022; thinking&hellip;</span>
+            </div>
+          </div>
+          <p class="anat-note">That&rsquo;s the unit: sponsor name, 3&ndash;80 characters of copy, a destination, and the developer payout shown before the placement can count.</p>
+          <div class="sponsor-status">
+            <span class="label">Launch program &middot; 2026</span>
+            <h3>Sponsor checkout is open</h3>
+            <p>Create a campaign, pay with Stripe Checkout, and fund credits for qualified placements after review.</p>
+            <a class="btn" href="/sponsor">Create campaign &rarr;</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FINAL CTA ============ -->
+    <section class="fin">
+      <h2>The wait was always inventory.<br>Now it <span class="hl">pays the developer</span>.</h2>
+      <p>Install SAI, run the agent you already use, and let qualified waits fund your credit ledger &mdash; 60% to you.</p>
+      <div class="hero-ctas">
+        <a class="btn solid" href="#install">Get SAI &uarr;</a>
+        <a class="btn yellow" href="/sponsor">Become a sponsor</a>
+        <a class="btn" href="/auth/google?next=/sponsor">Sign in with Google</a>
+      </div>
+      <div class="tear">&lowast; &lowast; &lowast; &lowast; &lowast; &lowast; &lowast; &lowast; &lowast; &lowast; &lowast; &lowast;</div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="end">
+  <div class="wrap">
+    <span>SAI &middot; backend-authoritative sponsored earnings</span>
+    <span><code>sai privacy schema</code> shows the local event schema</span>
+    <a href="/trust">Trust Boundary</a>
+    <a href="/terms">Terms of Service</a>
+    <a href="/privacy">Privacy Policy</a>
+    <span class="right">made for agent workflows &middot; 2026</span>
+  </div>
+</footer>
+
+<div class="sticky-earn" id="stickyEarn">
+  <a href="#install">
+    <span class="se-dot" aria-hidden="true"></span>
+    <span>&asymp; <b class="num" id="stickyMonth">+32.40</b> credits/mo while your agent thinks</span>
+    <span class="se-go">install &rarr;</span>
+  </a>
+  <button class="se-x" id="seClose" aria-label="Dismiss earnings bar">&times;</button>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- tape marquee: duplicate entries so translateX(-50%) loops seamlessly ---------- */
+  var reel = $("reel");
+  if (reel){ reel.innerHTML += reel.innerHTML; }
+
+  /* ---------- toast + copy buttons ---------- */
+  var toastTimer = null;
+  function toast(msg){
+    var el = $("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.classList.remove("show"); }, 1600);
+  }
+	  document.querySelectorAll(".copy").forEach(function(btn){
+	    btn.addEventListener("click", function(){
+	      if (!navigator.clipboard || !navigator.clipboard.writeText) {
+	        toast("copy unavailable");
+	        return;
+	      }
+	      navigator.clipboard.writeText(btn.dataset.cmd || "").then(function(){
+	        btn.classList.add("ok");
+	        var prev = btn.textContent;
+	        btn.textContent = "copied";
+        setTimeout(function(){ btn.classList.remove("ok"); btn.textContent = prev; }, 1200);
+      }, function(){ toast("copy failed"); });
+    });
+  });
+
+	  /* ---------- calculator (market economics) ---------- */
+	  var MARKET_BID_PER_1000 = 30.00; // launch pricing: sponsor spend per 1,000 qualified placements
+	  var DEV_PER_CARD = 0.018;
+	  var DEV_PER_CLICK = DEV_PER_CARD * 50;
+	  var CARD_GAP = 45;               // normal frequency: seconds each card holds before rotating
+	  function num(value){
+	    var n = Number(value);
+	    return Number.isFinite(n) ? n : null;
+	  }
+	  function setLiveFlag(text, off){
+	    ["calcLiveFlag", "mktFlag"].forEach(function(id){
+	      var flag = $(id);
+	      if (!flag) return;
+	      flag.textContent = text;
+	      flag.classList.toggle("off", Boolean(off));
+	    });
+	  }
+	  function hostFromUrl(value){
+	    try {
+	      return new URL(value).hostname.replace(/^www\./, "");
+	    } catch (_err) {
+	      return String(value || "").replace(/^https?:\/\//, "").split("/")[0] || "sponsoredai.dev";
+	    }
+	  }
+	  function updateMarketNote(text){
+	    $("calcMarketNote").textContent = text;
+	  }
+	  function marketFetchJson(url){
+	    return fetch(url, { cache: "no-store" }).then(function(response){
+	      if (!response.ok) throw new Error("HTTP " + response.status);
+	      return response.json();
+	    });
+	  }
+	  function renderMarketRows(rows, loaded){
+	    var tbody = $("marketRows");
+	    tbody.textContent = "";
+	    var visible = rows.slice(0, 8);
+	    $("marketEmpty").hidden = visible.length > 0;
+	    $("marketUpdated").textContent = loaded ? "live from /v1/market" : "launch pricing";
+	    var liveRows = rows.filter(function(row){ return row && row.status === "LIVE"; });
+	    $("mktLive").textContent = String(liveRows.length);
+	    var topBid = MARKET_BID_PER_1000;
+	    if (liveRows.length) {
+	      topBid = liveRows.reduce(function(best, row){
+	        var bid = num(row.bid_per_1000_qp) || 0;
+	        return bid > best ? bid : best;
+	      }, 0);
+	    }
+	    $("mktBid").textContent = "$" + topBid.toFixed(2);
+	    visible.forEach(function(row){
+	      var tr = document.createElement("tr");
+	      function cell(text, cls){
+	        var td = document.createElement("td");
+	        if (cls) td.className = cls;
+	        td.textContent = text;
+	        return td;
+	      }
+	      var campaign = cell(String(row.campaign || "Sponsor"));
+	      var statusText = String(row.status || "UNKNOWN");
+	      var status = document.createElement("td");
+	      var pill = document.createElement("span");
+	      pill.className = "pill " + statusText.toLowerCase();
+	      pill.textContent = statusText;
+	      status.appendChild(pill);
+	      var bid = cell("$" + (num(row.bid_per_1000_qp) || 0).toFixed(2), "num");
+	      var payout = cell("+" + (num(row.developer_payout) || 0).toFixed(3), "num");
+	      var clickPayout = num(row.developer_click_payout);
+	      if (clickPayout === null) clickPayout = (num(row.developer_payout) || 0) * 50;
+	      var click = cell("+" + clickPayout.toFixed(2), "num");
+	      var left = num(row.remaining_impressions) || 0;
+	      var total = num(row.total_impressions) || 0;
+	      var remaining = document.createElement("td");
+	      remaining.className = "num";
+	      var rem = document.createElement("span");
+	      rem.className = "rem";
+	      var bar = document.createElement("span");
+	      bar.className = "rembar";
+	      var fill = document.createElement("i");
+	      fill.style.width = (total > 0 ? Math.max(0, Math.min(100, left / total * 100)) : 0) + "%";
+	      bar.appendChild(fill);
+	      rem.appendChild(bar);
+	      rem.appendChild(document.createTextNode(left + "/" + total));
+	      remaining.appendChild(rem);
+	      tr.append(campaign, status, bid, payout, click, remaining);
+	      tbody.appendChild(tr);
+	    });
+	  }
+	  function applyMarketPayout(payout){
+	    if (payout.available) {
+	      MARKET_BID_PER_1000 = num(payout.bid_per_1000_qp) || MARKET_BID_PER_1000;
+	      DEV_PER_CARD = num(payout.developer_payout) || DEV_PER_CARD;
+	      DEV_PER_CLICK = num(payout.developer_click_payout) || DEV_PER_CARD * 50;
+	      setLiveFlag("LIVE", false);
+	      $("heroRate").textContent = "live market rate";
+	      updateMarketNote(
+	        "Live payout from /v1/market: " + payout.campaign +
+	        " pays +" + DEV_PER_CARD.toFixed(3) +
+	        " credits per qualified card from a $" + MARKET_BID_PER_1000.toFixed(2) + " bid/block."
+	      );
+	    } else {
+	      DEV_PER_CLICK = DEV_PER_CARD * 50;
+	      setLiveFlag("PROJECTED", true);
+	      $("heroRate").textContent = "launch pricing";
+	      updateMarketNote(
+	        "No funded campaign is live yet — figures are projected at launch pricing ($" +
+	        MARKET_BID_PER_1000.toFixed(2) + " per 1,000 qualified placements), the rate the first sponsors buy at."
+	      );
+	    }
+	    $("mktCard").textContent = "+" + DEV_PER_CARD.toFixed(3);
+	    $("mktClick").textContent = "+" + DEV_PER_CLICK.toFixed(2);
+	    calc();
+	  }
+	  function marketRowToSponsor(row){
+	    var pay = num(row.developer_payout) || 0;
+	    var creative = String(row.creative || "Live sponsor placement");
+	    return {
+	      name: String(row.campaign || "Live Sponsor"),
+	      msg: creative,
+	      url: hostFromUrl(row.url),
+	      pay: pay
+	    };
+	  }
+	  function applyLiveMarket(payload){
+	    if (!payload || typeof payload !== "object") { renderMarketRows([], false); applyMarketPayout({ available: false }); return; }
+	    var rows = Array.isArray(payload.rows) ? payload.rows : [];
+	    renderMarketRows(rows, true);
+	    var payout = payload.live_payout;
+	    if (!payout || typeof payout !== "object") {
+	      var liveRow = rows.find(function(row){ return row && row.status === "LIVE"; });
+	      payout = liveRow ? {
+	        available: true,
+	        campaign: liveRow.campaign,
+	        creative: liveRow.creative,
+	        url: liveRow.url,
+	        bid_per_1000_qp: liveRow.bid_per_1000_qp,
+	        unit_cost: liveRow.unit_cost,
+	        developer_payout: liveRow.developer_payout,
+	        platform_take: liveRow.platform_take,
+	        infra_cost: liveRow.infra_cost
+	      } : { available: false };
+	    }
+	    applyMarketPayout(payout);
+	    var liveSponsors = rows
+	      .filter(function(row){ return row && row.status === "LIVE" && num(row.developer_payout) !== null; })
+	      .slice(0, 3)
+	      .map(marketRowToSponsor);
+	    if (!liveSponsors.length && payout.available && num(payout.developer_payout) !== null) {
+	      liveSponsors = [marketRowToSponsor(payout)];
+	    }
+	    if (liveSponsors.length) {
+	      SPONSORS = liveSponsors;
+	      var top = liveSponsors[0];
+	      $("liveAnatomyPay").textContent = "+" + top.pay.toFixed(3) + " AI credits";
+	      $("liveAnatomySponsor").textContent = top.name;
+	      $("liveAnatomyMsg").textContent = top.msg;
+	      $("liveAnatomyUrl").textContent = top.url + " ↗";
+	    }
+	  }
+	  function calc(){
+	    var minutes = Number($("calcSlider").value);
+	    $("calcMin").textContent = minutes;
+	    var cards = Math.floor(minutes * 60 / CARD_GAP);
+	    var day = cards * DEV_PER_CARD;
+	    var month = day * 30;
+	    $("calcPayout").textContent = "+" + DEV_PER_CARD.toFixed(3);
+	    $("calcCards").textContent = cards;
+	    $("calcClick").textContent = "+" + DEV_PER_CLICK.toFixed(2);
+	    $("calcDay").textContent = "+" + day.toFixed(3);
+	    $("calcMonth").textContent = "+" + month.toFixed(2);
+	    $("calcUsd").textContent = "USD " + month.toFixed(2);
+	    $("heroMonth").textContent = "+" + month.toFixed(2);
+	    $("heroMin").textContent = minutes;
+	    $("stickyMonth").textContent = "+" + month.toFixed(2);
+	  }
+	  $("calcSlider").addEventListener("input", calc);
+	  calc();
+
+	  /* ---------- live market price chart (top bid / 1,000 QP over time) ---------- */
+	  var PRICE_MAX_POINTS = 240;     // ~80 min of in-session ticks at 20s apart
+	  var MARKET_POLL_MS = 20000;
+	  var priceSeries = [];           // [{t: epoch ms, bid: $/1k QP, live: count}]
+	  function fmtUsd(v){ return "$" + (Number(v) || 0).toFixed(2); }
+	  function fmtClock(ms){
+	    var d = new Date(ms);
+	    return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+	  }
+	  function renderPriceChart(){
+	    var svg = $("mcSvg"), empty = $("mcEmpty"), nowEl = $("mcNow");
+	    if (!svg) return;
+	    var pts = priceSeries;
+	    var last = pts.length ? pts[pts.length - 1] : null;
+	    nowEl.innerHTML = fmtUsd(last ? last.bid : 0) + ' <small>/ 1k QP</small>';
+	    var maxBid = pts.reduce(function(m, p){ return p.bid > m ? p.bid : m; }, 0);
+	    if (pts.length < 2 || maxBid <= 0){
+	      svg.innerHTML = "";
+	      svg.style.display = "none";
+	      empty.style.display = "block";
+	      if (last && last.bid > 0) {
+	        empty.textContent = "Live top bid is " + fmtUsd(last.bid) + " / 1,000 QP. Collecting history for the chart.";
+	      } else {
+	        empty.innerHTML = 'Price history begins when the first sponsor funds the book &mdash; currently <b>$0.00 / 1,000 QP</b>, no live demand.';
+	      }
+	      return;
+	    }
+	    svg.style.display = "";
+	    empty.style.display = "none";
+	    var W = 720, H = 220, padL = 12, padR = 66, padT = 16, padB = 26;
+	    var plotW = W - padL - padR, plotH = H - padT - padB;
+	    var t0 = pts[0].t, t1 = pts[pts.length - 1].t, span = Math.max(1, t1 - t0);
+	    var yMax = maxBid * 1.15;
+	    function X(t){ return padL + (t - t0) / span * plotW; }
+	    function Y(v){ return padT + plotH - (v / yMax) * plotH; }
+	    var grid = "", ylab = "";
+	    for (var i = 0; i <= 3; i++){
+	      var gy = padT + plotH - (i / 3) * plotH;
+	      grid += '<line class="mc-grid" x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (padL + plotW) + '" y2="' + gy.toFixed(1) + '"/>';
+	      ylab += '<text class="mc-axis-label" x="' + (padL + plotW + 6) + '" y="' + (gy + 3).toFixed(1) + '">' + fmtUsd(yMax * (i / 3)) + '</text>';
+	    }
+	    var xlab = '<text class="mc-axis-label" x="' + padL + '" y="' + (H - 8) + '">' + fmtClock(t0) + '</text>'
+	             + '<text class="mc-axis-label" x="' + (padL + plotW) + '" y="' + (H - 8) + '" text-anchor="end">' + fmtClock(t1) + '</text>';
+	    function poly(scale){
+	      return pts.map(function(p){ return X(p.t).toFixed(1) + "," + Y(p.bid * scale).toFixed(1); }).join(" ");
+	    }
+	    var devLine = '<polyline class="mc-dev" points="' + poly(0.6) + '"/>';
+	    var bidLine = '<polyline class="mc-bid" points="' + poly(1) + '"/>';
+	    var dot = '<circle class="mc-dot" cx="' + X(t1).toFixed(1) + '" cy="' + Y(last.bid).toFixed(1) + '" r="3.5"/>';
+	    svg.innerHTML = grid + devLine + bidLine + dot + ylab + xlab;
+	  }
+	  function appendPricePoint(bid, live){
+	    priceSeries.push({ t: Date.now(), bid: Number(bid) || 0, live: Number(live) || 0 });
+	    if (priceSeries.length > PRICE_MAX_POINTS) priceSeries = priceSeries.slice(-PRICE_MAX_POINTS);
+	  }
+	  function topLiveBidFrom(payload){
+	    var rows = (payload && Array.isArray(payload.rows)) ? payload.rows : [];
+	    var live = rows.filter(function(r){ return r && r.status === "LIVE"; });
+	    var top = live.reduce(function(m, r){ var b = num(r.bid_per_1000_qp) || 0; return b > m ? b : m; }, 0);
+	    return { bid: top, live: live.length };
+	  }
+	  function seedPriceHistory(){
+	    return marketFetchJson("/v1/market/history")
+	      .then(function(data){
+	        var points = (data && Array.isArray(data.points)) ? data.points : [];
+	        priceSeries = points.map(function(p){
+	          return { t: new Date(p.t).getTime(), bid: num(p.top_bid_per_1000_qp) || 0, live: num(p.live_campaigns) || 0 };
+	        }).filter(function(p){ return isFinite(p.t); });
+	        renderPriceChart();
+	      })
+	      .catch(function(){ /* no history yet; polling will populate the series */ });
+	  }
+	  function pollMarket(){
+	    return marketFetchJson("/v1/market")
+	      .then(function(payload){
+	        applyLiveMarket(payload);
+	        var top = topLiveBidFrom(payload);
+	        appendPricePoint(top.bid, top.live);
+	        renderPriceChart();
+	      })
+	      .catch(function(){
+	        renderMarketRows([], false);
+	        setLiveFlag("PROJECTED", true);
+	        $("marketUpdated").textContent = "market temporarily unavailable";
+	        updateMarketNote("The live market could not be loaded from /v1/market — figures are projected at launch pricing ($" + MARKET_BID_PER_1000.toFixed(2) + " per 1,000 qualified placements).");
+	      });
+	  }
+	  function startMarketPolling(){
+	    pollMarket();
+	    setInterval(function(){ if (!document.hidden) pollMarket(); }, MARKET_POLL_MS);
+	    document.addEventListener("visibilitychange", function(){ if (!document.hidden) pollMarket(); });
+	  }
+
+	  /* live auction strip — a few live numbers; the full order book lives on /market */
+	  function fmtBid2(v){ return "$" + (Number(v) || 0).toFixed(2); }
+	  function loadAuction(){
+	    if (!window.fetch) return;
+	    fetch("/v1/market", { cache: "no-store" })
+	      .then(function(r){ if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+	      .then(function(p){
+	        var rows = (p && Array.isArray(p.rows)) ? p.rows : [];
+	        var live = rows.filter(function(r){ return r && r.status === "LIVE"; });
+	        var topBid = live.reduce(function(m, r){ var b = num(r.bid_per_1000_qp) || 0; return b > m ? b : m; }, 0);
+	        var payout = live.reduce(function(m, r){ var d = num(r.developer_payout) || 0; return d > m ? d : m; }, 0);
+	        if (live.length && payout > 0){ DEV_PER_CARD = payout; DEV_PER_CLICK = payout * 50; }
+	        $("auxLive").textContent = String(live.length);
+	        $("auxBid").textContent = fmtBid2(topBid > 0 ? topBid : MARKET_BID_PER_1000);
+	        $("auxCard").textContent = "+" + DEV_PER_CARD.toFixed(3);
+	        $("auxState").textContent = live.length ? "live auction" : "auction open";
+	        calc();
+	      })
+	      .catch(function(){ $("auxState").textContent = "auction open"; });
+	  }
+	  loadAuction();
+	  setInterval(function(){ if (!document.hidden) loadAuction(); }, 20000);
+
+	  /* ---------- sticky earn bar ---------- */
+	  var stickyBar = $("stickyEarn");
+	  var stickyDismissed = false;
+	  try { stickyDismissed = sessionStorage.getItem("sai_earn_bar") === "off"; } catch (_err) {}
+	  function stickyTick(){
+	    var y = window.scrollY || window.pageYOffset || 0;
+	    var nearBottom = (window.innerHeight + y) > (document.body.scrollHeight - 900);
+	    stickyBar.classList.toggle("show", !stickyDismissed && y > 520 && !nearBottom);
+	  }
+	  $("seClose").addEventListener("click", function(){
+	    stickyDismissed = true;
+	    try { sessionStorage.setItem("sai_earn_bar", "off"); } catch (_err) {}
+	    stickyTick();
+	  });
+	  window.addEventListener("scroll", stickyTick, { passive: true });
+	  stickyTick();
+
+	  /* ---------- hero terminal demo: one pinned sponsor line, like the real CLI ---------- */
+  var SPONSORS = [
+    { name: "Sponsored AI",   msg: "First 24 installs split $120 in real AI credits", url: "sponsoredai.dev", pay: 0.018 },
+    { name: "Your Brand",     msg: "Ship faster agent workflows",                     url: "yourcompany.com", pay: 0.019 },
+    { name: "Launch Partner", msg: "Fund AI credits for real agent sessions",         url: "sponsoredai.dev", pay: 0.017 }
+  ];
+  var body = $("termBody");
+  var pin = $("termPin");
+  var walletEl = $("demoWallet");
+  var chip = $("walletChip");
+  var wallet = 0;
+  var spIdx = 0;
+
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function setWallet(v, bump){
+    wallet = v;
+    walletEl.textContent = wallet.toFixed(3);
+    if (bump && !reducedMotion){
+      chip.classList.add("bump");
+      setTimeout(function(){ chip.classList.remove("bump"); }, 900);
+    }
+  }
+  /* the variant-A sponsor line, mirroring SponsorCard.footer() */
+	  function pinNode(s){
+	    var head = el("span", "pin-head");
+	    head.append(el("span", "s-rail", "\u258c"), document.createTextNode(" "), el("span", "s-tag", "sponsored"), document.createTextNode(" "), el("span", "s-name", String(s.name || "Sponsor")));
+
+	    var mid = el("span", "pin-mid");
+	    mid.append(el("span", "s-sep", "\u00b7"), document.createTextNode(" "), el("span", "s-msg", String(s.msg || "Live sponsor placement")), document.createTextNode(" "), el("span", "s-sep", "\u00b7"));
+
+	    var tail = el("span", "pin-tail");
+	    var link = el("a", "s-link", String(s.url || "sponsoredai.dev") + " \u2197");
+	    link.href = "#";
+	    link.tabIndex = -1;
+	    tail.appendChild(link);
+
+	    var pay = el("span", "pin-pay");
+	    pay.appendChild(el("span", "s-pay", "+" + (num(s.pay) || 0).toFixed(3) + " AI credits"));
+
+	    var frag = document.createDocumentFragment();
+	    frag.append(head, mid, tail, pay);
+	    return frag;
+	  }
+	  function showPin(s){
+	    pin.textContent = "";
+	    pin.appendChild(pinNode(s));
+	    pin.classList.remove("hidden");
+    if (!reducedMotion){ pin.classList.remove("flash"); void pin.offsetWidth; pin.classList.add("flash"); }
+  }
+  function welcomeBox(){
+    var b = el("div", "cc-box");
+    b.innerHTML = '<div><span class="ttl">✻ Claude Code</span> <span class="ver">v2.1.177</span></div>'
+      + '<div>Welcome back</div>'
+      + '<div class="sub">Opus 4.8 (1M context) · ~/projects/api</div>';
+    return b;
+  }
+  function push(node){ body.appendChild(node); body.scrollTop = body.scrollHeight; return node; }
+
+  function staticDemo(){
+    body.textContent = "";
+    push(welcomeBox());
+    var p = push(el("div")); p.appendChild(el("span", "t-dim", "> ")); p.appendChild(document.createTextNode("add retries with backoff to the http client"));
+    push(el("div")).innerHTML = '<span class="ag">⏺</span> I’ll wrap the request client with exponential backoff.';
+    push(el("div")).innerHTML = '<span class="tree">  ⎿  </span><span class="t-dim">Update src/http/client.py (+31 −6)</span>';
+    push(el("div", "t-dim", "✶ Forging… 12s (esc to interrupt)"));
+    showPin(SPONSORS[0]);
+    setWallet(SPONSORS[0].pay, false);
+  }
+  if (reducedMotion){ staticDemo(); return; }
+
+  var timers = [];
+  function after(ms, fn){ timers.push(setTimeout(fn, ms)); }
+
+  function typeLine(node, text, done){
+    var i = 0; var cur = el("span", "t-cursor"); node.appendChild(cur);
+    (function tick(){
+      if (i < text.length){
+        node.insertBefore(document.createTextNode(text[i++]), cur);
+        body.scrollTop = body.scrollHeight;
+        timers.push(setTimeout(tick, 34 + Math.random() * 46));
+      } else { node.removeChild(cur); done(); }
+    })();
+  }
+  var THINK = ["Cogitating", "Reticulating", "Pondering", "Forging"];
+  function think(node, target, qpAt, sponsor, done){
+    var s = 0, shown = false;
+    node.className = "t-dim";
+    (function tick(){
+      s++;
+      node.textContent = "✶ " + THINK[spIdx % THINK.length] + "… " + s + "s (esc to interrupt)";
+      body.scrollTop = body.scrollHeight;
+      /* after ~10s of quiet the line surfaces and stays; it qualifies (>=5s) and pays */
+      if (!shown && s >= qpAt){ shown = true; showPin(sponsor); after(1900, function(){ setWallet(wallet + sponsor.pay, true); }); }
+      if (s < target) timers.push(setTimeout(tick, 150));
+      else done();
+    })();
+  }
+
+  function loop(){
+    timers.forEach(clearTimeout); timers = [];
+    body.textContent = "";
+    push(welcomeBox());
+    var s = SPONSORS[spIdx % SPONSORS.length];
+
+    var p = push(el("div")); p.appendChild(el("span", "t-dim", "> "));
+    typeLine(p, "add retries with backoff to the http client", function(){
+      after(450, function(){
+        push(el("div")).innerHTML = '<span class="ag">⏺</span> I’ll wrap the request client with exponential backoff.';
+        push(el("div")).innerHTML = '<span class="tree">  ⎿  </span><span class="t-dim">Update src/http/client.py (+31 −6)</span>';
+        var t = push(el("div"));
+        after(400, function(){
+          think(t, 9, 4, s, function(){
+            push(el("div")).innerHTML = '<span class="t-ok">✓</span> retries added · tests passing';
+            spIdx++;
+            after(4200, loop);
+          });
+        });
+      });
+    });
+  }
+  loop();
+})();
+</script>
+</body>
+</html>

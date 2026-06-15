@@ -1,31 +1,23 @@
-# Dependencies
-node_modules/
-
-# Release artifacts and binaries
-dist/
-build/
-vendor/
-*.exe
-*.dll
-*.dylib
-*.so
-*.zip
-*.tar.gz
-*.tgz
-*.mp4
-
-# Local config and secrets
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-*.sqlite
-*.sqlite3
-
-# Local tooling
-.DS_Store
-Thumbs.db
-.pytest_cache/
-.ruff_cache/
 __pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+.venv/
+.env
+.sai/
+.sai-test-data/
+.claude/
+.npm-cache/
+npm/*.tgz
+npm/platform/*/bin/
+npm/platform/*.tgz
+npm/vendor/
+node_modules/
+package-lock.json
+sai-promo-x.mp4

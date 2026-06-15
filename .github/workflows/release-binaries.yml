@@ -1,0 +1,159 @@
+name: release binaries
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  pytest:
+    name: pytest (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-2025]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install package
+        run: python -m pip install -e ".[test]"
+      - name: Run tests
+        run: python -m pytest
+
+  python-package:
+    name: wheel smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Build wheel
+        run: |
+          python -m pip install build
+          python -m build
+      - name: Install wheel in clean venv
+        run: |
+          python -m venv .venv-smoke
+          .venv-smoke/bin/python -m pip install dist/*.whl
+          .venv-smoke/bin/sai --version
+
+  build:
+    name: build ${{ matrix.platform }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            pyinstaller_output: dist/sai
+            collect: ""
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+            pyinstaller_output: dist/sai
+            collect: ""
+          - os: windows-2025
+            platform: win32
+            arch: x64
+            pyinstaller_output: dist/sai.exe
+            # pywinpty is a native, lazily-imported dep; --collect-all bundles
+            # its extension + binaries so the frozen exe can drive the ConPTY
+            # compositor instead of silently falling back.
+            collect: "--collect-all winpty"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: python -m pip install -e . pyinstaller
+      - name: Build binary
+        # --exclude-module sai.backend: the sponsor server is server-only and must
+        # never ship inside the client binary. In the public client repo the module
+        # is absent anyway; this keeps the build clean (and any source-repo build
+        # client-only too). The VPS runs the backend from source, not this binary.
+        run: python -m PyInstaller --onefile --name sai --paths src --exclude-module sai.backend ${{ matrix.collect }} scripts/pyinstaller_entry.py
+      - name: Package binary
+        run: python scripts/package_binary.py --source "${{ matrix.pyinstaller_output }}" --output-dir release --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}"
+      - name: Smoke packaged binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "win32" ]; then
+            release/sai-${{ matrix.platform }}-${{ matrix.arch }}.exe --version
+          else
+            release/sai-${{ matrix.platform }}-${{ matrix.arch }} --version
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sai-${{ matrix.platform }}-${{ matrix.arch }}
+          path: release/*
+
+  github-release:
+    name: upload release assets
+    needs: [build, pytest, python-package]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: release
+          merge-multiple: true
+      - name: Upload assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "SAI CLI binaries"
+          gh release upload "$TAG" release/* --clobber
+
+  publish-npm:
+    name: publish npm packages
+    needs: [build, pytest, python-package]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - uses: actions/download-artifact@v7
+        with:
+          path: release
+          merge-multiple: true
+      - name: Stage platform packages
+        run: |
+          node npm/scripts/stage-platform-package.js --target darwin-arm64 --source release/sai-darwin-arm64
+          node npm/scripts/stage-platform-package.js --target linux-x64 --source release/sai-linux-x64
+          node npm/scripts/stage-platform-package.js --target win32-x64 --source release/sai-win32-x64.exe
+      - name: Verify npm package contents
+        run: |
+          npm pack ./npm/platform/darwin-arm64 --dry-run
+          npm pack ./npm/platform/linux-x64 --dry-run
+          npm pack ./npm/platform/win32-x64 --dry-run
+          npm pack ./npm --dry-run
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm view @sponsoredai/cli-darwin-arm64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/darwin-arm64 --access public
+          npm view @sponsoredai/cli-linux-x64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/linux-x64 --access public
+          npm view @sponsoredai/cli-win32-x64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/win32-x64 --access public
+      - name: Publish launcher package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          npm view @sponsoredai/cli@"$VERSION" >/dev/null 2>&1 || npm publish ./npm --access public

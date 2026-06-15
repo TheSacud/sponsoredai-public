@@ -1,9 +1,16 @@
 {
   "name": "@sponsoredai/cli",
-  "version": "0.1.11",
+  "version": "0.2.2",
   "description": "SAI CLI launcher.",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "homepage": "https://sponsoredai.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheSacud/sponsoredai-public.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TheSacud/sponsoredai-public/issues"
+  },
   "bin": {
     "sai": "bin/sai.js"
   },
@@ -16,9 +23,9 @@
     "README.md"
   ],
   "optionalDependencies": {
-    "@sponsoredai/cli-darwin-arm64": "0.1.11",
-    "@sponsoredai/cli-linux-x64": "0.1.11",
-    "@sponsoredai/cli-win32-x64": "0.1.11"
+    "@sponsoredai/cli-darwin-arm64": "0.2.2",
+    "@sponsoredai/cli-linux-x64": "0.2.2",
+    "@sponsoredai/cli-win32-x64": "0.2.2"
   },
   "os": [
     "darwin",

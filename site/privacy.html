@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Privacy Policy - SAI</title>
+<meta name="description" content="Privacy Policy for SAI, the local-first Sponsored AI Credits CLI and sponsor-funded developer credit marketplace.">
+<meta property="og:title" content="SAI - Privacy Policy">
+<meta property="og:description" content="How SAI handles local processing, sponsor telemetry, accounts, payments, and developer credit data.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sponsoredai.dev/privacy">
+<meta property="og:image" content="https://sponsoredai.dev/social-card-v2.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<style>
+  :root{
+    --paper:#f3efe5;
+    --card:#fbf8f1;
+    --ink:#1b1812;
+    --ink-soft:#6b6453;
+    --rule:#d8d1bd;
+    --rule-soft:rgba(27,24,18,.09);
+    --accent:#ffd83d;
+    --earn:#1d7a44;
+    --spend:#bf3a2b;
+    --term:#16140f;
+    --term-ink:#efe9d6;
+    --term-soft:#9a937d;
+    --mono:ui-monospace,"Cascadia Code","Cascadia Mono","JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style",Charter,"Bitstream Charter",Georgia,Cambria,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;scrollbar-gutter:stable}
+  body{
+    font:15px/1.68 var(--mono);
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+    overflow-x:clip;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-image:radial-gradient(rgba(27,24,18,.05) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  ::selection{background:var(--accent);color:var(--ink)}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  a{color:inherit}
+  code{font-family:var(--mono);font-size:.95em}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 28px}
+  header.top{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:1px solid var(--ink)}
+  .bar{max-width:1040px;margin:0 auto;padding:13px 28px;display:flex;align-items:center;gap:14px}
+  .logo{background:var(--ink);color:var(--accent);padding:3px 9px;font-weight:700;letter-spacing:.1em;font-size:14px;text-decoration:none}
+  .wordmark{font-size:10px;letter-spacing:.26em;color:var(--ink-soft);text-transform:uppercase}
+  nav.links{margin-left:auto;display:flex;align-items:center;gap:18px;font-size:12px}
+  nav.links a{text-decoration:none;color:var(--ink-soft)}
+  nav.links a:hover{color:var(--ink);box-shadow:inset 0 -2px 0 0 var(--accent)}
+  .btn{display:inline-block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;border:1.5px solid var(--ink);background:transparent;padding:6px 13px;cursor:pointer;text-decoration:none;font-weight:700}
+  .btn.yellow{background:var(--accent);border-color:var(--ink);color:var(--ink)}
+  .btn:hover,.btn.yellow:hover{background:var(--ink);color:var(--accent)}
+  .hero{padding:58px 0 24px;border-bottom:2px solid var(--ink)}
+  .label{display:inline-block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:14px}
+  h1{font-family:var(--serif);font-size:clamp(36px,5.4vw,64px);line-height:1.06;letter-spacing:-.01em}
+  .dek{margin-top:18px;max-width:70ch;color:var(--ink-soft);font-size:15px}
+  .meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;color:var(--ink-soft);font-size:12px}
+  .meta span{border:1px solid var(--rule);background:var(--card);padding:5px 9px}
+  .privacy-grid{display:grid;grid-template-columns:250px minmax(0,1fr);gap:38px;padding:34px 0 80px;align-items:start}
+  .toc{position:sticky;top:72px;border:1px solid var(--ink);background:var(--card);padding:18px}
+  .toc h2{font-family:var(--serif);font-size:22px;margin-bottom:10px}
+  .toc ol{list-style:none;counter-reset:item;display:grid;gap:8px}
+  .toc li{counter-increment:item;padding-left:0;color:inherit}
+  .toc li::before{content:none}
+  .toc a{display:grid;grid-template-columns:24px 1fr;gap:8px;text-decoration:none;color:var(--ink-soft);font-size:12px}
+  .toc a::before{content:counter(item,decimal-leading-zero);color:var(--ink);font-weight:700}
+  .toc a:hover{color:var(--ink)}
+  .doc{min-width:0}
+  section.clause{padding:30px 0;border-bottom:1px solid var(--rule)}
+  section.clause:first-child{padding-top:0}
+  h2{font-family:var(--serif);font-size:clamp(24px,3vw,34px);line-height:1.2;letter-spacing:-.01em;margin-bottom:14px}
+  h3{font-family:var(--serif);font-size:20px;margin:22px 0 8px}
+  p{margin:12px 0;color:var(--ink-soft)}
+  p strong, li strong{color:var(--ink)}
+  ul{margin:12px 0 0 0;list-style:none;display:grid;gap:8px}
+  li{position:relative;padding-left:18px;color:var(--ink-soft)}
+  li::before{content:"";position:absolute;left:0;top:.75em;width:6px;height:6px;background:var(--accent);border:1px solid var(--ink)}
+  .schema{background:var(--term);color:var(--term-ink);border:1px solid var(--ink);padding:18px 20px;overflow-x:auto;font-size:12px;line-height:1.7;margin:18px 0}
+  .schema .hd{color:var(--term-soft);margin-bottom:8px}
+  .schema .k{color:#d7af5f}
+  .schema .v{color:#efe9d6}
+  .schema .b{color:#7fbf8f}
+  .never{border:1.5px solid var(--ink);background:var(--card);padding:18px 20px;margin:20px 0;display:grid;gap:10px}
+  .never div{display:flex;gap:10px;align-items:baseline;color:var(--ink-soft)}
+  .never strong{color:var(--ink)}
+  .never span{margin-left:auto;color:var(--spend);font-size:10px;letter-spacing:.14em;font-weight:700}
+  .callout{border-left:6px solid var(--accent);background:var(--card);padding:18px 20px;margin:20px 0;color:var(--ink-soft)}
+  footer.end{border-top:1px solid var(--ink)}
+  footer.end .wrap{padding-top:22px;padding-bottom:48px;display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;font-size:11px;color:var(--ink-soft)}
+  footer.end a{color:var(--ink-soft)}
+  footer.end a:hover{color:var(--ink)}
+  footer.end .right{margin-left:auto}
+  @media (max-width:860px){
+    .privacy-grid{grid-template-columns:1fr;gap:22px}
+    .toc{position:static}
+  }
+  @media (max-width:560px){
+    .wrap,.bar{padding-left:18px;padding-right:18px}
+    .wordmark{display:none}
+    .bar{gap:10px;flex-wrap:wrap}
+    nav.links{gap:10px;margin-left:0}
+    .hero{padding-top:42px}
+    .never div{align-items:flex-start;flex-wrap:wrap}
+    .never span{margin-left:0}
+    footer.end .right{margin-left:0}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <a class="logo" href="/">SAI</a>
+    <span class="wordmark">Sponsored AI Credits</span>
+    <nav class="links" aria-label="Legal pages">
+      <a href="/">Home</a>
+      <a href="/market">Market</a>
+      <a href="/trust">Trust</a>
+      <a href="/terms">Terms</a>
+      <a class="btn yellow" href="/sponsor">Become a sponsor</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="hero">
+      <span class="label">Privacy</span>
+      <h1>Privacy Policy</h1>
+      <p class="dek">SAI's privacy rule is simple: measure the pause, not the work. Whether the sponsor line shows in a terminal or as a small banner from the optional SAI desktop overlay over a supported app, SAI validates the wait-state event without sending us prompts, code, terminal logs, model responses, repository URLs, full file paths, shell history, or the titles or contents of any window.</p>
+      <div class="meta">
+        <span>Last updated: June 14, 2026</span>
+        <span>Version 1.1</span>
+      </div>
+    </section>
+
+    <section style="padding:34px 0;border-bottom:2px solid var(--ink)">
+      <span class="label">Common questions</span>
+      <h2 style="margin-top:10px">Fair questions</h2>
+      <div style="max-width:760px">
+        <h3>So&hellip; this is adware?</h3>
+        <p>It&rsquo;s one line of text, in a moment you were staring at a spinner anyway, that pays <strong>you</strong> in AI credits. It appears in interactive terminals, or as a small banner the optional SAI desktop overlay floats over a supported app such as Claude Desktop or the Codex app &mdash; never in CI. It is dismissable, capped in frequency, and you control it from the tray menu, with <code>sai config set frequency low</code>, or <code>sai config kill-switch on</code>, which stops every sponsor surface instantly.</p>
+        <h3>Can you read my code or prompts?</h3>
+        <p>No &mdash; and not as a policy promise, as a mechanism. The runner watches output <strong>timing</strong> through a PTY, never content. Events are sanitized against a fixed schema where <code>code_uploaded</code>, <code>prompt_uploaded</code> and <code>logs_uploaded</code> are hard-coded false. Run <code>sai privacy schema</code> to read the whole contract.</p>
+        <h3>What is a credit actually worth?</h3>
+        <p>One credit pays for one US dollar of AI model usage, prepaid by a sponsor. Credits are server-side developer earnings backed by paid sponsor placements; the local wallet is only a display cache. You spend them on model calls &mdash; OpenRouter for now &mdash; straight from your terminal. During Beta, credited earnings are capped at <strong>USD 5 per installation per hour</strong> to limit abuse.</p>
+      </div>
+    </section>
+
+    <div class="privacy-grid">
+      <aside class="toc" aria-label="Contents">
+        <h2>Contents</h2>
+        <ol>
+          <li><a href="#scope">Scope</a></li>
+          <li><a href="#local">Local Processing</a></li>
+          <li><a href="#collect">Information We Collect</a></li>
+          <li><a href="#website">Website Data</a></li>
+          <li><a href="#use">How We Use Data</a></li>
+          <li><a href="#google">Google User Data</a></li>
+          <li><a href="#share">Data Sharing</a></li>
+          <li><a href="#retention">Retention</a></li>
+          <li><a href="#rights">Your Rights</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#children">Children</a></li>
+          <li><a href="#changes">Changes</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ol>
+      </aside>
+
+      <article class="doc">
+        <section class="clause" id="scope">
+          <h2>1. Scope</h2>
+          <p>This page covers the SAI CLI, sponsoredai.dev, the sponsor console, backend APIs, the credit ledger, the gateway, and related tools.</p>
+          <p>Read it with the <a href="/terms">Terms of Service</a>. If a checkout, order form, or signed agreement has more specific privacy language for a transaction, that more specific language controls that transaction.</p>
+        </section>
+
+        <section class="clause" id="local">
+          <h2>2. Local Processing and the Privacy Boundary</h2>
+          <p>SAI runs on your machine. It looks at timing and local display state: is the terminal interactive, is the agent waiting, did the sponsor line render, and did it stay visible long enough? It does not send SAI the content of the work happening in that terminal.</p>
+          <p>The optional desktop overlay (<code>sai overlay</code>) floats one sponsor banner over a supported desktop app, such as Claude Desktop or the Codex app. To show it honestly and bill only a genuinely visible, attended view, it reads local window state through the operating system: whether a supported app is in the foreground, whether its own banner is actually on screen, and how long since your last keyboard or mouse input. These signals are evaluated locally to decide when to show the banner and when an impression qualifies. SAI does not read the titles or contents of any window, and does not upload which app you were using beyond the surface label below.</p>
+          <p>Any sponsor logo shown in the banner is fetched and cached by SAI server-side and served from sponsoredai.dev, so the sponsor's own servers never receive your request, IP address, user agent, or the timing of when the ad appeared.</p>
+          <div class="never" aria-label="Data SAI does not upload">
+            <div><strong>Prompts</strong><span>NEVER UPLOADED</span></div>
+            <div><strong>Source code</strong><span>NEVER UPLOADED</span></div>
+            <div><strong>Model responses</strong><span>NEVER UPLOADED</span></div>
+            <div><strong>Terminal output or logs</strong><span>NEVER UPLOADED</span></div>
+            <div><strong>Full file paths and repository URLs</strong><span>NEVER UPLOADED</span></div>
+            <div><strong>Shell history and environment variables</strong><span>NEVER UPLOADED</span></div>
+            <div><strong>Window titles or the contents of any app</strong><span>NEVER UPLOADED</span></div>
+            <div><strong>Which app you were using, beyond the surface label</strong><span>NEVER UPLOADED</span></div>
+          </div>
+          <p>The event contract is intentionally small. If a sponsor event includes fields outside the allowed schema, SAI rejects or strips them before recording. You can inspect the contract locally with <code>sai privacy schema</code>.</p>
+          <div class="schema"><div class="hd">// sponsor event payload shape (terminal surface)</div>{
+  <span class="k">"surface"</span>: <span class="v">"cli_agent_wait"</span>,
+  <span class="k">"tool"</span>: <span class="v">"codex"</span>,
+  <span class="k">"event"</span>: <span class="v">"agent_thinking"</span>,
+  <span class="k">"duration_bucket"</span>: <span class="v">"10-30s"</span>,
+  <span class="k">"terminal_interactive"</span>: <span class="b">true</span>,
+  <span class="k">"ci"</span>: <span class="b">false</span>,
+  <span class="k">"country"</span>: <span class="v">"PT"</span>,
+  <span class="k">"code_uploaded"</span>: <span class="b">false</span>,
+  <span class="k">"prompt_uploaded"</span>: <span class="b">false</span>,
+  <span class="k">"logs_uploaded"</span>: <span class="b">false</span>
+}</div>
+          <p>Transport identifiers can also travel with events: installation hash, CLI version, session ID, placement ID, campaign ID, signature, and click token. They let the backend prevent replay, settle credits, and attribute clicks. They are not prompts, commands, paths, code, terminal output, or shell history.</p>
+          <p>The desktop overlay uses the same payload with two differences: <code>"surface"</code> is <code>"desktop_overlay"</code>, and the attested field is <code>"attended_interactive"</code> instead of <code>"terminal_interactive"</code>. The foreground-app identity, on-screen visibility, and idle time it reads stay on your machine; only this small allowlisted schema reaches the backend.</p>
+        </section>
+
+        <section class="clause" id="collect">
+          <h2>3. What Reaches the Backend</h2>
+          <h3>3.1 Account and Sponsor Data</h3>
+          <p>If you sign in or create a sponsor account, SAI stores the basics needed to run that account: email, name, profile picture if your login provider returns one, authentication provider ID, session data, role, sponsor ID, campaign details, destination URLs, bids, budgets, checkout status, and support messages.</p>
+          <h3>3.2 Developer and Installation Data</h3>
+          <p>When the CLI or desktop overlay talks to the backend, SAI can process installation hashes, session identifiers, CLI version, selected tool, the surface (interactive terminal or desktop overlay) and whether the view was attended, placement IDs, event type, duration bucket, approximate country, click tokens, credit balances, settlement state, gateway provisioning state, and provider usage counters needed to debit spendable credits.</p>
+          <h3>3.3 Payment Data</h3>
+          <p>Stripe handles sponsor payments. SAI keeps payment references: Stripe checkout session IDs, payment status, amounts, campaign IDs, top-up IDs, refund or dispute status, and accounting ledger entries. SAI does not store full card numbers.</p>
+          <h3>3.4 Gateway Data</h3>
+          <p>When wallet spend is enabled, the backend can provision or resize a model-provider key and read provider usage counters so the ledger can debit credits. Your model call goes from your machine to the provider with the runtime key. SAI's backend does not proxy or read the prompt and response in that spend flow.</p>
+        </section>
+
+        <section class="clause" id="website">
+          <h2>4. Website Analytics, Logs, and Cookies</h2>
+          <p>The site and backend keep ordinary server logs: time, path, status code, user agent, referrer, and IP-derived network information. Those logs support security, abuse prevention, debugging, uptime work, and aggregate web analytics.</p>
+          <p>Sponsor and admin pages use cookies or similar session tokens so sign-in and OAuth flows work. Public marketing and legal pages can be read without signing in.</p>
+          <p>Current web analytics are server-side log analytics. SAI does not sell visitor data. If third-party analytics or advertising pixels are added later, this policy will be updated and any required controls will be added.</p>
+        </section>
+
+        <section class="clause" id="use">
+          <h2>5. How We Use Information</h2>
+          <ul>
+            <li>Keep the CLI, backend, sponsor console, market, gateway, and website running.</li>
+            <li>Issue placements, verify five-second qualified views, record eligible clicks, and update the backend credit ledger.</li>
+            <li>Handle sponsor checkout, wallet top-ups, refunds, disputes, campaign state, and accounting entries.</li>
+            <li>Provision spend-limited provider keys and debit credits from provider usage counters.</li>
+            <li>Find fraud, duplicate events, cap evasion, payment risk, replay attempts, and security incidents.</li>
+            <li>Send service, account, security, billing, and support messages.</li>
+            <li>Improve reliability, pricing, placement behavior, and product fit.</li>
+            <li>Meet legal, tax, sanctions, accounting, and dispute obligations.</li>
+          </ul>
+        </section>
+
+        <section class="clause" id="google">
+          <h2>6. Google User Data</h2>
+          <p>If you choose Google sign-in, SAI receives basic OpenID profile data: verified email address, name, profile picture, and Google subject ID. That data is used for account login, sponsor/admin access, and account security.</p>
+          <ul>
+            <li>Google user data is not used for ad targeting, retargeting, or profiling.</li>
+            <li>Google user data is not sold or shared with data brokers.</li>
+            <li>Google user data is not used to train AI or machine learning models.</li>
+            <li>Google user data is used only for authentication and related account functionality.</li>
+          </ul>
+        </section>
+
+        <section class="clause" id="share">
+          <h2>7. How We Share Information</h2>
+          <p>SAI does not sell personal information. It does rely on service providers and counterparties:</p>
+          <ul>
+            <li><strong>Stripe</strong> handles checkout, payment processing, refunds, disputes, and payment compliance.</li>
+            <li><strong>Google</strong> handles OAuth sign-in when you choose that login path.</li>
+            <li><strong>Model providers such as OpenRouter</strong> may be used for provider key provisioning and usage synchronization when wallet spend is enabled.</li>
+            <li><strong>Hosting, infrastructure, security, logging, and email providers</strong> support day-to-day operation.</li>
+            <li><strong>Sponsors</strong> receive aggregate campaign reporting: served, rendered, qualified, clicked, and spent counts. They do not receive prompts, source code, terminal output, or full developer work context.</li>
+            <li><strong>Authorities, courts, counterparties, and advisors</strong> may receive information when needed for legal compliance, safety, fraud prevention, corporate transactions, or dispute resolution.</li>
+          </ul>
+        </section>
+
+        <section class="clause" id="retention">
+          <h2>8. Data Retention and Deletion</h2>
+          <p>Account, campaign, payment, credit, and accounting records stay as long as SAI needs them to operate the Service and handle business, legal, tax, audit, fraud-prevention, and dispute needs. Financial and abuse-prevention records can be kept for up to seven years, or longer if law requires it.</p>
+          <p>Server logs and aggregate analytics are kept for operations and security. Aggregated or de-identified data can be kept without a fixed deadline when it no longer reasonably identifies a person.</p>
+          <p>You can ask for deletion. Some records may remain if deleting them would break fraud prevention, security, accounting, legal compliance, or dispute handling.</p>
+        </section>
+
+        <section class="clause" id="rights">
+          <h2>9. Your Privacy Rights</h2>
+          <p>Depending on where you live, you may be able to request access, correction, deletion, portability, restriction, or objection to some processing. California and other U.S. state laws can add rights to know, correct, delete, and opt out of sale or sharing.</p>
+          <p>SAI does not sell personal information. Send rights requests to <a href="mailto:support@sponsoredai.dev">support@sponsoredai.dev</a>. We may verify identity or authority before responding.</p>
+        </section>
+
+        <section class="clause" id="security">
+          <h2>10. Security</h2>
+          <p>SAI uses practical safeguards: encrypted connections, signed sessions, access controls, rate limits, Stripe webhook signature checks, narrow telemetry schemas, and separation between local work content and backend events.</p>
+          <p>No service is perfectly secure. Protect your machine, npm environment, terminal sessions, API keys, browser sessions, and SAI config.</p>
+        </section>
+
+        <section class="clause" id="children">
+          <h2>11. Children</h2>
+          <p>SAI is not for children under 18. If you believe a child sent information to SAI, contact us and we will review it.</p>
+        </section>
+
+        <section class="clause" id="changes">
+          <h2>12. Changes to This Policy</h2>
+          <p>This policy will change as SAI changes. The "Last updated" date shows the current version. For material changes, SAI will try to notify users through the website, account interface, CLI, or email.</p>
+        </section>
+
+        <section class="clause" id="contact">
+          <h2>13. Contact</h2>
+          <p>Questions, privacy requests, and data-protection concerns can go to <a href="mailto:support@sponsoredai.dev">support@sponsoredai.dev</a>.</p>
+        </section>
+      </article>
+    </div>
+  </div>
+</main>
+
+<footer class="end">
+  <div class="wrap">
+    <span>SAI &middot; code, prompts and terminal output stay local</span>
+    <a href="/trust">Trust Boundary</a>
+    <a href="/terms">Terms of Service</a>
+    <span class="right"><a href="/">Back to home</a></span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAI — promo loop (record me)</title>
+<style>
+  :root{
+    --paper:#f3efe5;
+    --card:#fbf8f1;
+    --ink:#1b1812;
+    --ink-soft:#6b6453;
+    --rule:#d8d1bd;
+    --accent:#ffd83d;
+    --earn:#1d7a44;
+    --spend:#bf3a2b;
+    --term:#16140f;
+    --term-ink:#efe9d6;
+    --term-soft:#9a937d;
+    --amber:#d7af5f;
+    --mono:ui-monospace,"Cascadia Code","Cascadia Mono","JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style",Charter,"Bitstream Charter",Georgia,Cambria,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#0c0b08;overflow:hidden}
+
+  /* fixed 16:9 stage (1920x1080), scaled to fit window — record fullscreen */
+  #stage{
+    position:absolute;left:0;top:0;
+    width:1920px;height:1080px;
+    transform-origin:0 0;
+    background:var(--paper);color:var(--ink);
+    font:26px/1.6 var(--mono);
+    overflow:hidden;
+  }
+  #stage::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(rgba(27,24,18,.05) 2px,transparent 2px);
+    background-size:44px 44px;
+  }
+
+  /* top bar */
+  .top{
+    position:absolute;top:0;left:0;right:0;
+    display:flex;align-items:center;gap:24px;
+    padding:30px 64px;border-bottom:2px solid var(--ink);
+    background:var(--paper);z-index:5;
+  }
+  .logo{background:var(--ink);color:var(--accent);padding:6px 18px;font-weight:700;letter-spacing:.1em;font-size:28px}
+  .wordmark{font-size:17px;letter-spacing:.3em;color:var(--ink-soft);text-transform:uppercase}
+  .wallet{
+    margin-left:auto;display:flex;align-items:baseline;gap:14px;
+    border:2.5px solid var(--ink);background:var(--card);padding:10px 22px;
+  }
+  .wallet .label{font-size:15px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
+  .wallet b{font-size:32px;font-variant-numeric:tabular-nums}
+  .wallet small{font-size:16px;color:var(--ink-soft)}
+  .wallet.bump{animation:bump .5s ease}
+  @keyframes bump{30%{background:var(--accent)}}
+
+  /* layout */
+  .main{position:absolute;top:130px;bottom:0;left:0;right:0;display:flex;gap:48px;padding:56px 64px}
+
+  /* terminal */
+  .term{
+    flex:1.45;min-width:0;align-self:stretch;display:flex;flex-direction:column;
+    background:var(--term);color:var(--term-ink);
+    border:2px solid var(--ink);box-shadow:14px 14px 0 0 rgba(27,24,18,.14);
+  }
+  .term-bar{
+    display:flex;align-items:center;gap:14px;
+    padding:18px 26px;border-bottom:2px solid rgba(239,233,214,.14);
+    font-size:20px;color:var(--term-soft);letter-spacing:.08em;
+  }
+  .term-bar i{width:16px;height:16px;border-radius:50%}
+  .term-bar i:nth-child(1){background:var(--spend)}
+  .term-bar i:nth-child(2){background:var(--accent)}
+  .term-bar i:nth-child(3){background:var(--earn)}
+  .term-bar span{margin-left:10px}
+  .term-body{padding:34px;font-size:27px;line-height:1.85;flex:1;white-space:pre-wrap;overflow:hidden}
+  .t-dim{color:var(--term-soft)}
+  .t-ok{color:#7fbf8f}
+  .t-y{color:var(--accent)}
+  .t-cursor{display:inline-block;width:15px;height:30px;background:var(--term-ink);vertical-align:-4px;animation:blink 1.05s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  .t-card{
+    display:block;margin:10px 0;padding:6px 0;
+    opacity:0;transform:translateY(12px);
+    transition:opacity .45s ease,transform .45s ease;
+  }
+  .t-card.on{opacity:1;transform:none}
+  .s-pay{color:#7fbf8f;font-weight:700}
+  .s-name{color:var(--amber);font-weight:700}
+  .s-msg{color:var(--term-ink)}
+  .s-rail{color:var(--amber)}
+  .s-link{color:var(--amber);text-decoration:underline;text-underline-offset:2px}
+
+  /* ledger tape */
+  .tape{
+    flex:1;display:flex;flex-direction:column;
+    background:var(--card);border:2px solid var(--ink);
+    box-shadow:14px 14px 0 0 rgba(27,24,18,.10);
+  }
+  .tape-hd{
+    padding:18px 28px;border-bottom:2px solid var(--ink);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .tape-hd .label{font-size:16px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-soft)}
+  .tape-hd em{font-style:normal;font-size:15px;color:var(--spend);border:2px dashed var(--spend);padding:2px 12px}
+  .tape-body{padding:22px 28px;font-size:23px;flex:1}
+  .tape-body .row{
+    display:flex;gap:18px;padding:10px 0;border-bottom:1.5px dashed var(--rule);
+    font-variant-numeric:tabular-nums;
+    opacity:0;transform:translateY(10px);
+    transition:opacity .4s ease,transform .4s ease;
+  }
+  .tape-body .row.on{opacity:1;transform:none}
+  .row .t{color:var(--ink-soft)}
+  .row .k{flex:1}
+  .row .e{color:var(--earn);font-weight:700}
+  .row .s{color:var(--spend);font-weight:700}
+  .tape-foot{padding:18px 28px;border-top:2px solid var(--ink);font-size:19px;color:var(--ink-soft)}
+  .tape-foot b{color:var(--ink)}
+
+  /* end card */
+  .end{
+    position:absolute;inset:0;z-index:10;
+    background:var(--paper);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:38px;
+    text-align:center;padding:0 120px;
+    opacity:0;pointer-events:none;transition:opacity .7s ease;
+  }
+  .end.on{opacity:1}
+  .end::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:radial-gradient(rgba(27,24,18,.05) 2px,transparent 2px);
+    background-size:44px 44px;
+  }
+  .end .logo{font-size:40px;padding:10px 26px}
+  .end h1{
+    font-family:var(--serif);font-weight:700;position:relative;
+    font-size:88px;line-height:1.08;letter-spacing:-.015em;max-width:18ch;
+  }
+  .end h1 .hl{box-shadow:inset 0 -.16em 0 0 var(--accent)}
+  .end .sub{font-size:28px;color:var(--ink-soft);position:relative}
+  .end .cmd{
+    position:relative;font-size:30px;border:2.5px solid var(--ink);background:var(--term);
+    color:var(--term-ink);padding:20px 40px;box-shadow:12px 12px 0 0 rgba(27,24,18,.14);
+  }
+  .end .cmd .t-y{color:var(--accent)}
+  .end .fine{font-size:20px;color:var(--ink-soft);position:relative;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="top">
+    <span class="logo">SAI</span>
+    <span class="wordmark">Sponsored AI Credits</span>
+    <div class="wallet" id="wallet">
+      <span class="label">Wallet</span>
+      <b id="walletNum">0.000</b><small>credits</small>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="term">
+      <div class="term-bar"><i></i><i></i><i></i><span>~/project — sai claude</span></div>
+      <div class="term-body" id="termBody"></div>
+    </div>
+
+    <div class="tape">
+      <div class="tape-hd"><span class="label">Ledger — today</span><em>CODE STAYS LOCAL</em></div>
+      <div class="tape-body" id="tapeBody"></div>
+      <div class="tape-foot">No prompts, code, logs or terminal output ever leave the machine. <b>Earned waiting, spent thinking.</b></div>
+    </div>
+  </div>
+
+  <div class="end" id="endCard">
+    <span class="logo">SAI</span>
+    <h1>Your agent is thinking.<br>Get <span class="hl">sponsored credits</span> for the wait.</h1>
+    <p class="sub">One quiet sponsor line in the wait state &middot; credits spent straight back on model calls</p>
+    <div class="cmd">$ npm install <span class="t-y">-g @sponsoredai/cli</span></div>
+    <p class="fine">SPONSOREDAI.DEV &middot; OPT-IN &middot; KILL SWITCH ON THE FRONT PAGE</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  // scale 1920x1080 stage to window
+  var stage=document.getElementById('stage');
+  function fit(){
+    var w=document.documentElement.clientWidth,h=document.documentElement.clientHeight;
+    var s=Math.min(w/1920,h/1080);
+    stage.style.transform='scale('+s+')';
+    stage.style.left=Math.round((w-1920*s)/2)+'px';
+    stage.style.top=Math.round((h-1080*s)/2)+'px';
+  }
+  addEventListener('resize',fit);
+  new ResizeObserver(fit).observe(document.documentElement);
+  fit();
+
+  var term=document.getElementById('termBody'),
+      tape=document.getElementById('tapeBody'),
+      wallet=document.getElementById('wallet'),
+      walletNum=document.getElementById('walletNum'),
+      endCard=document.getElementById('endCard');
+
+  var timers=[];
+  function at(t,fn){timers.push(setTimeout(fn,t));}
+
+  function el(html){var d=document.createElement('div');d.innerHTML=html;return d.firstChild;}
+
+  // terminal-style: newest line always visible (content overflows the box in scene 4)
+  function push(node){term.appendChild(node);term.scrollTop=term.scrollHeight;}
+
+  function typeCmd(t0,text,done){
+    var line=el('<div><span class="t-ok">$</span> <span class="typed"></span><span class="t-cursor"></span></div>');
+    at(t0,function(){push(line);});
+    var typed=line.querySelector('.typed');
+    for(let i=0;i<text.length;i++){
+      at(t0+90+i*55,function(){typed.textContent=text.slice(0,i+1);});
+    }
+    at(t0+90+text.length*55+250,function(){
+      line.querySelector('.t-cursor').remove();
+      if(done)done();
+    });
+  }
+
+  function addLine(t,html){at(t,function(){push(el('<div>'+html+'</div>'));});}
+
+  var spinFrames=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+  function spinner(t0,dur,label){
+    var line=el('<div class="t-dim"><span class="sp">⠋</span> '+label+' <span class="secs">0s</span></div>');
+    at(t0,function(){push(line);});
+    var n=Math.floor(dur/90);
+    for(let i=0;i<n;i++){
+      at(t0+i*90,function(){
+        line.querySelector('.sp').textContent=spinFrames[i%spinFrames.length];
+        line.querySelector('.secs').textContent=Math.floor(i*90/1000)+'s';
+      });
+    }
+    return line;
+  }
+
+  function card(t,pay,name,msg,url){
+    var c=el('<span class="t-card"><span class="s-rail">▌</span> <span class="t-dim">sponsored</span> <span class="s-name">'+name+'</span> <span class="t-dim">·</span> <span class="s-msg">'+msg+'</span> <span class="t-dim">·</span> <a class="s-link">'+url+' ↗</a>  <span class="s-pay">'+pay+' AI credits</span></span>');
+    at(t,function(){push(c);requestAnimationFrame(function(){c.classList.add('on');});});
+  }
+
+  var balance=0;
+  function earn(t,amount,key,clock){
+    at(t,function(){
+      balance+=amount;
+      walletNum.textContent=balance.toFixed(3);
+      wallet.classList.remove('bump');void wallet.offsetWidth;wallet.classList.add('bump');
+      var r=el('<div class="row"><span class="t">'+clock+'</span><span class="k">EARN sponsor·'+key+'</span><span class="e">+'+amount.toFixed(3)+'</span></div>');
+      tape.appendChild(r);requestAnimationFrame(function(){r.classList.add('on');});
+    });
+  }
+  function spend(t,amount,key,clock){
+    at(t,function(){
+      balance-=amount;
+      walletNum.textContent=balance.toFixed(3);
+      var r=el('<div class="row"><span class="t">'+clock+'</span><span class="k">SPEND gateway·'+key+'</span><span class="s">−'+amount.toFixed(3)+'</span></div>');
+      tape.appendChild(r);requestAnimationFrame(function(){r.classList.add('on');});
+    });
+  }
+
+  function run(){
+    term.innerHTML='';tape.innerHTML='';
+    balance=0;walletNum.textContent='0.000';
+    endCard.classList.remove('on');
+
+    // scene 1 — launch
+    typeCmd(400,'sai claude');
+    addLine(1600,'<span class="t-dim">sai · gateway up · cards: on · kill switch: armed</span>');
+    addLine(2100,'<span class="t-y">✦</span> Claude is working on your refactor…');
+
+    // scene 2 — wait state, card renders
+    spinner(2800,5200,'thinking…');
+    card(5200,'+0.012','Lumen Cache','Builds that finish before the coffee','lumen.example');
+    earn(6400,0.012,'placement·lumen','09:41');
+
+    // scene 3 — more work, a click pays 50×
+    addLine(8200,'<span class="t-ok">✓</span> 14 files updated · tests passing');
+    spinner(9000,4600,'running test suite…');
+    card(10800,'+0.011','TraceKit','See why the test was slow','tracekit.example');
+    earn(12000,0.011,'placement·tracekit','09:52');
+    addLine(12900,'<span class="t-y">↗</span> card clicked — the sponsor pays 50× the placement rate');
+    earn(13800,0.600,'click·lumen','10:02');
+
+    // scene 4 — spend it back through the gateway
+    addLine(14900,'<span class="t-ok">$</span> sai status');
+    addLine(15600,'<span class="t-dim">gateway localhost:8787/v1 · OpenAI-compatible · spend key provisioned</span>');
+    spend(16300,0.018,'tokens','10:11');
+    addLine(16900,'<span class="t-y">✦</span> Same wait. Now it pays for the next prompt.<span class="t-cursor"></span>');
+
+    // scene 5 — end card
+    at(18600,function(){endCard.classList.add('on');});
+
+    // loop
+    at(24500,function(){timers.forEach(clearTimeout);timers=[];run();});
+  }
+  run();
+})();
+</script>
+</body>
+</html>

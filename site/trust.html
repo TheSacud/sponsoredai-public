@@ -10,7 +10,7 @@
 <meta property="og:description" content="SAI measures the wait, not the work. Prompts, code, terminal output, model responses, screenshots, and window contents stay local.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://sponsoredai.dev/trust">
-<meta property="og:image" content="https://sponsoredai.dev/social-card.png">
+<meta property="og:image" content="https://sponsoredai.dev/social-card-v2.png">
 <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
 <style>
@@ -146,6 +146,7 @@
       <aside class="toc" aria-label="Contents">
         <h2>Contents</h2>
         <ol>
+          <li><a href="#public-repo">Public Repository</a></li>
           <li><a href="#local">What Stays Local</a></li>
           <li><a href="#sent">What Can Be Sent</a></li>
           <li><a href="#overlay">Overlay Qualification</a></li>
@@ -156,6 +157,16 @@
       </aside>
 
       <article class="doc">
+        <section class="clause" id="public-repo">
+          <h2>Public trust repository</h2>
+          <p>SAI keeps a public trust repository for the parts users should be able to inspect without exposing backend anti-abuse, billing, or sponsor-ranking internals.</p>
+          <div class="callout">
+            <strong>GitHub:</strong>
+            <a href="https://github.com/TheSacud/sponsoredai-public" rel="noopener">TheSacud/sponsoredai-public</a>
+          </div>
+          <p>It includes the public data-boundary docs, npm launcher surface, package manifests, and event schemas. It does not include private deployment config, fraud thresholds, sponsor accounting internals, or code that would make qualified-placement spoofing easier.</p>
+        </section>
+
         <section class="clause" id="local">
           <h2>What stays local</h2>
           <p>SAI does not upload developer work context. The terminal runner watches output timing; the desktop overlay checks local window state; neither sends prompts or code to SAI.</p>
@@ -236,6 +247,7 @@ sai overlay both</pre>
 <footer class="end">
   <div class="wrap">
     <span>SAI &middot; public trust boundary</span>
+    <a href="https://github.com/TheSacud/sponsoredai-public" rel="noopener">GitHub</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms of Service</a>
     <span class="right"><a href="/">Back to home</a></span>
