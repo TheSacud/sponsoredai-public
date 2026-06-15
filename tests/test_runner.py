@@ -135,7 +135,7 @@ class RunnerTests(unittest.TestCase):
         runner = CommandRunner({"frequency": "normal"})
         runner._run_windows_pty = mock.Mock(return_value="WPTY")
         runner._run_passthrough = mock.Mock(return_value="PASS")
-        with mock.patch("sai.runner.os.name", "nt"), \
+        with mock.patch("sai.runner._is_windows", return_value=True), \
                 mock.patch("sai.runner.interactive_terminal", return_value=True), \
                 mock.patch("sai.runner._winpty_available", return_value=True):
             result = runner.run(["codex"], tool="codex")
@@ -147,7 +147,7 @@ class RunnerTests(unittest.TestCase):
         runner = CommandRunner({"frequency": "normal"})
         runner._run_windows_pty = mock.Mock()
         runner._run_passthrough = mock.Mock(return_value="PASS")
-        with mock.patch("sai.runner.os.name", "nt"), \
+        with mock.patch("sai.runner._is_windows", return_value=True), \
                 mock.patch("sai.runner.interactive_terminal", return_value=True), \
                 mock.patch("sai.runner._winpty_available", return_value=True):
             result = runner.run([sys.executable, "-c", "pass"], tool="run")
@@ -158,7 +158,7 @@ class RunnerTests(unittest.TestCase):
         runner = CommandRunner({"frequency": "normal"})
         runner._run_windows_pty = mock.Mock()
         runner._run_passthrough = mock.Mock(return_value="PASS")
-        with mock.patch("sai.runner.os.name", "nt"), \
+        with mock.patch("sai.runner._is_windows", return_value=True), \
                 mock.patch("sai.runner.interactive_terminal", return_value=True), \
                 mock.patch("sai.runner._winpty_available", return_value=False):
             result = runner.run(["codex"], tool="codex")

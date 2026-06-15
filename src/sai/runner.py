@@ -29,6 +29,10 @@ WINDOWS_KILL_WAIT_SECONDS = 0.5
 FULLSCREEN_TUI_TOOLS = {"claude", "codex"}
 
 
+def _is_windows() -> bool:
+    return os.name == "nt"
+
+
 @dataclass(frozen=True)
 class RunReceipt:
     exit_code: int
@@ -126,7 +130,7 @@ class CommandRunner:
                 billing_lock.release()
 
     def _dispatch(self, command: Sequence[str], tool: str) -> RunReceipt:
-        if os.name == "nt":
+        if _is_windows():
             # On Windows a full-screen agent TUI clobbers an overlay, so pin the
             # ad via a ConPTY compositor. Other tools / non-interactive runs keep
             # the passthrough path. If pywinpty is missing, degrade gracefully.
