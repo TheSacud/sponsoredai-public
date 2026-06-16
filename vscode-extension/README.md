@@ -45,7 +45,7 @@ npm install -g @sponsoredai/cli
 
 ## Install The Extension
 
-After Marketplace publication, install `Sacud.sai-sponsored-ai-credits` from VS Code. Tagged GitHub releases also attach a `.vsix` package that can be installed with VS Code's "Install from VSIX..." command.
+After Marketplace publication, install `Sacud.sponsoredai-credits` from VS Code. Tagged GitHub releases also attach a `.vsix` package that can be installed with VS Code's "Install from VSIX..." command.
 
 ## Privacy And Security
 

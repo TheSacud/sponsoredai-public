@@ -119,7 +119,7 @@ The VS Code extension lives in [`vscode-extension/`](vscode-extension/). It adds
   balance and labels local-only balances as unconfirmed.
 - A SAI activity-bar sponsor view for attended Claude/Codex wait states.
 
-Install it from the VS Code Marketplace as `Sacud.sai-sponsored-ai-credits`
+Install it from the VS Code Marketplace as `Sacud.sponsoredai-credits`
 after publication, or install the `.vsix` attached to a tagged GitHub release.
 
 ## Logs and error triage

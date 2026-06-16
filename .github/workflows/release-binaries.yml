@@ -125,8 +125,9 @@ jobs:
             echo "VSCE_PAT is not configured; skipping Marketplace publish."
             exit 0
           fi
+          NAME="$(node -p "require('./package.json').name")"
           VERSION="$(node -p "require('./package.json').version")"
-          npx vsce publish --packagePath "sai-sponsored-ai-credits-${VERSION}.vsix"
+          npx vsce publish --packagePath "${NAME}-${VERSION}.vsix"
       - uses: actions/upload-artifact@v7
         with:
           name: sai-vscode-extension

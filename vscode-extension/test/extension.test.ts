@@ -78,6 +78,7 @@ function readPackageManifest() {
   return JSON.parse(
     fs.readFileSync(path.join(__dirname, "..", "..", "package.json"), "utf8")
   ) as {
+    name: string;
     version: string;
     activationEvents?: string[];
     contributes: {
@@ -203,6 +204,7 @@ test("registers SAI commands on activation", () => {
 test("manifest keeps sensitive settings machine-scoped and hides dev preview", () => {
   const manifest = readPackageManifest();
   const properties = manifest.contributes.configuration.properties;
+  assert.equal(manifest.name, "sponsoredai-credits");
   assert.equal(manifest.version, "0.0.1");
   assert.equal(properties["sai.cliPath"].scope, "machine");
   assert.equal(properties["sai.gateway.host"].scope, "machine");
