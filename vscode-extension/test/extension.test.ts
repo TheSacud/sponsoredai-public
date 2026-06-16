@@ -79,6 +79,7 @@ function readPackageManifest() {
     fs.readFileSync(path.join(__dirname, "..", "..", "package.json"), "utf8")
   ) as {
     name: string;
+    displayName: string;
     version: string;
     activationEvents?: string[];
     contributes: {
@@ -205,6 +206,7 @@ test("manifest keeps sensitive settings machine-scoped and hides dev preview", (
   const manifest = readPackageManifest();
   const properties = manifest.contributes.configuration.properties;
   assert.equal(manifest.name, "sponsoredai-credits");
+  assert.equal(manifest.displayName, "SAI Credits by Sacud");
   assert.equal(manifest.version, "0.0.1");
   assert.equal(properties["sai.cliPath"].scope, "machine");
   assert.equal(properties["sai.gateway.host"].scope, "machine");
