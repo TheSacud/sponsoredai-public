@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Your wallet — SAI</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
+<link rel="stylesheet" href="sai-core-v3.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="/"><span class="mark">S</span>SAI <small>Sponsored AI Credits</small></a>
+    <nav class="links" aria-label="Account">
+      <a class="nl" href="/market">Market</a>
+      <a class="nl" href="/sponsor">Sponsor</a>
+      <span class="walletchip"><span class="d"></span> wallet <b class="num">2.34</b></span>
+      <span class="userchip"><span class="av">D</span> <b>Duarte</b></span>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="band">
+    <div class="wrap page-head">
+      <div class="sec-h" style="margin-bottom:20px">
+        <span class="eyebrow">Your wallet</span>
+        <h1>Earned while your agent thought.</h1>
+        <p>Spend credits on model calls from the same terminal, or cash out eligible balance. <span class="note">Sample data for layout — wire to <code>/v1/me</code> in prod.</span></p>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="k">available</div><div class="v g num">2.34</div><div class="sub">credits · ≈ $2.34</div></div>
+        <div class="kpi"><div class="k">pending</div><div class="v num">0.41</div><div class="sub">awaiting settle</div></div>
+        <div class="kpi"><div class="k">lifetime earned</div><div class="v num">18.90</div><div class="sub">since install</div></div>
+        <div class="kpi"><div class="k">this month</div><div class="v g num">6.12</div><div class="sub">+38% vs last</div></div>
+        <div class="kpi"><div class="k">qualified cards · 30d</div><div class="v num">340</div><div class="sub">71% qualify rate</div></div>
+        <div class="kpi"><div class="k">avg / active day</div><div class="v num">0.51</div><div class="sub">credits</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band darker sec">
+    <div class="wrap">
+      <div class="grid2">
+        <!-- ledger -->
+        <div class="panel">
+          <div class="panel-h"><h3>Earnings ledger</h3><span class="flag live">live</span></div>
+          <table>
+            <thead><tr><th>Time</th><th>Surface</th><th>Event</th><th>Status</th><th>Amount</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">10:55</td><td>overlay · Claude</td><td>qualified 5s</td><td><span class="pill pending">pending</span></td><td class="g num">+0.018</td></tr>
+              <tr><td class="mono">10:31</td><td>terminal · Codex</td><td>click 50×</td><td><span class="pill live">available</span></td><td class="g num">+0.90</td></tr>
+              <tr><td class="mono">10:26</td><td>terminal · Claude</td><td>qualified 5s</td><td><span class="pill live">available</span></td><td class="g num">+0.018</td></tr>
+              <tr><td class="mono">10:07</td><td>overlay · Codex</td><td>qualified 5s</td><td><span class="pill live">available</span></td><td class="g num">+0.013</td></tr>
+              <tr><td class="mono">09:52</td><td>terminal · Claude</td><td>qualified 5s</td><td><span class="pill live">available</span></td><td class="g num">+0.011</td></tr>
+              <tr><td class="mono">09:41</td><td>overlay · Claude</td><td>spend · model call</td><td><span class="pill paid">spent</span></td><td class="num" style="color:var(--spend)">−0.40</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- side -->
+        <div class="stack">
+          <div class="card pad">
+            <div class="eyebrow" style="margin-bottom:12px">Cash-out</div>
+            <p class="muted" style="font-size:14px">Move eligible balance to your bank via Stripe Connect after threshold and review.</p>
+            <div class="row" style="justify-content:space-between;margin:16px 0 6px">
+              <span class="muted">Stripe Connect</span><span class="pill pending">not connected</span>
+            </div>
+            <div class="bar" style="width:100%"><i style="width:9%"></i></div>
+            <p class="note" style="margin-top:8px">$2.34 of $25.00 minimum eligible balance.</p>
+            <a class="btn dark lg block" href="#" style="margin-top:16px">Connect Stripe to cash out →</a>
+            <p class="note" style="margin-top:10px">Or keep spending credits on model calls — no threshold.</p>
+          </div>
+
+          <div class="card pad">
+            <div class="eyebrow" style="margin-bottom:12px">Controls</div>
+            <div class="stack" style="gap:12px">
+              <div class="row" style="justify-content:space-between"><span>Card frequency</span><b class="mono">normal · ≥45s</b></div>
+              <div class="row" style="justify-content:space-between"><span>Surfaces</span><b class="mono">terminal + overlay</b></div>
+              <div class="row" style="justify-content:space-between"><span>Kill switch</span><span class="pill live">armed</span></div>
+              <code class="miniterm" style="display:block">$ sai config kill-switch on</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>SAI · backend-authoritative sponsored earnings</span>
+    <a href="/trust">Trust</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <span class="r">your code never leaves your machine · 2026</span>
+  </div>
+</footer>
+
+</body>
+</html>

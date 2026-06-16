@@ -11,7 +11,9 @@ dist/
 .venv/
 .env
 .sai/
+.sai-mock/
 .sai-test-data/
+.tmp/
 .claude/
 .npm-cache/
 npm/*.tgz

@@ -160,6 +160,7 @@ class CliWiringTests(unittest.TestCase):
     def test_parser_accepts_positional_codex_and_both_targets(self):
         self.assertEqual(build_parser().parse_args(["overlay", "codex"]).target, "codex")
         self.assertEqual(build_parser().parse_args(["overlay", "both"]).target, "both")
+        self.assertEqual(build_parser().parse_args(["overlay", "mock"]).target, "mock")
 
     def test_parser_keeps_legacy_target_flag(self):
         self.assertEqual(build_parser().parse_args(["overlay", "--target", "codex"]).target_option, "codex")
@@ -170,6 +171,7 @@ class CliWiringTests(unittest.TestCase):
             (["overlay"], {"target": "claude", "anchor": "top", "billable": True}),
             (["overlay", "codex"], {"target": "codex", "anchor": "top", "billable": True}),
             (["overlay", "both", "--no-bill"], {"target": "both", "anchor": "top", "billable": False}),
+            (["overlay", "mock"], {"target": "mock", "anchor": "top", "billable": False}),
             (["overlay", "--target", "codex"], {"target": "codex", "anchor": "top", "billable": True}),
         ]
         for argv, expected in cases:
@@ -183,6 +185,7 @@ class CliWiringTests(unittest.TestCase):
         self.assertIsNotNone(_target_matcher("claude"))
         self.assertIsNotNone(_target_matcher("codex"))
         self.assertIsNotNone(_target_matcher("both"))
+        self.assertIsNotNone(_target_matcher("mock"))
         self.assertIsNone(_target_matcher("nonsense"))
 
 

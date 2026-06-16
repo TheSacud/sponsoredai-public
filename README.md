@@ -1,12 +1,14 @@
 # SAI — Sponsored AI Credits (client)
 
-SAI turns coding-agent wait states into sponsor-funded AI credits.
+SAI lets developers earn sponsor-funded AI credits or cash-out eligible balance
+while Claude Code, Codex, and long-running AI agent workflows wait.
 
 It wraps terminal AI workflows such as Codex CLI, Claude Code, and long-running
 commands, and can run a small desktop overlay over supported apps such as Claude
 Desktop and the Codex app. When an agent is waiting, SAI shows one quiet sponsor
 placement, records a qualified view, and credits the developer through the
-server-side earnings ledger.
+server-side earnings ledger. Eligible balances can be spent on model calls or
+requested as cash-out through Stripe Connect after threshold and review.
 
 ```text
 Service:        https://sponsoredai.dev
@@ -106,6 +108,19 @@ Override the backend URL for local testing:
 sai config set backend-url http://127.0.0.1:8790
 sai config set backend-url none
 ```
+
+## VS Code extension
+
+The VS Code extension lives in [`vscode-extension/`](vscode-extension/). It adds:
+
+- Command Palette launchers for `sai codex`, `sai claude`, `sai overlay both`,
+  the wallet, dashboard, refresh, and CLI install.
+- A status bar wallet readout that prefers the backend-confirmed spendable
+  balance and labels local-only balances as unconfirmed.
+- A SAI activity-bar sponsor view for attended Claude/Codex wait states.
+
+Install it from the VS Code Marketplace as `Sacud.sai-sponsored-ai-credits`
+after publication, or install the `.vsix` attached to a tagged GitHub release.
 
 ## Logs and error triage
 

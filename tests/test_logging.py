@@ -51,8 +51,17 @@ class LoggingTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             self.assertIn("Captured test exception", text)
             self.assertIn("RuntimeError: test failure", text)
+            self.assertIn("service=test", text)
             self.assertEqual(tail_log_lines(1), text.rstrip("\n").splitlines()[-1:])
             reset_logging_for_tests()
+
+    def test_invalid_log_level_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            os.environ["SAI_HOME"] = tmp
+            os.environ["SAI_LOG_LEVEL"] = "DEBG"
+
+            with self.assertRaises(ValueError):
+                configure_logging(service="test")
 
 
 if __name__ == "__main__":

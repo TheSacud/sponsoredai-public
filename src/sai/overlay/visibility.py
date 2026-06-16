@@ -128,6 +128,20 @@ def codex_desktop_matcher() -> TargetMatcher:
     )
 
 
+def mock_foreground_matcher() -> TargetMatcher:
+    """Development-only matcher: accept whichever real app is foreground.
+
+    This is intentionally broad so a local mock overlay can be visually tested
+    without installing Claude Desktop or the Codex desktop app. The CLI forces
+    this target into credit-0 mode, so it cannot create billable impressions.
+    """
+
+    def match(path: str) -> bool:
+        return bool(path)
+
+    return match
+
+
 class VisibilityMonitor:
     def __init__(
         self,

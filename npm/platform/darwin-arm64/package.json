@@ -1,9 +1,17 @@
 {
   "name": "@sponsoredai/cli-darwin-arm64",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "macOS arm64 binary for @sponsoredai/cli.",
   "license": "AGPL-3.0-or-later",
   "homepage": "https://sponsoredai.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheSacud/sponsoredai-public.git",
+    "directory": "npm/platform/darwin-arm64"
+  },
+  "bugs": {
+    "url": "https://github.com/TheSacud/sponsoredai-public/issues"
+  },
   "os": [
     "darwin"
   ],

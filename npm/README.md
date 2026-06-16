@@ -1,5 +1,9 @@
 # SAI CLI
 
+Earn sponsor-funded AI credits or cash-out eligible balance while Claude Code
+and Codex wait. SAI is a local-first terminal wrapper and desktop overlay; your
+prompts, code, logs, and output stay on your machine.
+
 Open-source client (AGPL-3.0): https://github.com/TheSacud/sponsoredai-public
 
 Install SAI from npm:
@@ -71,6 +75,10 @@ Windows x64 -> @sponsoredai/cli-win32-x64
 
 When you run `sai`, the launcher finds that platform package and executes the
 bundled binary. There is no separate binary download during install.
+
+The launcher package does not run npm lifecycle scripts during installation. It
+does not use `preinstall`, `install`, or `postinstall`; platform support is
+checked by the `sai` launcher when you run it.
 
 ## Requirements
 

@@ -1,0 +1,118 @@
+/* ============================================================
+   SAI — v3 reskin layer (preview)
+   Re-skins the legacy editorial pages (market, demo, trust,
+   privacy, terms, promo) into the bold v3 system used by the
+   new index: warm palette, heavy sans display type, rounded
+   cards, hard-offset yellow buttons, dark rounded terminals.
+   Loaded AFTER each page's inline <style>; markup + JS untouched.
+   ============================================================ */
+
+:root{
+  --paper:#f3efe5;--paper-2:#ece4d2;--card:#fbf8f1;--ink:#1b1812;--ink-soft:#5d5747;
+  --rule:#d8d1bd;--rule-soft:rgba(27,24,18,.10);--accent:#ffd83d;--accent-deep:#e9c21f;
+  --earn:#1d7a44;--term:#16140f;--term-ink:#efe9d6;--term-soft:#9a937d;--coral:#d97757;
+  --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --v3sh:5px 5px 0 0 rgba(27,24,18,.16);
+  --v3sh-lg:8px 8px 0 0 rgba(27,24,18,.16);
+  --v3r:13px;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+
+/* ---- base type: body → sans, keep mono for terminal/data bits ---- */
+body{font-family:var(--sans)!important;line-height:1.6}
+nav.links,.btn,.dek,p,.cta p,.cta h3,.market-empty,.priv-note,.anat-note,.step p,.facts,.trust{font-family:var(--sans)}
+code,pre,.schema,.term,.term-bar,.tbody,.cmds,.cmd,.cmd code,.label,.sec-head .note,.note,.pill,.tag,.kicker .tag,.toggle,.copy,.market-status,.cap-flag,.mc-axis-label,.mc-title,.aux-state,.aux-stat,.f-tag,.no,.never .no,.wordmark,.meta span,.flag{font-family:var(--mono)!important}
+
+/* ---- headings → heavy sans display ---- */
+h1{font-family:var(--sans)!important;font-weight:800!important;letter-spacing:-.035em!important;line-height:1.0!important}
+h2,h3,.sec-head h2,.toc h2,section.clause h2,.fin h2,.calc-in h3,.step h3,.calc-out h3,.sponsor-status h3,.cta h3,.stage-head .label{font-family:var(--sans)!important;font-weight:800!important;letter-spacing:-.02em!important}
+h3{letter-spacing:-.01em!important}
+.dek{font-size:16px;color:var(--ink-soft)}
+
+/* ---- top bar (v3) ---- */
+header.top{background:rgba(243,239,229,.82)!important;-webkit-backdrop-filter:saturate(1.3) blur(10px);backdrop-filter:saturate(1.3) blur(10px);border-bottom:1px solid var(--ink)}
+.logo{border-radius:7px!important}
+nav.links a:not(.btn){position:relative;font-weight:500}
+nav.links a:not(.btn):hover{box-shadow:none}
+nav.links a:not(.btn)::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .2s var(--ease)}
+nav.links a:not(.btn):hover::after{transform:scaleX(1)}
+
+/* ---- buttons (v3 rounded + hard-offset yellow) ---- */
+.btn{border-radius:9px!important;border:1.5px solid var(--ink)!important;text-transform:none!important;letter-spacing:0!important;font-weight:700!important;font-size:13px!important;padding:9px 16px!important;transition:transform .14s var(--ease),box-shadow .14s var(--ease),background .14s,color .14s!important}
+.btn:hover{transform:translateY(-2px)}
+.btn.yellow{background:var(--accent)!important;color:var(--ink)!important;box-shadow:0 5px 0 0 var(--accent-deep)}
+.btn.yellow:hover{background:var(--accent)!important;color:var(--ink)!important;box-shadow:0 7px 0 0 var(--accent-deep)}
+.btn.yellow:active{transform:translateY(2px);box-shadow:0 2px 0 0 var(--accent-deep)}
+.btn:not(.yellow):hover{background:var(--ink)!important;color:var(--paper)!important}
+.aux-cta{border-radius:8px!important}
+
+/* ---- hero / section heads ---- */
+.hero h1,.hero-copy h1{margin-top:8px}
+.label{display:inline-flex;align-items:center;gap:8px;color:var(--ink-soft)}
+.sec-head{border-bottom:2px solid var(--ink)}
+.sec-head h2{position:relative;padding-left:18px}
+.sec-head h2::before{content:"";position:absolute;left:0;top:.2em;width:9px;height:.7em;background:var(--accent);border:1.5px solid var(--ink);border-radius:2px}
+.meta span{border-radius:999px;border-color:var(--rule)}
+
+/* ---- generic cards → rounded + depth ---- */
+.cta,.mkt-stat,.market-board,.market-chart,.step,.cred-def,.calc-in,.calc-out,
+.never-card,.sp-facts,.sponsor-status,.works,.toc,.callout,.never,.kill-note,
+.stage,.flow-step,details{
+  border-radius:var(--v3r)!important;
+}
+.mkt-stat,.step,.cred-def,.calc-in,.market-board,.market-chart,.never-card,.toc,.works,.cta,.stage,.sponsor-status{
+  border:1.5px solid var(--ink)!important;box-shadow:var(--v3sh);
+}
+.mkt-stat,.step,.flow-step{transition:transform .16s var(--ease),box-shadow .16s var(--ease)}
+.mkt-stat:hover,.step:hover,.flow-step:hover{transform:translateY(-3px);box-shadow:var(--v3sh-lg)}
+.sponsor-status{box-shadow:var(--v3sh-lg)}
+
+/* ---- dark rounded terminals / schema / command block ---- */
+.term,.schema,.cmds,.ovl-stage{border-radius:var(--v3r)!important;border:1.5px solid var(--ink)!important}
+.term,.cmds{box-shadow:var(--v3sh)}
+.schema{box-shadow:var(--v3sh)}
+.term-bar{border-top-left-radius:var(--v3r);border-top-right-radius:var(--v3r)}
+
+/* ---- market table ---- */
+.market-board table{font-family:var(--sans)}
+.market-board th{font-family:var(--mono)!important}
+.pill{border-radius:999px!important}
+.rembar{border-radius:999px;overflow:hidden}
+.cap-flag{border-radius:999px!important}
+.market-status{font-weight:700}
+
+/* ---- legal / trust: TOC + clauses ---- */
+.toc{padding:20px 22px}
+.toc h2{font-size:18px!important;margin-bottom:12px}
+.toc a{transition:transform .14s var(--ease)}
+.toc a:hover{transform:translateX(2px)}
+section.clause{scroll-margin-top:84px}
+.callout{border-radius:var(--v3r)!important;border-left:5px solid var(--accent)}
+.never{border:1.5px solid var(--ink)!important;box-shadow:var(--v3sh)}
+.dek + .meta{margin-top:20px}
+
+/* ---- demo: toggle + chips + stage ---- */
+.toggle{border-radius:999px!important;overflow:hidden}
+.toggle button{font-family:var(--mono)!important;text-transform:none}
+.kicker .tag,.tag{border-radius:999px!important;background:var(--card);border:1px solid var(--ink)}
+.kicker .tag.spin{border-color:var(--earn)}
+.runs .chip,.chip{border-radius:999px!important}
+.cmd .copy,.copy{border-radius:7px!important}
+.ctas .btn{border-radius:11px!important}
+
+/* ---- FAQ (if present) ---- */
+details{border-radius:var(--v3r)!important;border:1.5px solid var(--rule)}
+details[open]{border-color:var(--ink);box-shadow:var(--v3sh)}
+
+/* ---- footer (v3) ---- */
+footer.end{border-top:1px solid var(--ink);background:var(--card)}
+footer.end .wrap{font-family:var(--mono)}
+
+/* ---- final CTA emphasis ---- */
+.fin{border-top:2px solid var(--ink)}
+.fin h2 .hl,.hl{box-shadow:inset 0 -.16em 0 0 var(--accent)}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition:none!important}
+  .mkt-stat:hover,.step:hover,.flow-step:hover,.toc a:hover{transform:none}
+}

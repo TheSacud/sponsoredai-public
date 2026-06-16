@@ -41,12 +41,23 @@ def open_url(url: str | None) -> bool:
     scheme is refused and an OS-level open failure is swallowed, so callers in a
     UI/event loop can safely ignore the result.
     """
+    try:
+        parsed = urlparse(url or "")
+    except ValueError:
+        parsed = urlparse("")
     if not is_safe_url(url):
-        logger.warning("refusing to open non-http(s) url: %r", url)
+        logger.warning(
+            "refusing to open unsafe url scheme=%s host=%s",
+            parsed.scheme or "-",
+            parsed.netloc or "-",
+        )
         return False
     try:
-        webbrowser.open(url)
+        opened = webbrowser.open(url)
     except OSError:
-        logger.debug("failed to open url", exc_info=True)
+        logger.debug("failed to open url scheme=%s host=%s", parsed.scheme, parsed.netloc, exc_info=True)
+        return False
+    if not opened:
+        logger.warning("browser open returned false scheme=%s host=%s", parsed.scheme, parsed.netloc)
         return False
     return True

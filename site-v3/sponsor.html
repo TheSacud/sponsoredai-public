@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Become a sponsor — SAI</title>
+<meta name="description" content="Create a campaign and buy qualified coding-agent wait states. Public bids, Stripe Checkout, 60% to developers.">
+<link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
+<link rel="stylesheet" href="sai-core-v3.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <a class="brand" href="/"><span class="mark">S</span>SAI <small>Sponsored AI Credits</small></a>
+    <nav class="links" aria-label="Sections">
+      <a class="nl" href="/">Home</a>
+      <a class="nl" href="/market">Market</a>
+      <a class="btn ghost" href="/auth/login">Sign in</a>
+      <a class="btn yellow" href="#create">Create a campaign</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="band">
+    <div class="wrap page-head">
+      <div class="sec-h" style="margin-bottom:18px">
+        <span class="eyebrow">For sponsors</span>
+        <h1>Buy the most-watched wait on Earth.</h1>
+        <p>Reach developers during real coding-agent wait states — counted only when the placement is visible and attended, never in CI. Public bids, Stripe Checkout, <b>60% of every dollar</b> to the developer whose machine showed the card.</p>
+      </div>
+      <div class="kpis" style="max-width:760px">
+        <div class="kpi"><div class="k">top bid / 1k</div><div class="v num">$30.00</div><div class="sub">launch pricing</div></div>
+        <div class="kpi"><div class="k">funded live</div><div class="v num">0</div><div class="sub">book is open</div></div>
+        <div class="kpi"><div class="k">developer share</div><div class="v g num">60%</div><div class="sub">40% platform</div></div>
+        <div class="kpi"><div class="k">click multiplier</div><div class="v num">50×</div><div class="sub">eligible clicks</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band darker sec" id="create">
+    <div class="wrap">
+      <div class="grid2">
+        <!-- form -->
+        <div class="panel">
+          <div class="panel-h"><h3>Create a campaign</h3><span class="flag">draft</span></div>
+          <div class="panel-b">
+            <form class="form" onsubmit="return false">
+              <div class="two">
+                <div class="field"><label for="spBrand">Sponsor / brand</label><input id="spBrand" type="text" value="Lumen Cache" maxlength="40"></div>
+                <div class="field"><label for="spCampaign">Campaign name</label><input id="spCampaign" type="text" value="Q3 developer launch" maxlength="60"></div>
+              </div>
+              <div class="field">
+                <label for="spCreative">Creative copy <span class="hint">(<span id="spChars">24</span>/80)</span></label>
+                <input id="spCreative" type="text" value="Builds that finish first" maxlength="80">
+                <span class="hint">One quiet line. No images, no autoplay — just text + a destination.</span>
+              </div>
+              <div class="field"><label for="spUrl">Destination URL</label><input id="spUrl" type="url" value="https://lumen.dev"></div>
+              <div class="field">
+                <label for="spBid">Bid per 1,000 qualified placements — <span class="num" id="spBidOut">$30.00</span></label>
+                <input id="spBid" type="range" min="1" max="120" step="1" value="30">
+                <span class="hint">Highest bid serves first. Developer earns <b class="num" id="spDevCard">+0.018</b> / card · <b class="num" id="spDevClick">+0.90</b> / eligible click.</span>
+              </div>
+              <div class="field">
+                <label for="spBudget">Budget</label>
+                <div class="inline"><span class="pre">$</span><input id="spBudget" type="number" value="500" min="10" step="10"></div>
+                <span class="hint">Buys <b class="num" id="spImps">16,667</b> qualified placements at this bid.</span>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- preview + summary -->
+        <div class="stack">
+          <div class="panel">
+            <div class="panel-h"><h3>Live preview</h3><span class="flag">both surfaces</span></div>
+            <div class="panel-b stack" style="gap:14px">
+              <div class="ovl-banner">
+                <span class="ic"><img src="favicon.png" alt=""></span>
+                <span style="color:#8b8b92">sponsored</span>
+                <span class="b" id="pvBrand">Lumen Cache</span>
+                <span style="color:#55524c">·</span>
+                <span id="pvMsg" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">Builds that finish first</span>
+                <span class="pay num" id="pvPay">+0.018</span>
+              </div>
+              <div class="miniterm">
+                <div><span class="dim">$</span> sai claude</div>
+                <div><span class="coral">✶</span> <span class="dim">Forging… 11s</span></div>
+                <div style="margin-top:4px"><span class="y">▌</span> <span class="dim">sponsored</span> <span class="y" id="pvBrand2">Lumen Cache</span> <span class="dim">· <span id="pvMsg2">Builds that finish first</span> ·</span> <span class="ok" id="pvPay2">+0.018</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card pad">
+            <div class="eyebrow" style="margin-bottom:12px">Order summary</div>
+            <table>
+              <tr><td>Qualified placements</td><td class="right num" id="sumImps">16,667</td></tr>
+              <tr><td>To developers (60%)</td><td class="right g num" id="sumDev">$300.00</td></tr>
+              <tr><td>Platform (40%)</td><td class="right num" id="sumPlat">$200.00</td></tr>
+              <tr><td><b>Total — charged on Stripe</b></td><td class="right"><b class="num" id="sumTotal">$500.00</b></td></tr>
+            </table>
+            <a class="btn yellow lg block" href="#" style="margin-top:18px">Continue to Stripe Checkout →</a>
+            <p class="note" style="margin-top:12px;text-align:center">Campaign goes live after a quick review. Public bid · cancel anytime.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- what you buy -->
+  <section class="band sec">
+    <div class="wrap">
+      <div class="sec-h"><span class="eyebrow">What you're buying</span><h2>Scarce, qualified, privacy-bounded.</h2></div>
+      <div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+        <div class="card pad"><b>Qualified only</b><p class="muted" style="margin-top:6px">Renders after a real wait in an interactive terminal or attended desktop overlay — never in CI.</p></div>
+        <div class="card pad"><b>Frequency-capped</b><p class="muted" style="margin-top:6px">≥45s apart, with per-campaign and per-install caps. Inventory stays scarce on purpose.</p></div>
+        <div class="card pad"><b>Clicks are premium</b><p class="muted" style="margin-top:6px">Eligible click-throughs bill at 50× the placement rate; developers keep the same 60%.</p></div>
+        <div class="card pad"><b>Privacy-bounded</b><p class="muted" style="margin-top:6px">Reporting follows the event schema — no prompts, code, logs or terminal output.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- order book -->
+  <section class="band darker sec" id="book">
+    <div class="wrap">
+      <div class="sec-h"><span class="eyebrow">The market is public</span><h2>Live order book.</h2><p>Every campaign, ranked by bid. Outbid the top to take #1, or queue behind it.</p></div>
+      <div class="panel">
+        <div class="panel-h"><h3>Bid market</h3><span class="flag">launch pricing</span></div>
+        <table>
+          <thead><tr><th>#</th><th>Campaign</th><th>Bid / 1k</th><th>Dev / card</th><th>Status</th></tr></thead>
+          <tbody><tr><td>1</td><td><b>Your campaign</b> (preview)</td><td class="num" id="bookBid">$30.00</td><td class="g num" id="bookDev">+0.018</td><td><span class="pill pending">draft</span></td></tr></tbody>
+        </table>
+        <div class="panel-b" style="text-align:center;color:var(--ink-soft);font-size:13px"><b style="color:var(--ink)">0 funded campaigns live</b> — the book is empty and cards pay zero until a sponsor funds it. Fund yours above to claim #1.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>SAI · backend-authoritative sponsored earnings</span>
+    <a href="/trust">Trust</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+    <a href="/market">Market</a>
+    <span class="r">Built for the minutes your agent makes you wait · 2026</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  function money(n){return "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+  function intc(n){return Math.round(n).toLocaleString("en-US")}
+  function sync(){
+    var brand=$("spBrand").value||"Your brand", msg=$("spCreative").value||"Your message",
+        url=($("spUrl").value||"").replace(/^https?:\/\//,"").replace(/\/$/,"")||"yoursite.com",
+        bid=+$("spBid").value||1, budget=+$("spBudget").value||0;
+    var devCard=bid/1000*0.6, devClick=devCard*50, imps=bid>0?budget/bid*1000:0;
+    $("spChars").textContent=$("spCreative").value.length;
+    $("spBidOut").textContent=money(bid);
+    $("spDevCard").textContent="+"+devCard.toFixed(3);
+    $("spDevClick").textContent="+"+devClick.toFixed(2);
+    $("spImps").textContent=intc(imps);
+    $("pvBrand").textContent=brand; $("pvBrand2").textContent=brand;
+    $("pvMsg").textContent=msg; $("pvMsg2").textContent=msg;
+    $("pvPay").textContent="+"+devCard.toFixed(3); $("pvPay2").textContent="+"+devCard.toFixed(3);
+    $("sumImps").textContent=intc(imps);
+    $("sumDev").textContent=money(budget*0.6);
+    $("sumPlat").textContent=money(budget*0.4);
+    $("sumTotal").textContent=money(budget);
+    $("bookBid").textContent=money(bid); $("bookDev").textContent="+"+devCard.toFixed(3);
+  }
+  ["spBrand","spCreative","spUrl","spBid","spBudget"].forEach(function(id){
+    var el=$(id); if(el){el.addEventListener("input",sync)}
+  });
+  sync();
+})();
+</script>
+</body>
+</html>

@@ -204,6 +204,7 @@
     *,*::before,*::after{transition:none!important;animation:none!important}
   }
 </style>
+<link rel="stylesheet" href="sai-v3.css">
 </head>
 <body>
 
@@ -227,12 +228,14 @@
       <div class="kicker">
         <span class="tag">Local-first</span>
         <span class="tag">Open ledger</span>
+        <span class="tag">Desktop overlay</span>
         <span class="tag spin">Now launching</span>
       </div>
       <h1>Your agent is thinking.<br>Get paid for <span class="hl">the wait</span>.</h1>
       <p>
-        SAI puts <b>one quiet sponsor line</b> at the bottom of Claude&nbsp;Code or Codex and
-        pays you <b>AI credits</b> while it works. <b>Your code never leaves the machine.</b>
+        SAI puts <b>one quiet sponsor line</b> at the bottom of Claude&nbsp;Code or Codex &mdash; or a
+        <b>small banner over Claude&nbsp;Desktop and the Codex app</b> &mdash; and pays you
+        <b>AI credits</b> while it works. <b>Your code never leaves the machine.</b>
         Watch it below &mdash; flip between agents.
       </p>
     </section>
@@ -504,14 +507,4 @@
     btn.addEventListener("click", function(){
       navigator.clipboard.writeText(btn.dataset.cmd).then(function(){
         btn.classList.add("ok"); var prev = btn.textContent; btn.textContent = "copied";
-        setTimeout(function(){ btn.classList.remove("ok"); btn.textContent = prev; }, 1200);
-      }, function(){ toast("copy failed"); });
-    });
-  });
-
-  setWallet(0, false);
-  start();
-})();
-</script>
-</body>
-</html>
+        setTimeout(function(){ btn.classList.remove("ok"); btn.textContent = prev; }, 1

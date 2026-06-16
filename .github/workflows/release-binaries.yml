@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   pytest:
@@ -82,7 +83,7 @@ jobs:
         # never ship inside the client binary. In the public client repo the module
         # is absent anyway; this keeps the build clean (and any source-repo build
         # client-only too). The VPS runs the backend from source, not this binary.
-        run: python -m PyInstaller --onefile --name sai --paths src --exclude-module sai.backend ${{ matrix.collect }} scripts/pyinstaller_entry.py
+        run: python -m PyInstaller --onefile --name sai --paths src --exclude-module sai.backend --exclude-module sai.dev_mock ${{ matrix.collect }} scripts/pyinstaller_entry.py
       - name: Package binary
         run: python scripts/package_binary.py --source "${{ matrix.pyinstaller_output }}" --output-dir release --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}"
       - name: Smoke packaged binary
@@ -98,9 +99,42 @@ jobs:
           name: sai-${{ matrix.platform }}-${{ matrix.arch }}
           path: release/*
 
+  vscode-extension:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Install extension dependencies
+        working-directory: vscode-extension
+        run: npm install
+      - name: Test extension
+        working-directory: vscode-extension
+        run: npm test
+      - name: Package VSIX
+        working-directory: vscode-extension
+        run: npm run package
+      - name: Publish to VS Code Marketplace when configured
+        working-directory: vscode-extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "VSCE_PAT is not configured; skipping Marketplace publish."
+            exit 0
+          fi
+          VERSION="$(node -p "require('./package.json').version")"
+          npx vsce publish --packagePath "sai-sponsored-ai-credits-${VERSION}.vsix"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sai-vscode-extension
+          path: vscode-extension/*.vsix
+
   github-release:
     name: upload release assets
-    needs: [build, pytest, python-package]
+    needs: [build, pytest, python-package, vscode-extension]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
@@ -114,7 +148,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "SAI CLI binaries"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "SAI CLI binaries and VS Code extension"
           gh release upload "$TAG" release/* --clobber
 
   publish-npm:
@@ -148,12 +182,12 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          npm view @sponsoredai/cli-darwin-arm64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/darwin-arm64 --access public
-          npm view @sponsoredai/cli-linux-x64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/linux-x64 --access public
-          npm view @sponsoredai/cli-win32-x64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/win32-x64 --access public
+          npm view @sponsoredai/cli-darwin-arm64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/darwin-arm64 --access public --provenance
+          npm view @sponsoredai/cli-linux-x64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/linux-x64 --access public --provenance
+          npm view @sponsoredai/cli-win32-x64@"$VERSION" >/dev/null 2>&1 || npm publish ./npm/platform/win32-x64 --access public --provenance
       - name: Publish launcher package
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          npm view @sponsoredai/cli@"$VERSION" >/dev/null 2>&1 || npm publish ./npm --access public
+          npm view @sponsoredai/cli@"$VERSION" >/dev/null 2>&1 || npm publish ./npm --access public --provenance

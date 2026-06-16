@@ -22,6 +22,16 @@ class UTCFormatter(logging.Formatter):
     converter = time.gmtime
 
 
+class ServiceFilter(logging.Filter):
+    def __init__(self, service: str) -> None:
+        super().__init__()
+        self.service = service or "app"
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.sai_service = self.service
+        return True
+
+
 class ParentCreatingRotatingFileHandler(RotatingFileHandler):
     def _open(self):  # type: ignore[override]
         Path(self.baseFilename).parent.mkdir(parents=True, exist_ok=True)
@@ -60,7 +70,7 @@ def configure_logging(
         logger.addHandler(_managed_handler(logging.NullHandler()))
         return None
 
-    formatter = UTCFormatter("%(asctime)sZ %(levelname)s %(name)s %(message)s")
+    formatter = UTCFormatter("%(asctime)sZ %(levelname)s %(name)s service=%(sai_service)s %(message)s")
     if destination == "stderr":
         handler: logging.Handler = logging.StreamHandler(sys.stderr)
     else:
@@ -73,6 +83,7 @@ def configure_logging(
         )
     handler.setFormatter(formatter)
     handler.setLevel(level_no)
+    handler.addFilter(ServiceFilter(service or "app"))
     logger.addHandler(_managed_handler(handler))
     return destination if isinstance(destination, Path) else None
 
@@ -142,7 +153,10 @@ def _resolve_level(level: str | int | None) -> int:
     value = (level or os.environ.get("SAI_LOG_LEVEL") or "INFO").strip().upper()
     if value.isdigit():
         return int(value)
-    return int(getattr(logging, value, logging.INFO))
+    resolved = getattr(logging, value, None)
+    if isinstance(resolved, int):
+        return int(resolved)
+    raise ValueError(f"Invalid SAI_LOG_LEVEL: {value}")
 
 
 def _resolve_positive_int(env_key: str, default: int) -> int:

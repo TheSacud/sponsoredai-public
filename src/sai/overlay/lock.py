@@ -12,11 +12,14 @@ so a crashed holder doesn't wedge the lock forever.
 from __future__ import annotations
 
 import os
+import logging
 import time
 from pathlib import Path
 from typing import Optional
 
 from ..config import runtime_paths
+
+logger = logging.getLogger(__name__)
 
 # One canonical lock for the whole machine-session, shared by the terminal
 # compositor and the desktop overlay: a single user attends one surface at a
@@ -90,15 +93,19 @@ class InstanceLock:
                 fd = os.open(str(self._path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             except FileExistsError:
                 if not self._is_stale():
+                    logger.info("billing authority lock contended owner_pid=%s", self._owner_pid())
                     return False
                 # Reclaim an abandoned lock, then retry once.
+                logger.warning("billing authority stale lock reclaimed owner_pid=%s", self._owner_pid())
                 self._path.unlink()
                 fd = os.open(str(self._path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 handle.write(f"{os.getpid()} {int(time.time())}")
-        except OSError:
+        except OSError as exc:
+            logger.warning("billing authority lock failed error=%s", type(exc).__name__)
             return False
         self._held = True
+        logger.info("billing authority lock acquired pid=%s", os.getpid())
         return True
 
     def release(self) -> None:

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import hmac
+import hashlib
 import json
 import logging
 import os
+import secrets
 import subprocess
 import sys
 import threading
@@ -54,6 +56,23 @@ SECURITY_HEADERS = {
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
 }
 logger = logging.getLogger(__name__)
+
+
+def _request_route(path: Any) -> str:
+    route = urlparse(str(path or "")).path
+    return route or "/"
+
+
+def _log_id(value: Any, length: int = 16) -> str:
+    text = str(value or "").strip()
+    return text[:length] if text else "-"
+
+
+def _log_hash(value: Any, length: int = 12) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return "-"
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:length]
 
 
 class UpstreamError(RuntimeError):
@@ -211,7 +230,24 @@ def usage_cost(usage: dict[str, Any], rates: dict[str, float] | None = None) -> 
     return round(max(0.001, prompt + completion), 6)
 
 
+def _mock_delay_seconds() -> float:
+    """Dev/testing knob: hold the mock response open this long so an external
+    surface (the VS Code sponsor banner) can observe an in-flight wait via
+    /v1/status. Off unless SAI_GATEWAY_MOCK_DELAY_MS is set; capped at 30s so a
+    typo cannot wedge the gateway."""
+    raw = os.environ.get("SAI_GATEWAY_MOCK_DELAY_MS", "").strip()
+    if not raw:
+        return 0.0
+    try:
+        return max(0, min(30000, int(raw))) / 1000.0
+    except ValueError:
+        return 0.0
+
+
 def mock_chat_completion(payload: dict[str, Any]) -> dict[str, Any]:
+    delay = _mock_delay_seconds()
+    if delay > 0:
+        time.sleep(delay)
     response_text = (
         "SAI mock response. Set SAI_GATEWAY_PROVIDER and the provider's API key "
         "to proxy a real model provider, or earn sponsored credits and the "
@@ -287,11 +323,17 @@ def _post_backend_json(
     request.add_header("User-Agent", USER_AGENT)
     if auth_secret:
         request.add_header("Authorization", f"{INSTALL_AUTH_SCHEME} {auth_secret}")
+    started = time.monotonic()
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
     except (OSError, ValueError) as exc:
-        logger.debug("Backend JSON request failed url=%s: %s", url, exc)
+        logger.debug(
+            "backend json request failed route=%s duration_ms=%s error=%s",
+            _request_route(url),
+            int((time.monotonic() - started) * 1000),
+            type(exc).__name__,
+        )
         return None
     return data if isinstance(data, dict) else None
 
@@ -331,6 +373,14 @@ def refresh_spend_key(timeout: float = 6.0) -> dict[str, Any] | None:
         config["spend_base_url"] = str(response.get("base_url") or WALLET_SPEND_BASE_URL)
         config["spend_key_hash"] = str(response.get("key_hash") or "")
         save_config(config)
+    logger.info(
+        "spend key refresh completed provisioned=%s rotated=%s reason=%s key_hash=%s limit_micros=%s",
+        bool(response.get("provisioned")),
+        bool(response.get("rotated")),
+        response.get("reason") or "-",
+        _log_id(response.get("key_hash"), 24),
+        response.get("limit_micros") or 0,
+    )
     return response
 
 
@@ -351,22 +401,26 @@ def start_install_link(timeout: float = 6.0) -> dict[str, Any] | None:
         f"{backend_url}/v1/developer/link/start", payload, timeout, auth_secret=auth_secret
     )
     if response is None or not isinstance(response.get("code"), str):
+        logger.info("install link start failed reason=backend_unavailable_or_unregistered")
         return None
     result = dict(response)
     result["backend_url"] = backend_url
     result["dashboard_url"] = f"{backend_url}/dashboard"
+    logger.info("install link code created expires_in_seconds=%s", result.get("expires_in_seconds") or 0)
     return result
 
 
 _last_spend_sync = 0.0
+_last_spend_key_refresh = 0.0
+SPEND_KEY_REFRESH_INTERVAL_SECONDS = 30.0
 
 
-def _maybe_sync_spend_usage() -> None:
+def _maybe_sync_spend_usage(force: bool = False) -> None:
     """Nudge the backend to read the provider usage counter and debit the
     ledger. Throttled and best-effort; never blocks or fails a completion."""
     global _last_spend_sync
     now = time.monotonic()
-    if now - _last_spend_sync < SPEND_SYNC_INTERVAL_SECONDS:
+    if not force and now - _last_spend_sync < SPEND_SYNC_INTERVAL_SECONDS:
         return
     _last_spend_sync = now
     config = load_config()
@@ -380,6 +434,26 @@ def _maybe_sync_spend_usage() -> None:
         timeout=3.0,
         auth_secret=resolve_install_secret(config),
     )
+
+
+def _maybe_refresh_spend_key_inline(force: bool = False) -> dict[str, Any] | None:
+    """Best-effort refresh of the wallet spend key before a request.
+
+    This lets a long-running gateway pick up newly-matured credits or a resized
+    provider limit without a restart. Explicit provider config still wins.
+    """
+    global _last_spend_key_refresh
+    if resolve_upstream_config() is not None or wallet_spend_disabled():
+        return None
+    now = time.monotonic()
+    if not force and now - _last_spend_key_refresh < SPEND_KEY_REFRESH_INTERVAL_SECONDS:
+        return None
+    _last_spend_key_refresh = now
+    try:
+        return refresh_spend_key(timeout=2.0)
+    except Exception:
+        logger.exception("Inline spend-key refresh failed")
+        return None
 
 
 _last_wallet_reconcile = 0.0
@@ -432,12 +506,33 @@ def proxy_json(path: str, payload: dict[str, Any] | None = None, method: str = "
     request.add_header("Content-Type", "application/json")
     for key, value in upstream_extra_headers(config).items():
         request.add_header(key, value)
+    started = time.monotonic()
     try:
         with urllib.request.urlopen(request, timeout=120) as response:
             headers = {"content-type": response.headers.get("content-type", "application/json")}
-            return response.status, headers, response.read()
+            body_bytes = response.read()
+            logger.debug(
+                "upstream response provider=%s route=%s status=%s duration_ms=%s content_type=%s",
+                config.provider,
+                path,
+                response.status,
+                int((time.monotonic() - started) * 1000),
+                headers["content-type"],
+            )
+            return response.status, headers, body_bytes
     except urllib.error.HTTPError as exc:
-        return exc.code, {"content-type": exc.headers.get("content-type", "application/json")}, exc.read()
+        headers = {"content-type": exc.headers.get("content-type", "application/json")}
+        body_bytes = exc.read()
+        logger.warning(
+            "upstream response provider=%s route=%s status=%s duration_ms=%s content_type=%s request_id=%s",
+            config.provider,
+            path,
+            exc.code,
+            int((time.monotonic() - started) * 1000),
+            headers["content-type"],
+            _log_id(exc.headers.get("x-request-id") or exc.headers.get("cf-ray"), 32),
+        )
+        return exc.code, headers, body_bytes
     except urllib.error.URLError as exc:
         raise UpstreamError(f"Upstream request failed: {exc.reason}") from exc
 
@@ -469,6 +564,30 @@ def upstream_status_line() -> str:
     return f"Upstream: {config.provider} ({config.base_url}) - {key_state}"
 
 
+# In-flight chat-completion counter. /v1/status exposes it so an external
+# surface (the VS Code extension) can show a sponsor ad while the agent is
+# waiting on the model, without ever reading the agent's output.
+_inflight_lock = threading.Lock()
+_inflight_requests = 0
+
+
+def _inflight_begin() -> None:
+    global _inflight_requests
+    with _inflight_lock:
+        _inflight_requests += 1
+
+
+def _inflight_end() -> None:
+    global _inflight_requests
+    with _inflight_lock:
+        _inflight_requests = max(0, _inflight_requests - 1)
+
+
+def inflight_requests() -> int:
+    with _inflight_lock:
+        return _inflight_requests
+
+
 class GatewayHandler(BaseHTTPRequestHandler):
     server_version = "SAIGateway/0.1"
 
@@ -478,25 +597,54 @@ class GatewayHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         self._dispatch(self._handle_post)
 
+    def send_response(self, code: int, message: str | None = None) -> None:
+        self._sai_status = int(code)
+        super().send_response(code, message)
+
     def _dispatch(self, handler: Callable[[], None]) -> None:
+        started = time.monotonic()
+        request_id = f"req_{secrets.token_hex(8)}"
+        self._sai_status = 0
         try:
             handler()
         except Exception as exc:  # keep the gateway alive instead of dropping the connection
             if isinstance(exc, UpstreamError):
                 status, message = HTTPStatus.BAD_GATEWAY, "Upstream provider request failed"
-                logger.warning("Gateway upstream error method=%s path=%s: %s", self.command, self.path, exc)
+                logger.warning(
+                    "Gateway upstream error method=%s route=%s error=%s",
+                    self.command,
+                    _request_route(self.path),
+                    type(exc).__name__,
+                )
             else:
                 status, message = HTTPStatus.INTERNAL_SERVER_ERROR, "Internal gateway error"
-                logger.exception("Unhandled gateway request error method=%s path=%s", self.command, self.path)
+                logger.exception("Unhandled gateway request error method=%s route=%s", self.command, _request_route(self.path))
             try:
                 self._send_json(status, {"error": {"message": message}})
             except OSError:
-                logger.debug("Could not send gateway error response method=%s path=%s", self.command, self.path)
+                logger.debug("Could not send gateway error response method=%s route=%s", self.command, _request_route(self.path))
                 pass
+        finally:
+            route = _request_route(self.path)
+            if route != "/healthz":
+                logger.info(
+                    "gateway request request_id=%s method=%s route=%s status=%s duration_ms=%s client=%s",
+                    request_id,
+                    self.command,
+                    route,
+                    self._sai_status,
+                    int((time.monotonic() - started) * 1000),
+                    _log_hash(self.client_address[0]),
+                )
 
     def _handle_get(self) -> None:
         if self.path == "/healthz":
             self._send_json(HTTPStatus.OK, {"status": "ok"})
+            return
+        if self.path == "/v1/status":
+            # Unauthenticated on purpose: it exposes only an in-flight count for
+            # the local ad surface, never request content. Bound to localhost.
+            self._send_json(HTTPStatus.OK, {"status": "ok", "active_requests": inflight_requests()})
             return
         if self.path in {"/", "/dashboard"}:
             if not self._dashboard_allowed():
@@ -545,17 +693,28 @@ class GatewayHandler(BaseHTTPRequestHandler):
             )
             return
 
-        config = active_upstream_config()
-        if config is not None:
-            status, headers, body = proxy_json("/chat/completions", payload=payload, method="POST")
-            self._send_raw(status, headers, body)
-            if config.provider == WALLET_SPEND_PROVIDER:
-                _maybe_sync_spend_usage()
-                _maybe_reconcile_wallet()
-            return
+        # Count this as in-flight for the whole upstream round trip so /v1/status
+        # reports the wait the external ad surface should fill.
+        _inflight_begin()
+        try:
+            explicit_config = resolve_upstream_config()
+            if explicit_config is None:
+                _maybe_refresh_spend_key_inline()
+            config = explicit_config or wallet_upstream_config()
+            if config is not None:
+                status, headers, body = proxy_json("/chat/completions", payload=payload, method="POST")
+                try:
+                    self._send_raw(status, headers, body)
+                finally:
+                    if config.provider == WALLET_SPEND_PROVIDER:
+                        _maybe_sync_spend_usage(force=True)
+                        _maybe_reconcile_wallet()
+                return
 
-        response = mock_chat_completion(payload)
-        self._send_json(HTTPStatus.OK, response)
+            response = mock_chat_completion(payload)
+            self._send_json(HTTPStatus.OK, response)
+        finally:
+            _inflight_end()
 
     def _handle_config_update(self) -> None:
         if not self._dashboard_allowed():
@@ -574,6 +733,10 @@ class GatewayHandler(BaseHTTPRequestHandler):
         if "kill_switch" in payload:
             reason = payload.get("reason")
             set_kill_switch(bool(payload["kill_switch"]), reason=str(reason) if reason else None)
+        logger.info(
+            "gateway config updated keys=%s",
+            ",".join(sorted(key for key in payload.keys() if key in {"frequency", "kill_switch"})) or "-",
+        )
         self._send_json(HTTPStatus.OK, overview_payload())
 
     def _dashboard_allowed(self) -> bool:
@@ -597,6 +760,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
             HTTPStatus.FORBIDDEN,
             {"error": {"message": "The SAI dashboard is only served to localhost"}},
         )
+        logger.warning("gateway dashboard denied client=%s host=%s route=%s", _log_hash(client), host, _request_route(self.path))
         return False
 
     def _csrf_safe_write(self) -> bool:
@@ -627,6 +791,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
         return True
 
     def _reject_csrf(self, message: str) -> None:
+        logger.warning("gateway csrf rejected route=%s reason=%s", _request_route(self.path), message)
         self._send_json(HTTPStatus.FORBIDDEN, {"error": {"message": message}})
 
     def _authorized(self) -> bool:
@@ -641,6 +806,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
             and hmac.compare_digest(supplied.encode("utf-8"), expected.encode("utf-8"))
         ):
             return True
+        logger.warning("gateway auth failed route=%s", _request_route(self.path))
         self._send_json(HTTPStatus.UNAUTHORIZED, {"error": {"message": "Invalid or missing SAI API key"}})
         return False
 
@@ -735,18 +901,14 @@ def maybe_refresh_spend_key_in_background() -> None:
 
 
 def _refresh_spend_key_best_effort() -> None:
-    try:
-        refresh_spend_key()
-    except Exception:
-        logger.exception("Background spend-key refresh failed")
-        pass  # gateway startup should not depend on backend availability
+    _maybe_refresh_spend_key_inline(force=True)
 
 
 def serve_gateway(host: str = "127.0.0.1", port: int = 8787, open_browser: bool = False) -> None:
     configure_logging(service="gateway")
     server = ThreadingHTTPServer((host, port), GatewayHandler)
     url = f"http://{host}:{server.server_address[1]}"
-    logger.info("Gateway listening url=%s", url)
+    logger.info("Gateway listening url=%s log=%s", url, log_destination_label())
     print(f"SAI gateway listening on {url}/v1")
     print(f"Dashboard: {url}/")
     print(f"Logs: {log_destination_label()}")

@@ -22,6 +22,7 @@ a ``desktop_overlay`` surface gated on ``attended_interactive``.
 from __future__ import annotations
 
 import time
+import logging
 from contextlib import AbstractContextManager, nullcontext
 from typing import Callable, Optional
 
@@ -43,6 +44,7 @@ DEFAULT_INPUT_PRESENCE_SECONDS = 3.0
 DEFAULT_ANCHOR = "top"
 
 TICK_SECONDS = 0.2
+logger = logging.getLogger(__name__)
 
 
 class SessionDriver:
@@ -75,11 +77,13 @@ class SessionDriver:
         self._card = None
         self._displaying = False
         self._dismissed = False
+        self._last_hidden_reason: str | None = None
 
     def dismiss(self) -> None:
         """User clicked the banner's close box: hide it for the rest of this
         session (a softer, in-GUI counterpart to the kill switch)."""
         self._dismissed = True
+        logger.info("overlay dismissed")
 
     @property
     def current_card(self):
@@ -107,14 +111,17 @@ class SessionDriver:
 
         # Live kill-switch / disable check, every tick, so toggling it off pulls
         # the banner immediately (matches the terminal path).
-        if not self._enabled() or self._dismissed:
-            self._hide(now)
+        if self._dismissed:
+            self._hide(now, "dismissed")
+            return None
+        if not self._enabled():
+            self._hide(now, "disabled")
             return None
 
         state = self._monitor.sample()
         attended = state.target_foreground and state.user_present
         if not attended:
-            self._hide(now)
+            self._hide(now, "target_not_foreground" if not state.target_foreground else "user_idle")
             return state
 
         # Treat recent input as presence so the carousel keeps rotating.
@@ -134,14 +141,14 @@ class SessionDriver:
 
         if self._card is None:
             # Attended but no creative available (e.g. no placement / disabled).
-            self._hide(now)
+            self._hide(now, "no_card")
             return state
 
         rect = self._probe.window_rect(state.target_hwnd)
         if rect is None:
             # Can't locate the target: never show at a stale position, and freeze
             # the billing window (fail closed) until it can be placed again.
-            self._hide(now)
+            self._hide(now, "target_rect_missing")
             return state
         # Measure and paint at the TARGET monitor's DPI (the banner tracks the
         # target), so a mixed-DPI multi-monitor setup doesn't size it wrong.
@@ -155,6 +162,7 @@ class SessionDriver:
         self._window.move_to(
             place_banner(rect, width, height, anchor=self._anchor, bounds=bounds)
         )
+        was_displaying = self._displaying
         self._window.show()
 
         # Integrity: if we were already displaying and the banner is no longer
@@ -163,9 +171,18 @@ class SessionDriver:
         # _displaying so the first show (when the window isn't visible yet in the
         # just-sampled state) doesn't immediately freeze the new card.
         if self._displaying and not (state.overlay_visible and state.same_monitor):
+            logger.warning(
+                "overlay integrity failed card=%s overlay_visible=%s same_monitor=%s",
+                self._card_id(),
+                state.overlay_visible,
+                state.same_monitor,
+            )
             self._session.mark_cards_hidden(now)
             self._set_reward_progress(None)
         self._displaying = True
+        self._last_hidden_reason = None
+        if not was_displaying:
+            logger.info("overlay visible card=%s anchor=%s dpi=%s", self._card_id(), self._anchor, dpi)
         return state
 
     def _update_reward_progress(self, now: float) -> None:
@@ -180,11 +197,20 @@ class SessionDriver:
         if callable(setter):
             setter(progress)
 
-    def _hide(self, now: float) -> None:
+    def _card_id(self) -> str:
+        if self._card is None:
+            return "-"
+        return str(getattr(self._card, "placement_id", None) or getattr(self._card, "id", "-") or "-")
+
+    def _hide(self, now: float, reason: str) -> None:
+        was_displaying = self._displaying
         self._session.mark_cards_hidden(now)
         self._set_reward_progress(None)
         self._window.hide()
         self._displaying = False
+        if was_displaying or self._last_hidden_reason != reason:
+            logger.info("overlay hidden reason=%s card=%s", reason, self._card_id())
+        self._last_hidden_reason = reason
 
     def run(
         self,
@@ -210,4 +236,6 @@ class SessionDriver:
         self._session.mark_cards_hidden(now)
         self._window.hide()
         self._displaying = False
-        return self._session.settle()
+        earned = self._session.settle()
+        logger.info("overlay settled earned=%s", earned)
+        return earned

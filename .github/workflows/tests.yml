@@ -42,3 +42,18 @@ jobs:
           python -m venv .venv-smoke
           .venv-smoke/bin/python -m pip install dist/*.whl
           .venv-smoke/bin/sai --version
+
+  vscode-extension:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        working-directory: vscode-extension
+        run: npm install
+      - name: Run tests
+        working-directory: vscode-extension
+        run: npm test

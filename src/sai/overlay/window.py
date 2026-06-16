@@ -109,6 +109,7 @@ class OverlayWindow:
         self._size = (0, 0)  # last applied client size, for click hit-testing
         self._placement: tuple[int, int, int, int] | None = None
         self._shown = False
+        self._paint_failures = 0
         self._class_name = f"SaiOverlayBanner_{id(self)}"
 
         self._user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -287,7 +288,9 @@ class OverlayWindow:
                     try:
                         self._paint_buffered(hdc, width, height)
                     except Exception:  # noqa: BLE001 - never let a Win32 callback exception escape
-                        logger.debug("overlay paint failed", exc_info=True)
+                        self._paint_failures += 1
+                        if self._paint_failures == 1 or self._paint_failures % 25 == 0:
+                            logger.warning("overlay paint failed count=%s", self._paint_failures, exc_info=True)
             finally:
                 self._user32.EndPaint(hwnd, ctypes.byref(ps))
             return 0

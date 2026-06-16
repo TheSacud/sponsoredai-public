@@ -741,6 +741,7 @@ class MacOverlayWindow:
         self._dpi = self.DEFAULT_DPI
         self._placement: Optional[Placement] = None
         self._shown = False
+        self._paint_failures = 0
         self._handle = id(self)
         self._create()
         _OVERLAYS[self._handle] = weakref.ref(self)
@@ -812,7 +813,9 @@ class MacOverlayWindow:
                 self._placement.width, self._placement.height, self._card, self._dpi
             )
         except Exception:  # noqa: BLE001 - never let a draw callback escape
-            logger.debug("macOS overlay paint failed", exc_info=True)
+            self._paint_failures += 1
+            if self._paint_failures == 1 or self._paint_failures % 25 == 0:
+                logger.warning("macOS overlay paint failed count=%s", self._paint_failures, exc_info=True)
 
     def _mouse_up(self, event) -> None:
         if self._placement is None:

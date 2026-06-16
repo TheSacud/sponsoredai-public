@@ -1,6 +1,7 @@
 import unittest
 from pathlib import Path
 
+from sai.config import utc_now_iso
 from sai.wallet import InsufficientCredits, Wallet, WalletError
 
 
@@ -39,6 +40,13 @@ class WalletTests(unittest.TestCase):
         self.assertEqual(entry.amount, -0.05)
         self.assertEqual(wallet.balance(), 0.0)
 
+    def test_spend_up_to_rejects_non_finite_amount(self):
+        wallet = Wallet(wallet_path("spend-up-to-inf"))
+        wallet.earn(1.0, "sponsor:test")
+        with self.assertRaises(ValueError):
+            wallet.spend_up_to(float("inf"), "gateway:test")
+        self.assertEqual(wallet.balance(), 1.0)
+
     def test_spend_up_to_returns_none_when_empty(self):
         wallet = Wallet(wallet_path("spend-up-to-empty"))
         self.assertIsNone(wallet.spend_up_to(0.2, "gateway:test"))
@@ -48,6 +56,22 @@ class WalletTests(unittest.TestCase):
         path.write_text("{not json", encoding="utf-8")
         with self.assertRaises(WalletError):
             Wallet(path).balance()
+
+    def test_non_finite_wallet_amount_raises_wallet_error(self):
+        path = wallet_path("non-finite")
+        path.write_text('{"version": 1, "ledger": [{"amount": "NaN"}]}', encoding="utf-8")
+        with self.assertRaises(WalletError):
+            Wallet(path).balance()
+
+    def test_today_earned_rejects_non_finite_amount(self):
+        path = wallet_path("today-earned-nan")
+        path.write_text(
+            '{"version": 1, "ledger": [{"kind": "earn", "amount": "NaN", "timestamp": "%s"}]}'
+            % utc_now_iso(),
+            encoding="utf-8",
+        )
+        with self.assertRaises(WalletError):
+            Wallet(path).today_earned()
 
 
 if __name__ == "__main__":

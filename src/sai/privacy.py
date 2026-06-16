@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 ALLOWED_EVENT_KEYS = {
@@ -57,7 +61,11 @@ FORBIDDEN_EVENT_KEYS = {
 def sanitize_event(payload: dict[str, Any]) -> dict[str, Any]:
     forbidden = sorted(set(payload) & FORBIDDEN_EVENT_KEYS)
     if forbidden:
+        logger.error("privacy event rejected forbidden_keys=%s", ",".join(forbidden))
         raise ValueError(f"Forbidden event keys present: {', '.join(forbidden)}")
+    unknown = sorted(set(payload) - ALLOWED_EVENT_KEYS - TRANSPORT_KEYS)
+    if unknown:
+        logger.debug("privacy event unknown keys dropped keys=%s", ",".join(unknown))
     sanitized = {key: payload[key] for key in ALLOWED_EVENT_KEYS if key in payload}
     sanitized.setdefault("code_uploaded", False)
     sanitized.setdefault("prompt_uploaded", False)

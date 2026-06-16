@@ -1,0 +1,12 @@
+src/**
+test/**
+out/test/**
+tsconfig.json
+*.vsix
+out/**/*.map
+node_modules/**
+package-lock.json
+.gitignore
+vsix_unpack/**
+.vscode/**
+DEV_TESTING.md

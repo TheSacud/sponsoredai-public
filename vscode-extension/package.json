@@ -1,0 +1,151 @@
+{
+  "name": "sai-sponsored-ai-credits",
+  "displayName": "SAI - Sponsored AI Credits",
+  "description": "Earn sponsored AI credits or cash-out eligible balance while Claude Code and Codex wait.",
+  "version": "0.0.1",
+  "publisher": "Sacud",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheSacud/sponsoredai-public.git",
+    "directory": "vscode-extension"
+  },
+  "homepage": "https://sponsoredai.dev",
+  "bugs": {
+    "url": "https://github.com/TheSacud/sponsoredai-public/issues"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "claude-code",
+    "codex",
+    "ai-credits",
+    "developer-payouts",
+    "terminal",
+    "sponsored-credits"
+  ],
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "extensionKind": [
+    "ui"
+  ],
+  "main": "./out/src/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:sai.showMenu",
+    "onCommand:sai.startCodex",
+    "onCommand:sai.startClaude",
+    "onCommand:sai.startOverlay",
+    "onCommand:sai.wallet",
+    "onCommand:sai.refreshWallet",
+    "onCommand:sai.openDashboard",
+    "onCommand:sai.installCli",
+    "onView:sai.adBanner"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "SAI",
+      "properties": {
+        "sai.cliPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "markdownDescription": "Absolute path to a `sai` launcher to run instead of resolving it from `PATH`. Use for development against the source CLI (point it at a shim that runs `python -m sai`) or for a non-standard install. When set, this exact path is trusted and used directly; leave empty to resolve `sai` from your npm-global / system locations."
+        },
+        "sai.gateway.host": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "scope": "machine",
+          "description": "Host of the local SAI gateway polled for the in-flight request count that drives the sponsor banner."
+        },
+        "sai.gateway.port": {
+          "type": "number",
+          "default": 8787,
+          "scope": "machine",
+          "description": "Port of the local SAI gateway."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "sai",
+          "title": "SAI",
+          "icon": "media/sai-activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "sai": [
+        {
+          "id": "sai.adBanner",
+          "name": "Sponsor",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "sai.showMenu",
+        "title": "SAI: Show Menu",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.startCodex",
+        "title": "SAI: Start Codex",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.startClaude",
+        "title": "SAI: Start Claude",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.startOverlay",
+        "title": "SAI: Start Overlay",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.wallet",
+        "title": "SAI: Wallet",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.refreshWallet",
+        "title": "SAI: Refresh Wallet",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.openDashboard",
+        "title": "SAI: Open Dashboard",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.installCli",
+        "title": "SAI: Install CLI",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.openSponsor",
+        "title": "SAI: Open Current Sponsor",
+        "category": "SAI"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "lint": "tsc -p ./ --noEmit",
+    "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
+    "package": "vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/vscode": "^1.92.0",
+    "@vscode/vsce": "^3.2.2",
+    "typescript": "^5.5.4"
+  }
+}

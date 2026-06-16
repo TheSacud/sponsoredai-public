@@ -77,6 +77,7 @@ class CommandRunner:
         # Set per-run: True when another surface already holds the billing
         # authority, so this run shows example cards only (credit 0).
         self._credit0 = False
+        self._run_path = "unknown"
 
     def _wallet(self):
         if self.wallet is None:
@@ -115,31 +116,68 @@ class CommandRunner:
         # credit-0 so one attended wait is never counted twice.
         billing_lock = None
         self._credit0 = False
-        if interactive_terminal():
+        terminal = interactive_terminal()
+        sponsor_active = False
+        backend_configured = False
+        if terminal:
             from .sponsors import RemotePlacementClient, sponsor_enabled
 
-            if sponsor_enabled(self.config) and RemotePlacementClient.from_config(self.config) is not None:
+            sponsor_active = sponsor_enabled(self.config)
+            backend_configured = RemotePlacementClient.from_config(self.config) is not None
+            if sponsor_active and backend_configured:
                 from .overlay.lock import billing_authority_lock
 
                 billing_lock = billing_authority_lock()
                 self._credit0 = not billing_lock.acquire()
+                if self._credit0:
+                    logger.info("billing authority unavailable tool=%s mode=credit0", tool)
+        logger.info(
+            "command run start tool=%s interactive=%s frequency=%s backend_configured=%s sponsor_enabled=%s credit0=%s",
+            tool,
+            terminal,
+            self.config.get("frequency", "normal"),
+            backend_configured,
+            sponsor_active,
+            self._credit0,
+        )
+        receipt: RunReceipt | None = None
         try:
-            return self._dispatch(command, tool)
+            receipt = self._dispatch(command, tool)
+            return receipt
         finally:
+            if isinstance(receipt, RunReceipt):
+                logger.info(
+                    "command run end tool=%s path=%s exit_code=%s duration_ms=%s qualified_waits=%s credits_earned=%s session_id=%s credit0=%s",
+                    tool,
+                    self._run_path,
+                    receipt.exit_code,
+                    int(receipt.duration_seconds * 1000),
+                    receipt.qualified_waits,
+                    receipt.credits_earned,
+                    receipt.session_id,
+                    self._credit0,
+                )
             if billing_lock is not None:
                 billing_lock.release()
 
     def _dispatch(self, command: Sequence[str], tool: str) -> RunReceipt:
+        terminal = interactive_terminal()
         if _is_windows():
             # On Windows a full-screen agent TUI clobbers an overlay, so pin the
             # ad via a ConPTY compositor. Other tools / non-interactive runs keep
             # the passthrough path. If pywinpty is missing, degrade gracefully.
-            if interactive_terminal() and tool in FULLSCREEN_TUI_TOOLS and _winpty_available():
-                return self._run_windows_pty(command, tool)
+            if terminal and tool in FULLSCREEN_TUI_TOOLS:
+                if _winpty_available():
+                    self._run_path = "windows_conpty"
+                    return self._run_windows_pty(command, tool)
+                logger.warning("conpty unavailable fallback tool=%s reason=missing_or_broken_pywinpty", tool)
+            self._run_path = "passthrough"
             return self._run_passthrough(command, tool)
 
-        if interactive_terminal():
+        if terminal:
+            self._run_path = "posix_pty"
             return self._run_posix_pty(command, tool)
+        self._run_path = "passthrough"
         return self._run_passthrough(command, tool)
 
     def _run_passthrough(self, command: Sequence[str], tool: str) -> RunReceipt:
@@ -465,8 +503,9 @@ class CommandRunner:
         except FileNotFoundError:
             print(command_not_found_message(command[0]), file=sys.stderr)
             return RunReceipt(127, 0.0, 0, 0.0, self._wallet().balance(), "")
-        except Exception:  # noqa: BLE001 - ConPTY init varies by machine; degrade
-            logger.info("ConPTY spawn failed; falling back to passthrough tool=%s", tool)
+        except Exception as exc:  # noqa: BLE001 - ConPTY init varies by machine; degrade
+            logger.warning("ConPTY spawn failed; falling back to passthrough tool=%s error=%s", tool, type(exc).__name__)
+            logger.debug("ConPTY spawn failure detail", exc_info=True)
             return self._run_passthrough(command, tool)
 
         k32 = ctypes.windll.kernel32

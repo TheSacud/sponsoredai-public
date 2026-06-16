@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import logging
 import os
 import secrets
 import time
@@ -36,13 +37,17 @@ from .config import (
 from .metrics import (
     CLICK_EVENT,
     CLI_WAIT_SURFACE,
+    GUI_SURFACES,
     OVERLAY_SURFACE,
     QP_EVENT,
     QUALIFIED_VISIBLE_SECONDS,
     RENDERED_EVENT,
+    VSCODE_WAIT_SURFACE,
 )
 from .privacy import sanitize_event
 from .wallet import Wallet
+
+logger = logging.getLogger(__name__)
 
 
 NO_PLACEMENT_RETRY_SECONDS = 10.0
@@ -218,10 +223,10 @@ class RemotePlacementClient:
             "surface": surface,
             "ci": ci_environment(),
         }
-        # Each surface attests attendance with its own key; the GUI overlay must
+        # Each surface attests attendance with its own key; a GUI surface must
         # never claim terminal_interactive (a false attestation the backend's
         # fraud checks are built to catch).
-        if surface == OVERLAY_SURFACE:
+        if surface in GUI_SURFACES:
             payload["attended_interactive"] = bool(terminal_is_interactive)
         else:
             payload["terminal_interactive"] = bool(terminal_is_interactive)
@@ -234,11 +239,21 @@ class RemotePlacementClient:
             )
             self._adopt_issued_secret(register)
             response = self._post("/v1/placements/next", payload)
-        except (OSError, urllib.error.URLError, TimeoutError, ValueError):
+        except (OSError, urllib.error.URLError, TimeoutError, ValueError) as exc:
+            logger.info(
+                "remote placement unavailable path=/v1/placements/next surface=%s error=%s",
+                surface,
+                type(exc).__name__,
+            )
             return None
 
         placement = response.get("placement") if isinstance(response, dict) else None
         if not isinstance(placement, dict):
+            logger.debug(
+                "remote placement unavailable path=/v1/placements/next surface=%s reason=%s",
+                surface,
+                response.get("reason") if isinstance(response, dict) else "invalid_response",
+            )
             return None
         placement_id = str(placement.get("placement_id") or "")
         campaign_id = str(placement.get("campaign_id") or "")
@@ -272,7 +287,13 @@ class RemotePlacementClient:
         payload.setdefault("install_id_hash", self.install_id_hash)
         try:
             return self._post(f"/v1/placements/{placement_id}/events", payload)
-        except (OSError, urllib.error.URLError, TimeoutError, ValueError):
+        except (OSError, urllib.error.URLError, TimeoutError, ValueError) as exc:
+            logger.info(
+                "remote placement event failed placement=%s event=%s error=%s",
+                placement_id[:16],
+                payload.get("event") or "-",
+                type(exc).__name__,
+            )
             return None
 
     def _adopt_issued_secret(self, register_response: Any) -> None:
@@ -448,7 +469,7 @@ class SponsorSession:
             "prompt_uploaded": False,
             "logs_uploaded": False,
         }
-        if self.surface == OVERLAY_SURFACE:
+        if self.surface in GUI_SURFACES:
             event_fields["attended_interactive"] = bool(terminal_is_interactive)
         else:
             event_fields["terminal_interactive"] = bool(terminal_is_interactive)
@@ -554,6 +575,15 @@ class SponsorSession:
         response = self._record_remote_event(shown.card, shown.event, QP_EVENT, visible_seconds=visible_seconds)
         if response and response.get("billable"):
             return response
+        logger.warning(
+            "sponsor settle not billable tool=%s surface=%s session=%s placement=%s visible_seconds=%.3f reason=%s",
+            self.tool,
+            self.surface,
+            self.id,
+            shown.card.placement_id[:16] if shown.card.placement_id else "-",
+            visible_seconds,
+            (response or {}).get("invalid_reason") or "remote_unreachable",
+        )
         return None
 
     def _record_remote_event(
@@ -590,3 +620,115 @@ def _optional_str(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def external_event_fields(tool: str, surface: str, attended: bool, config: dict[str, Any]) -> dict[str, Any]:
+    """Sanitized event fields for a placement event recorded from an external
+    (non-carousel) surface such as the VS Code webview. The attestation key
+    matches the surface so the backend's surface_attended check passes."""
+    fields: dict[str, Any] = {
+        "surface": surface,
+        "tool": tool,
+        "ci": ci_environment(),
+        "country": config.get("country"),
+        "code_uploaded": False,
+        "prompt_uploaded": False,
+        "logs_uploaded": False,
+    }
+    if surface in GUI_SURFACES:
+        fields["attended_interactive"] = bool(attended)
+    else:
+        fields["terminal_interactive"] = bool(attended)
+    return sanitize_event(fields)
+
+
+def fetch_placement_card(
+    config: dict[str, Any],
+    *,
+    tool: str,
+    surface: str = VSCODE_WAIT_SURFACE,
+    attended: bool = True,
+) -> dict[str, Any]:
+    """Fetch one placement for an external surface and record the ``rendered``
+    event so the backend sets rendered_at_ts (a later ``qualified_5s`` requires a
+    prior rendered plus a >=5s gap). Returns a JSON-serialisable dict with the
+    card and the ticket fields the caller echoes back to qualify the impression,
+    or ``{"placement": None, "reason": ...}``."""
+    client = RemotePlacementClient.from_config(config)
+    if client is None:
+        return {"placement": None, "reason": "backend_unconfigured"}
+    card = client.next_placement(tool, config, attended, surface=surface)
+    if card is None or not card.placement_id:
+        return {"placement": None, "reason": "no_placement"}
+    session_id = f"sess_{secrets.token_urlsafe(12)}"
+    event = external_event_fields(tool, surface, attended, config)
+    # Best effort: a failed rendered event only means the qualifying event will
+    # be rejected later (missing_rendered) -- never a wrong bill.
+    client.record_event(
+        card.placement_id,
+        {
+            **{key: value for key, value in event.items() if key != "event"},
+            "event": RENDERED_EVENT,
+            "visible_seconds": 0.0,
+            "session_id": session_id,
+            "campaign_id": card.campaign_id,
+            "signature": card.signature,
+        },
+    )
+    return {
+        "placement": {
+            "placement_id": card.placement_id,
+            "campaign_id": card.campaign_id,
+            "sponsor": card.sponsor,
+            "message": card.message,
+            "url": card.url,
+            "click_url": card.click_url,
+            "brand_icon_url": card.brand_icon_url,
+            "credit_amount": card.credit_amount,
+            "expires_at": card.expires_at,
+            "signature": card.signature,
+            "surface": surface,
+            "tool": tool,
+            "session_id": session_id,
+        },
+        "minimum_visible_seconds": QUALIFIED_VISIBLE_SECONDS,
+    }
+
+
+def record_placement_event(
+    config: dict[str, Any],
+    ticket: dict[str, Any],
+    *,
+    event: str = QP_EVENT,
+    visible_seconds: float = 0.0,
+    attended: bool = True,
+) -> dict[str, Any]:
+    """Record a placement event from an external surface. ``ticket`` is the
+    placement dict returned by :func:`fetch_placement_card`, echoed back by the
+    caller. ``attended`` is re-attested at event time (truthful at the moment of
+    qualifying). Returns the backend response, or a ``{"billable": False, ...}``
+    dict when the backend is unreachable or the ticket is incomplete."""
+    client = RemotePlacementClient.from_config(config)
+    if client is None:
+        return {"billable": False, "reason": "backend_unconfigured"}
+    placement_id = _optional_str(ticket.get("placement_id"))
+    signature = _optional_str(ticket.get("signature"))
+    if not placement_id or not signature:
+        return {"billable": False, "reason": "incomplete_ticket"}
+    surface = _optional_str(ticket.get("surface")) or VSCODE_WAIT_SURFACE
+    tool = _optional_str(ticket.get("tool")) or "claude"
+    fields = external_event_fields(tool, surface, attended, config)
+    payload = {
+        **{key: value for key, value in fields.items() if key != "event"},
+        "event": event,
+        "visible_seconds": round(float(visible_seconds), 3),
+        "session_id": ticket.get("session_id"),
+        "campaign_id": ticket.get("campaign_id"),
+        "signature": signature,
+    }
+    if event == CLICK_EVENT:
+        click_token = _optional_str(ticket.get("click_token"))
+        if click_token:
+            payload["click_token"] = click_token
+    response = client.record_event(placement_id, payload)
+    return response or {"billable": False, "reason": "remote_unreachable"}

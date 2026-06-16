@@ -18,7 +18,13 @@ from ..metrics import OVERLAY_SURFACE
 from ..sponsors import SponsorSession
 from .driver import DEFAULT_ANCHOR, SessionDriver
 from .lock import billing_authority_lock
-from .visibility import VisibilityMonitor, any_of, claude_desktop_matcher, codex_desktop_matcher
+from .visibility import (
+    VisibilityMonitor,
+    any_of,
+    claude_desktop_matcher,
+    codex_desktop_matcher,
+    mock_foreground_matcher,
+)
 from .macos import is_macos
 from .win32 import is_windows
 
@@ -67,6 +73,7 @@ _TARGETS = {
     "codex": ("the Codex app", codex_desktop_matcher),
     "both": ("Claude Desktop + the Codex app",
              lambda: any_of(claude_desktop_matcher(), codex_desktop_matcher())),
+    "mock": ("the foreground app (mock)", mock_foreground_matcher),
 }
 
 
@@ -110,6 +117,8 @@ def run_overlay(target: str = "claude", anchor: str = DEFAULT_ANCHOR, billable: 
     # surface already holds it, fall back to credit-0 display.
     lock = billing_authority_lock()
     bill = billable and lock.acquire()
+    if bill:
+        logger.info("billing authority acquired surface=overlay target=%s", target)
     if billable and not bill:
         logger.info("another SAI billing authority is active; overlay runs credit-0")
 
@@ -139,14 +148,17 @@ def run_overlay(target: str = "claude", anchor: str = DEFAULT_ANCHOR, billable: 
         logger.warning("tray icon unavailable; overlay runs without it", exc_info=True)
 
     mode = "billing" if bill else "credit-0 preview"
+    logger.info("overlay starting target=%s mode=%s anchor=%s", target, mode, anchor)
     print(f"SAI overlay running for {_target_label(target)} ({mode}). Press Ctrl+C to stop.")
+    earned = 0.0
     try:
-        driver.run(stop=lambda: stop["requested"], iteration=backend.get("iteration_context"))
+        earned = driver.run(stop=lambda: stop["requested"], iteration=backend.get("iteration_context"))
     finally:
         if tray is not None:
             tray.close()
         window.close()
         lock.release()
+        logger.info("overlay stopped target=%s mode=%s earned=%s", target, mode, earned)
     return 0
 
 

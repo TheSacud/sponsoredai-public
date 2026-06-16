@@ -1,4 +1,4 @@
-// Records site/promo.html into a 24.4s MP4 ready for X (1080p H.264).
+// Records site-v3/_internal/promo.html into a 24.4s MP4 ready for X (1080p H.264).
 //
 // Requires: Microsoft Edge (installed by default on Windows) and ffmpeg in PATH.
 // Usage:
@@ -13,7 +13,7 @@ const os = require('os');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const PROMO = 'file:///' + path.join(ROOT, 'site', 'promo.html').replace(/\\/g, '/');
+const PROMO = 'file:///' + path.join(ROOT, 'site-v3', '_internal', 'promo.html').replace(/\\/g, '/');
 const OUT = path.join(ROOT, 'sai-promo-x.mp4');
 const LOOP_SECONDS = 24.4; // one full loop, ends on the end card (restart is at 24.5s)
 

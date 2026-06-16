@@ -12,19 +12,25 @@ QUALIFIED_VISIBLE_SECONDS = 5.0
 PLACEMENT_TTL_SECONDS = 120
 
 # Ad surfaces. Each attests attendance in its own truthful way: the terminal via
-# terminal_interactive (a real interactive tty), the desktop overlay via
-# attended_interactive (a verified foreground + on-screen + user-present banner).
+# terminal_interactive (a real interactive tty), GUI surfaces (the desktop overlay
+# and the VS Code webview) via attended_interactive (a verified foreground +
+# on-screen + user-present banner).
 CLI_WAIT_SURFACE = "cli_agent_wait"
 OVERLAY_SURFACE = "desktop_overlay"
+VSCODE_WAIT_SURFACE = "vscode_ai_wait"
+
+# Surfaces that are graphical (not a tty) and therefore attest with
+# attended_interactive rather than terminal_interactive.
+GUI_SURFACES = (OVERLAY_SURFACE, VSCODE_WAIT_SURFACE)
 
 
 def surface_attended(payload: dict[str, Any]) -> bool:
     """Whether an event/placement payload truthfully attests that the user is
-    attending an interactive session, for that payload's surface. A GUI overlay
+    attending an interactive session, for that payload's surface. A GUI surface
     can only qualify via attended_interactive (never terminal_interactive), and a
     terminal only via terminal_interactive -- so neither surface can borrow the
     other's attestation."""
-    if payload.get("surface") == OVERLAY_SURFACE:
+    if payload.get("surface") in GUI_SURFACES:
         return bool(payload.get("attended_interactive"))
     return bool(payload.get("terminal_interactive"))
 

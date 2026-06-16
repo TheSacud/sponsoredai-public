@@ -20,7 +20,13 @@ from .config import (
     set_kill_switch,
 )
 from .credits import spendable_balance, sync_local_wallet
-from .metrics import metric_contract
+from .metrics import (
+    CLICK_EVENT,
+    QP_EVENT,
+    RENDERED_EVENT,
+    VSCODE_WAIT_SURFACE,
+    metric_contract,
+)
 from .privacy import public_event_schema
 from .runner import CommandRunner
 from .wallet import Wallet, WalletError
@@ -41,15 +47,26 @@ def default_backend_db_path() -> Path:
     return runtime_paths().home / "backend.sqlite3"
 
 
+def _module_available(name: str) -> bool:
+    import importlib.util
+
+    return importlib.util.find_spec(f"{__package__}.{name}") is not None
+
+
 def _backend_available() -> bool:
     """True when the server-only ``sai.backend`` module is present. It ships in
     the source/private build but is stripped from the public client package, so
     this gates whether the ``sai backend`` subcommands exist at all -- the frozen
     client binary then neither bundles the sponsor server nor advertises a
     command it cannot run."""
-    import importlib.util
+    return _module_available("backend")
 
-    return importlib.util.find_spec(f"{__package__}.backend") is not None
+
+def _dev_mock_available() -> bool:
+    # The mock lab intentionally depends on the private/source backend. The
+    # public client package strips both modules, so do not advertise this command
+    # unless the full development checkout is present.
+    return _backend_available() and _module_available("dev_mock")
 
 
 def gateway_running(host: str = "127.0.0.1", port: int = 8787, timeout: float = 0.2) -> bool:
@@ -80,8 +97,10 @@ def start_gateway_in_background(
 
     if getattr(sys, "frozen", False):
         command = [sys.executable, "gateway", "serve", "--host", host, "--port", str(port)]
+        mode = "frozen"
     else:
         command = [sys.executable, "-m", "sai", "gateway", "serve", "--host", host, "--port", str(port)]
+        mode = "module"
     kwargs: dict[str, object] = {
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
@@ -91,6 +110,8 @@ def start_gateway_in_background(
         kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         kwargs["start_new_session"] = True
+    logger.info("Gateway autostart attempt host=%s port=%s mode=%s", host, port, mode)
+    started = time.monotonic()
     try:
         subprocess.Popen(command, **kwargs)
     except OSError:
@@ -99,9 +120,11 @@ def start_gateway_in_background(
     deadline = time.monotonic() + max(0.0, wait_seconds)
     while time.monotonic() < deadline:
         if gateway_running(host, port):
+            logger.info("Gateway autostart ready host=%s port=%s elapsed_ms=%s", host, port, int((time.monotonic() - started) * 1000))
             return True
         time.sleep(0.05)
-    return True
+    logger.warning("Gateway autostart unhealthy host=%s port=%s elapsed_ms=%s", host, port, int((time.monotonic() - started) * 1000))
+    return False
 
 
 def provider_catalog() -> list[dict]:
@@ -131,6 +154,43 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-sync",
         action="store_true",
         help="Skip reconciling the local ledger against the backend before showing it",
+    )
+
+    placement_cmd = sub.add_parser(
+        "placement",
+        help="Fetch or report a sponsor placement for an external surface (e.g. the VS Code webview)",
+    )
+    placement_sub = placement_cmd.add_subparsers(dest="placement_action", required=True)
+    placement_next = placement_sub.add_parser(
+        "next", help="Fetch the next placement and record its rendered event (JSON)"
+    )
+    placement_next.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    placement_next.add_argument(
+        "--surface", default=VSCODE_WAIT_SURFACE, help="Surface label issued server-side (default: vscode_ai_wait)"
+    )
+    placement_next.add_argument("--tool", default="claude", help="Agent the wait belongs to (claude/codex)")
+    placement_next.add_argument(
+        "--attended",
+        action="store_true",
+        help="Attest the user is attending (VS Code focused with recent input)",
+    )
+    placement_event = placement_sub.add_parser(
+        "event", help="Record a placement event; reads the placement ticket JSON from stdin"
+    )
+    placement_event.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    placement_event.add_argument(
+        "--event",
+        default=QP_EVENT,
+        choices=[RENDERED_EVENT, QP_EVENT, CLICK_EVENT],
+        help="Event type (default: qualified_5s)",
+    )
+    placement_event.add_argument(
+        "--visible-seconds", type=float, default=0.0, help="Seconds the card was continuously visible"
+    )
+    placement_event.add_argument(
+        "--attended",
+        action="store_true",
+        help="Attest the user is attending at event time (focused with recent input)",
     )
 
     run_cmd = sub.add_parser("run", help="Run a command through SAI")
@@ -173,6 +233,18 @@ def build_parser() -> argparse.ArgumentParser:
     providers_cmd = gateway_sub.add_parser("providers", help="List built-in upstream provider presets")
     providers_cmd.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
+    if _dev_mock_available():
+        dev_cmd = sub.add_parser("dev", help="Development-only mock surfaces")
+        dev_sub = dev_cmd.add_subparsers(dest="dev_command")
+        mock_cmd = dev_sub.add_parser("mock", help="Run a local full-product mock lab")
+        mock_cmd.add_argument("--host", default="127.0.0.1")
+        mock_cmd.add_argument("--backend-port", type=int, default=8790)
+        mock_cmd.add_argument("--gateway-port", type=int, default=8787)
+        mock_cmd.add_argument("--lab-port", type=int, default=8799)
+        mock_cmd.add_argument("--home", type=Path, default=Path(".sai-mock"))
+        mock_cmd.add_argument("--wait-seconds", type=float, default=8.0)
+        mock_cmd.add_argument("--open", action="store_true", help="Open the mock lab in a browser")
+
     fonts_cmd = sub.add_parser("fonts", help="Detect or install a Nerd Font for sponsor card icons")
     fonts_sub = fonts_cmd.add_subparsers(dest="fonts_command")
     fonts_sub.add_parser("status", help="Show whether sponsor card icons will render")
@@ -195,14 +267,14 @@ def build_parser() -> argparse.ArgumentParser:
     overlay_cmd.add_argument(
         "target",
         nargs="?",
-        choices=["claude", "codex", "both"],
+        choices=["claude", "codex", "both", "mock"],
         default="claude",
         help="Desktop app to watch (default: claude)",
     )
     overlay_cmd.add_argument(
         "--target",
         dest="target_option",
-        choices=["claude", "codex", "both"],
+        choices=["claude", "codex", "both", "mock"],
         help="Deprecated; use `sai overlay codex|claude|both`.",
     )
     overlay_cmd.add_argument(
@@ -270,7 +342,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         return _main(raw_argv)
     except (ConfigError, WalletError) as exc:
-        logger.warning("Command failed: %s", exc)
+        logger.warning("command failed error=%s", type(exc).__name__)
         print(f"sai: {exc}", file=sys.stderr)
         return 1
 
@@ -335,6 +407,33 @@ def _main(argv: Sequence[str] | None = None) -> int:
                     )
         return 0
 
+    if args.command_name == "placement":
+        from .sponsors import fetch_placement_card, record_placement_event
+
+        config = ensure_config_saved()
+        if args.placement_action == "next":
+            result = fetch_placement_card(
+                config, tool=args.tool, surface=args.surface, attended=args.attended
+            )
+        else:
+            try:
+                ticket = json.load(sys.stdin)
+            except (json.JSONDecodeError, ValueError):
+                ticket = {}
+            if isinstance(ticket, dict) and isinstance(ticket.get("placement"), dict):
+                ticket = ticket["placement"]
+            elif not isinstance(ticket, dict):
+                ticket = {}
+            result = record_placement_event(
+                config,
+                ticket,
+                event=args.event,
+                visible_seconds=args.visible_seconds,
+                attended=args.attended,
+            )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+
     if args.command_name == "config":
         return handle_config(args)
 
@@ -377,13 +476,17 @@ def _main(argv: Sequence[str] | None = None) -> int:
     if args.command_name == "gateway":
         return handle_gateway(args)
 
+    if args.command_name == "dev":
+        return handle_dev(args, parser)
+
     if args.command_name == "fonts":
         return handle_fonts(args, parser)
 
     if args.command_name == "overlay":
         from .overlay.app import run_overlay
 
-        return run_overlay(target=args.target_option or args.target, anchor=args.anchor, billable=args.bill)
+        target = args.target_option or args.target
+        return run_overlay(target=target, anchor=args.anchor, billable=(args.bill and target != "mock"))
 
     if args.command_name == "privacy":
         if args.privacy_command == "schema":
@@ -503,6 +606,23 @@ def handle_fonts(args: argparse.Namespace, parser: argparse.ArgumentParser) -> i
         print_fonts_status(fonts)
         return 0
     parser.error("fonts requires a subcommand")
+    return 2
+
+
+def handle_dev(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
+    if args.dev_command == "mock":
+        from .dev_mock import run_mock_lab
+
+        return run_mock_lab(
+            host=args.host,
+            backend_port=args.backend_port,
+            gateway_port=args.gateway_port,
+            lab_port=args.lab_port,
+            home=args.home,
+            wait_seconds=args.wait_seconds,
+            open_browser=args.open,
+        )
+    parser.error("dev requires a subcommand")
     return 2
 
 

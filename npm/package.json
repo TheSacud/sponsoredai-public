@@ -1,12 +1,25 @@
 {
   "name": "@sponsoredai/cli",
-  "version": "0.2.2",
-  "description": "SAI CLI launcher.",
+  "version": "0.2.3",
+  "description": "Local-first CLI and overlay for sponsored AI credits and cash-out while Claude Code and Codex wait.",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "codex-cli",
+    "ai-credits",
+    "cash-out",
+    "developer-payouts",
+    "sponsored-credits",
+    "terminal",
+    "overlay",
+    "local-first"
+  ],
   "license": "AGPL-3.0-or-later",
   "homepage": "https://sponsoredai.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TheSacud/sponsoredai-public.git"
+    "url": "git+https://github.com/TheSacud/sponsoredai-public.git",
+    "directory": "npm"
   },
   "bugs": {
     "url": "https://github.com/TheSacud/sponsoredai-public/issues"
@@ -14,18 +27,14 @@
   "bin": {
     "sai": "bin/sai.js"
   },
-  "scripts": {
-    "preinstall": "node scripts/preinstall.js"
-  },
   "files": [
     "bin/",
-    "scripts/preinstall.js",
     "README.md"
   ],
   "optionalDependencies": {
-    "@sponsoredai/cli-darwin-arm64": "0.2.2",
-    "@sponsoredai/cli-linux-x64": "0.2.2",
-    "@sponsoredai/cli-win32-x64": "0.2.2"
+    "@sponsoredai/cli-darwin-arm64": "0.2.3",
+    "@sponsoredai/cli-linux-x64": "0.2.3",
+    "@sponsoredai/cli-win32-x64": "0.2.3"
   },
   "os": [
     "darwin",

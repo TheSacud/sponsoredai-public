@@ -9,6 +9,7 @@ from unittest import mock
 
 from sai.config import load_config, login, save_config
 from sai.gateway import (
+    UpstreamConfig,
     WALLET_SPEND_PROVIDER,
     active_upstream_config,
     estimate_usage,
@@ -218,6 +219,46 @@ class GatewayTests(unittest.TestCase):
             maybe_refresh_spend_key_in_background()
 
         thread_class.assert_not_called()
+
+    def test_wallet_spend_sync_runs_when_client_write_fails(self):
+        handler = object.__new__(GatewayHandler)
+        handler.path = "/v1/chat/completions"
+        handler._authorized = mock.Mock(return_value=True)
+        handler._read_json = mock.Mock(return_value={"model": "x", "messages": []})
+        handler._send_raw = mock.Mock(side_effect=BrokenPipeError)
+        upstream = UpstreamConfig(
+            provider=WALLET_SPEND_PROVIDER,
+            base_url="https://openrouter.ai/api/v1",
+            api_key_env="(sai credits)",
+            api_key="sk-or-wallet",
+        )
+
+        with mock.patch("sai.gateway.resolve_upstream_config", return_value=None), \
+                mock.patch("sai.gateway._maybe_refresh_spend_key_inline"), \
+                mock.patch("sai.gateway.wallet_upstream_config", return_value=upstream), \
+                mock.patch("sai.gateway.proxy_json", return_value=(200, {"content-type": "application/json"}, b"{}")), \
+                mock.patch("sai.gateway._maybe_sync_spend_usage") as sync, \
+                mock.patch("sai.gateway._maybe_reconcile_wallet") as reconcile:
+            with self.assertRaises(BrokenPipeError):
+                handler._handle_post()
+
+        sync.assert_called_once_with(force=True)
+        reconcile.assert_called_once()
+
+    def test_chat_completion_attempts_inline_spend_key_refresh_before_mock(self):
+        handler = object.__new__(GatewayHandler)
+        handler.path = "/v1/chat/completions"
+        handler._authorized = mock.Mock(return_value=True)
+        handler._read_json = mock.Mock(return_value={"model": "x", "messages": []})
+        handler._send_json = mock.Mock()
+
+        with mock.patch("sai.gateway.resolve_upstream_config", return_value=None), \
+                mock.patch("sai.gateway._maybe_refresh_spend_key_inline") as refresh, \
+                mock.patch("sai.gateway.wallet_upstream_config", return_value=None):
+            handler._handle_post()
+
+        refresh.assert_called_once()
+        handler._send_json.assert_called_once()
 
     def test_mock_chat_completion_does_not_spend_local_wallet(self):
         with tempfile.TemporaryDirectory() as tmp:

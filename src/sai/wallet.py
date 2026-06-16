@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import secrets
 import threading
@@ -116,9 +117,31 @@ class Wallet:
     ) -> LedgerEntry:
         if kind not in {"earn", "spend", "expire", "adjust"}:
             raise ValueError(f"Unsupported ledger entry kind: {kind}")
+        if not math.isfinite(float(amount)):
+            raise ValueError("Ledger amount must be finite")
         with self._locked():
             data = self.load()
             return self._append(data, kind, amount, source, session_id, metadata)
+
+    def adjust_to_balance(
+        self,
+        target_balance: float,
+        source: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> tuple[float, float, LedgerEntry | None]:
+        """Atomically append an adjust entry that aligns the local balance."""
+        if not math.isfinite(float(target_balance)):
+            raise ValueError("Target balance must be finite")
+        with self._locked():
+            data = self.load()
+            local_before = self._balance_of(data)
+            delta = round(float(target_balance) - local_before, 6)
+            if delta == 0:
+                return local_before, local_before, None
+            entry_metadata = dict(metadata or {})
+            entry_metadata.setdefault("local_balance_before", local_before)
+            entry = self._append(data, "adjust", delta, source, None, entry_metadata)
+            return local_before, self._balance_of(data), entry
 
     def earn(
         self,
@@ -133,6 +156,8 @@ class Wallet:
         daily_cap is accepted for backward compatibility with older configs,
         but payout limits must be enforced by the authoritative backend.
         """
+        if not math.isfinite(float(amount)):
+            raise ValueError("Earn amount must be finite")
         if amount <= 0:
             return None
         with self._locked():
@@ -149,6 +174,8 @@ class Wallet:
         session_id: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> LedgerEntry:
+        if not math.isfinite(float(amount)):
+            raise ValueError("Spend amount must be finite")
         if amount <= 0:
             raise ValueError("Spend amount must be positive")
         with self._locked():
@@ -165,6 +192,8 @@ class Wallet:
         metadata: dict[str, Any] | None = None,
     ) -> LedgerEntry | None:
         """Spend at most the available balance instead of failing the charge."""
+        if not math.isfinite(float(amount)):
+            raise ValueError("Spend amount must be finite")
         if amount <= 0:
             return None
         with self._locked():
@@ -183,6 +212,8 @@ class Wallet:
         session_id: str | None,
         metadata: dict[str, Any] | None,
     ) -> LedgerEntry:
+        if not math.isfinite(float(amount)):
+            raise ValueError("Ledger amount must be finite")
         entry = LedgerEntry(
             id=f"led_{secrets.token_urlsafe(12)}",
             timestamp=utc_now_iso(),
@@ -198,7 +229,13 @@ class Wallet:
 
     @staticmethod
     def _balance_of(data: dict[str, Any]) -> float:
-        return round(sum(float(entry.get("amount", 0)) for entry in data["ledger"]), 6)
+        total = 0.0
+        for entry in data["ledger"]:
+            amount = float(entry.get("amount", 0))
+            if not math.isfinite(amount):
+                raise WalletError("Wallet file is corrupt: ledger amount must be finite")
+            total += amount
+        return round(total, 6)
 
     @staticmethod
     def _today_earned(data: dict[str, Any]) -> float:
@@ -212,5 +249,8 @@ class Wallet:
             except (KeyError, ValueError, TypeError):
                 continue
             if ts == today:
-                total += float(entry.get("amount", 0))
+                amount = float(entry.get("amount", 0))
+                if not math.isfinite(amount):
+                    raise WalletError("Wallet file is corrupt: ledger amount must be finite")
+                total += amount
         return round(total, 6)

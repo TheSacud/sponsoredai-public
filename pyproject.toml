@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sai-credits"
-version = "0.2.2"
-description = "Sponsored AI Credits CLI wrapper, local wallet, and OpenAI-compatible gateway MVP."
+version = "0.2.3"
+description = "Local-first CLI and overlay for sponsored AI credits and cash-out while Claude Code and Codex wait."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "SAI" }]
-keywords = ["ai", "cli", "wallet", "gateway", "sponsored-credits"]
+keywords = ["ai", "cli", "claude-code", "codex", "wallet", "gateway", "cash-out", "developer-payouts", "sponsored-credits", "terminal-overlay"]
 dependencies = [
     'pywinpty>=2.0; sys_platform == "win32"',
     'pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"',

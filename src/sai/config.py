@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import secrets
 import sys
@@ -17,6 +18,7 @@ CONFIG_FILE = "config.json"
 KILL_SWITCH_FILE = "kill_switch.json"
 DEFAULT_BACKEND_URL = "https://sponsoredai.dev"
 DEFAULT_FREQUENCY = "normal"
+logger = logging.getLogger(__name__)
 
 # Identify the CLI on outbound backend requests. The default urllib User-Agent
 # ("Python-urllib/x.y") is rejected by the edge's bot/DoS filter, which would
@@ -132,6 +134,7 @@ def load_config() -> dict[str, Any]:
     config = _default_config()
     config.update(loaded)
     if config.get("frequency") not in FREQUENCY_PROFILES:
+        logger.warning("config invalid frequency value=%s fallback=%s", config.get("frequency"), DEFAULT_FREQUENCY)
         config["frequency"] = DEFAULT_FREQUENCY
     return config
 
@@ -161,6 +164,7 @@ def store_install_secret(secret: str) -> dict[str, Any]:
         return config
     config["install_secret"] = secret
     save_config(config)
+    logger.info("install secret stored")
     return config
 
 
@@ -176,17 +180,21 @@ def login(email: str | None = None, name: str | None = None) -> dict[str, Any]:
         config["name"] = name
     config["logged_in_at"] = utc_now_iso()
     save_config(config)
+    logger.info("login refreshed has_email_hint=%s has_name=%s", bool(email), bool(name))
     return config
 
 
 def set_frequency(value: str) -> dict[str, Any]:
     if value not in FREQUENCY_PROFILES:
+        logger.warning("config frequency rejected value=%s", value)
         valid = ", ".join(sorted(FREQUENCY_PROFILES))
         raise ValueError(f"Invalid frequency '{value}'. Valid values: {valid}")
     config = load_config()
+    old = config.get("frequency")
     config["frequency"] = value
     config["ads_enabled"] = value != "off"
     save_config(config)
+    logger.info("config frequency changed old=%s new=%s ads_enabled=%s", old, value, config["ads_enabled"])
     return config
 
 
@@ -199,7 +207,11 @@ def kill_switch_active() -> bool:
     try:
         with paths.kill_switch_file.open("r", encoding="utf-8-sig") as fh:
             data = json.load(fh)
-    except (OSError, json.JSONDecodeError):
+    except OSError:
+        logger.warning("kill switch fail closed source=file error=os_error")
+        return True
+    except json.JSONDecodeError:
+        logger.warning("kill switch fail closed source=file error=json_decode")
         return True
     return bool(data.get("active", False))
 
@@ -207,6 +219,7 @@ def kill_switch_active() -> bool:
 def set_kill_switch(active: bool, reason: str | None = None) -> None:
     payload = {"active": active, "updated_at": utc_now_iso(), "reason": reason}
     write_json_atomic(runtime_paths().kill_switch_file, payload)
+    logger.info("kill switch updated active=%s reason_present=%s", active, bool(reason))
 
 
 def interactive_terminal() -> bool:

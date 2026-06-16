@@ -6,6 +6,7 @@ import time
 import urllib.error
 import urllib.request
 from typing import Any
+from urllib.parse import urlparse
 
 from .config import USER_AGENT, load_config
 from .sponsors import INSTALL_AUTH_SCHEME, hash_install_id, resolve_install_secret
@@ -99,7 +100,7 @@ def fetch_backend_credits(config: dict[str, Any] | None = None, timeout: float =
         with urllib.request.urlopen(request, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
     except (OSError, ValueError) as exc:
-        logger.debug("Backend credit fetch failed url=%s: %s", url, exc)
+        logger.debug("Backend credit fetch failed route=%s error=%s", urlparse(url).path or "/", type(exc).__name__)
         return None
     return data if _is_credit_summary(data) else None
 
@@ -116,25 +117,30 @@ def reconcile_wallet(summary: dict[str, Any], wallet: Wallet | None = None) -> d
     nothing."""
     wallet = wallet or Wallet()
     target_micros = authoritative_micros(summary)
-    local_micros = int(round(wallet.balance() * MICROS_PER_UNIT))
-    delta_micros = target_micros - local_micros
-    entry = None
-    if delta_micros != 0:
-        entry = wallet.record(
-            "adjust",
-            delta_micros / MICROS_PER_UNIT,
-            source=RECONCILE_SOURCE,
-            metadata={
-                "reason": "backend_reconcile",
-                "local_balance_before": round(local_micros / MICROS_PER_UNIT, 6),
-                **{field: summary.get(field) for field in _BALANCE_FIELDS},
-            },
+    target_balance = round(target_micros / MICROS_PER_UNIT, 6)
+    metadata = {
+        "reason": "backend_reconcile",
+        **{field: summary.get(field) for field in _BALANCE_FIELDS},
+    }
+    local_before, local_after, entry = wallet.adjust_to_balance(
+        target_balance,
+        source=RECONCILE_SOURCE,
+        metadata=metadata,
+    )
+    local_micros = int(round(local_before * MICROS_PER_UNIT))
+    delta_micros = int(round((local_after - local_before) * MICROS_PER_UNIT))
+    if entry is not None:
+        logger.info(
+            "wallet reconciled delta_micros=%s local_before_micros=%s authoritative_micros=%s",
+            delta_micros,
+            local_micros,
+            target_micros,
         )
     return {
         "authoritative_balance": round(target_micros / MICROS_PER_UNIT, 6),
         "spendable_balance": spendable_balance(summary),
         "local_balance_before": round(local_micros / MICROS_PER_UNIT, 6),
-        "local_balance_after": wallet.balance(),
+        "local_balance_after": local_after,
         "adjusted": entry.amount if entry is not None else 0.0,
         "reconciled": entry is not None,
     }
@@ -190,7 +196,7 @@ def maybe_sync_local_wallet(
     a backend hiccup just leaves the last confirmed state in place."""
     global _last_sync
     now = time.monotonic()
-    if now - _last_sync < min_interval:
+    if _last_summary is not None and now - _last_sync < min_interval:
         return _last_summary
     _last_sync = now
     try:

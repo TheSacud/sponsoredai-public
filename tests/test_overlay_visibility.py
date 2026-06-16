@@ -8,6 +8,7 @@ from sai.overlay.visibility import (
     claude_desktop_matcher,
     codex_desktop_matcher,
     image_path_matcher,
+    mock_foreground_matcher,
 )
 from sai.overlay.win32 import is_windows
 
@@ -146,6 +147,11 @@ class HelperMatcherTests(unittest.TestCase):
         self.assertTrue(match(CLAUDE_STORE))
         self.assertTrue(match(CODEX_CLI))
         self.assertFalse(match(CLAUDE_CODE_CLI))
+
+    def test_mock_foreground_matcher_accepts_any_real_path(self):
+        match = mock_foreground_matcher()
+        self.assertTrue(match(CODEX_CLI))
+        self.assertFalse(match(""))
 
 
 class VisibilityMonitorTests(unittest.TestCase):
