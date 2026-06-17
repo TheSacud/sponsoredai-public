@@ -177,7 +177,7 @@
           <p><strong>"Developer"</strong> means someone who runs SAI around a supported terminal workflow.</p>
           <p><strong>"Sponsor"</strong> means someone who creates or funds campaigns in the sponsor console.</p>
           <p><strong>"Qualified Placement" or "QP"</strong> means a real paid unit: one sponsor line issued by the backend, shown on a supported surface &mdash; an interactive supported terminal, or the SAI desktop overlay floated over a supported desktop app &mdash; during a real, attended wait, visible for at least five continuous seconds, and accepted by the metric contract.</p>
-          <p><strong>"Credits"</strong> means ledger value created from paid qualified placements and usable, where supported, for AI model calls through the gateway. Credits are not cash, deposits, gift cards, securities, or a promise of payout.</p>
+          <p><strong>"Credits"</strong> means ledger value created from paid qualified placements and usable, where supported, for AI model calls through the gateway or for cash-out requests after eligibility checks. Credits are not deposits, gift cards, securities, or guaranteed payouts; they become cash only when a payout is approved and completed.</p>
         </section>
 
         <section class="clause" id="eligibility">
@@ -197,7 +197,7 @@
 
         <section class="clause" id="accounts">
           <h2>5. Accounts and Registration</h2>
-          <p>Some flows need an account, an installation registration, or a checkout identity. Use accurate information, especially for sponsor billing and any future settlement flow.</p>
+          <p>Some flows need an account, an installation registration, or a checkout identity. Use accurate information, especially for sponsor billing, payout, and settlement flows.</p>
           <p>You are responsible for your credentials, browser sessions, local SAI config, and installation secret. Tell us if something looks compromised.</p>
           <p>Do not sell, rent, farm, or rotate accounts and installations to get around caps, fraud checks, campaign review, or payment obligations.</p>
         </section>
@@ -206,14 +206,14 @@
           <h2>6. Developer Credits</h2>
           <h3>6.1 How Credits Accrue</h3>
           <p>Credits only come from real sponsor money. A campaign must be live, approved, funded, selected by the backend, rendered locally, visible long enough, and accepted by the current metric contract. Example cards, seeded dev data, duplicate events, expired placements, invalid clicks, and fraud-filtered events pay nothing.</p>
-          <h3>6.2 No Cash Value</h3>
-          <p>Credits are meant to pay for model usage through supported gateway flows. They are not a cash balance. Unless SAI launches a separate payout program in writing, there is no cash-out right.</p>
+          <h3>6.2 Cash-Out Eligibility</h3>
+          <p>Eligible available or settled balance can be requested as cash-out through Stripe Connect once the payout account, threshold, settlement holds, and review requirements are satisfied. Cash-out is not instant or guaranteed; SAI can hold, reject, fail, reverse, or claw back payouts where payment, fraud, abuse, refund, dispute, sanctions, tax, or legal risk applies.</p>
           <h3>6.3 Settlement, Caps, and Corrections</h3>
-          <p>Credits can sit in pending state before becoming available. Settlement holds, hourly caps, campaign caps, account caps, fraud reviews, corrections, and clawbacks are part of the product. Refunds, disputes, failed payments, duplicate events, invalid clicks, sponsor non-payment, or abuse can freeze, reduce, revoke, or reverse credits.</p>
+          <p>Credits can sit in pending state before becoming available. Settlement holds, hourly caps, campaign caps, account caps, fraud reviews, corrections, and clawbacks are part of the product. Refunds, disputes, failed payments, duplicate events, invalid clicks, sponsor non-payment, or abuse can freeze, reduce, revoke, or reverse credits or payout requests.</p>
           <h3>6.4 Spend Through the Gateway</h3>
           <p>When wallet spend is enabled, the gateway can provision a provider key with a limit tied to your spendable balance. Provider outages, usage counters, pricing, rate limits, model availability, and policy decisions can all affect whether a credit can be spent at a given moment.</p>
           <h3>6.5 Taxes</h3>
-          <p>You are responsible for any tax treatment that applies to credits, benefits, sponsor purchases, or future payout programs. SAI does not provide tax, accounting, or legal advice.</p>
+          <p>You are responsible for any tax treatment that applies to credits, benefits, cash-out payouts, or sponsor purchases. SAI does not provide tax, accounting, or legal advice.</p>
         </section>
 
         <section class="clause" id="sponsors">
