@@ -1,39 +1,56 @@
-# SAI — Sponsored AI Credits (client)
+<div align="center">
 
-SAI lets developers earn sponsor-funded AI credits or cash-out eligible balance
-while Claude Code, Codex, and long-running AI agent workflows wait.
+<img alt="SAI — Sponsored AI Credits" src="site-v3/social-card-v2.png" width="760">
 
-It wraps terminal AI workflows such as Codex CLI, Claude Code, and long-running
-commands, and can run a small desktop overlay over supported apps such as Claude
-Desktop and the Codex app. When an agent is waiting, SAI shows one quiet sponsor
-placement, records a qualified view, and credits the developer through the
-server-side earnings ledger. Eligible balances can be spent on model calls or
-requested as cash-out through Stripe Connect after threshold and review.
+### Get paid while your agent thinks.
 
-```text
-Service:        https://sponsoredai.dev
-Trust boundary: https://sponsoredai.dev/trust
-Source:         https://github.com/TheSacud/sponsoredai-public
+**SAI** sells the quiet line your AI agent shows while it works — the
+*"Percolating…"*, the *"Working in the app…"*, the spinner you stare at — and
+pays **60% of the sponsor revenue back to you**, the developer whose machine
+showed it. Take it as **AI credits or cash**.
+
+[![Website](https://img.shields.io/badge/sponsoredai.dev-1A1A1A?style=for-the-badge&logoColor=white)](https://sponsoredai.dev)
+[![npm](https://img.shields.io/npm/v/%40sponsoredai%2Fcli?style=for-the-badge&logo=npm&label=npm&color=CB3837)](https://www.npmjs.com/package/@sponsoredai/cli)
+[![VS Code](https://img.shields.io/badge/VS%20Code-extension-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](vscode-extension/)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-EEB200?style=for-the-badge&labelColor=1A1A1A)](LICENSE)
+
+</div>
+
+---
+
+## 💡 The idea
+
+Claude Code, Codex, and long-running agents spend a lot of time thinking. That
+wait is dead air on your screen. SAI fills one line of it with a single, quiet,
+**clickable** sponsor placement while you keep coding.
+
+```diff
+  · Refactoring the auth module… (12s · esc to interrupt)
++ ⬡ Sponsored · Linear — issue tracking that keeps up with you ↗
 ```
 
-> **This repository is the open-source SAI client** — the CLI, the gateway, and
-> the desktop overlay that run on your machine. It is licensed under **AGPL-3.0**
-> (see [`LICENSE`](LICENSE)). The hosted backend (sponsor server, billing, fraud
-> and payout engine) is a separate, proprietary service operated by SAI; it is
-> not part of this repository. The client talks to it over the documented public
-> endpoints only.
+When the placement is actually on screen long enough to count, the sponsor pays,
+and 60% of that lands in your balance. You watch it tick up:
 
-## Trust and privacy boundary
+```text
+SAI  ·  $0.42 today  ·  $7.11 spendable  ·  credits or cash
+```
 
-The CLI and desktop overlay do not upload prompts, source code, model responses,
-terminal logs, full file paths, repository URLs, shell history, screenshots,
-window titles, or window contents.
+No surveys, no tokens to buy, no video to sit through. You run your agent the way
+you already do.
 
-The terminal runner measures output *timing*, not terminal *content*. The
-desktop overlay checks local window visibility and recent input to decide whether
-a placement can be shown and qualified. Raw window state stays on the machine.
+## 🔒 Your code never leaves your machine
 
-Sponsor event metadata is limited to wait-state fields:
+This is the part most "earn while you code" ideas get wrong. SAI measures the
+*wait*, not the *work*.
+
+It does not upload prompts, source code, model responses, terminal logs, file
+paths, repository URLs, shell history, screenshots, window titles, or window
+contents. The terminal runner watches output *timing*. The desktop overlay
+checks whether a supported window is visible and recently used before a
+placement can qualify. Raw window state stays local.
+
+What reaches the server is one allowlisted event:
 
 ```json
 {
@@ -50,51 +67,69 @@ Sponsor event metadata is limited to wait-state fields:
 }
 ```
 
-Desktop overlay events use the same allowlisted shape with `surface` set to
-`desktop_overlay` and `attended_interactive` instead of `terminal_interactive`.
+Alongside it travel technical identifiers only (`install_id_hash`, `session_id`,
+`placement_id`, `campaign_id`, `signature`, `cli_version`). Desktop overlay
+events use the same shape with `surface: "desktop_overlay"`.
 
-Requests may also include technical transport identifiers (`install_id_hash`,
-`session_id`, `placement_id`, `campaign_id`, `signature`, `cli_version`). These
-identify the install/session/placement; they never include prompts, code,
-terminal output, file paths, commands, or shell history.
-
-Inspect the schema locally — and read the source in this repo to verify it:
+This repo is the real client. You can read exactly what runs, and you can print
+the live schema yourself:
 
 ```bash
 sai privacy schema
 ```
 
-## Install
+Full write-up: **[sponsoredai.dev/trust](https://sponsoredai.dev/trust)**.
 
-The public npm package is a small launcher. npm installs the matching optional
-platform binary package from the registry; it does not contain the Python source
-tree and does not download release binaries from a separate host.
+## 💸 How the money works
+
+- **Sponsors buy qualified placements.** The paid unit is fixed:
+  `1 QP = 1 qualified five-second placement`.
+- **Your share is 60%**, credited per qualified placement and per click.
+- **Clicks pay more.** A click bills the sponsor a multiplier (default 50×) over
+  the placement rate and pays you the same 60% net split.
+- **Credits or cash.** Spend your balance on model calls through the local
+  gateway, or cash out through Stripe Connect once you pass the threshold and
+  review. It is your choice each time.
+
+A placement only counts when the backend issued it, the campaign is live,
+approved, and funded, the card rendered in an interactive terminal or attended
+overlay (never CI or headless), it stayed visible for at least five seconds, the
+event arrived before expiry and is not a duplicate, and it passes the fraud
+filters. The contract is public and unauthenticated:
+
+```bash
+curl -fsS https://sponsoredai.dev/v1/metric-contract
+```
+
+## 🖥️ Where the sponsor line shows up
+
+| Surface | Where | Needs |
+| --- | --- | --- |
+| **Terminal sponsor line** | Claude Code / Codex CLI wait | Any version |
+| **Pinned spinner line** | Claude Code / Codex CLI on Windows | `pywinpty` (ConPTY) |
+| **Desktop overlay** | Claude Desktop, Codex app | Windows x64 or macOS arm64 |
+| **VS Code sponsor view** | Claude / Codex panels in VS Code | The SAI extension |
+
+Sponsor cards appear for interactive terminals or attended desktop overlays over
+supported apps. CI and headless runs are left alone, and the kill switch turns
+everything off instantly.
+
+## 🚀 Install
 
 ```bash
 npm install -g @sponsoredai/cli
-sai claude
-sai overlay both
 ```
 
-## CLI
+Then run your agent through SAI:
 
 ```bash
-sai login
-sai --version
-sai wallet
-sai run -- npm test
-sai run -- pytest
-sai codex
-sai claude
-sai overlay codex
-sai overlay claude
-sai overlay both
+sai claude            # or: sai codex
+sai overlay both      # desktop overlay for Claude Desktop + Codex app
+sai wallet            # check your balance
 ```
 
-Sponsor cards only appear for interactive terminals or attended desktop overlays
-over supported apps. CI and headless runs are left alone.
-
-Use frequency settings or the kill switch to suppress sponsor surfaces:
+You do not need to log in first; SAI creates its local install state when it is
+needed. Turn the volume down or off whenever you want:
 
 ```bash
 sai config set frequency low
@@ -102,189 +137,82 @@ sai config set frequency off
 sai config kill-switch on --reason "incident"
 ```
 
-Override the backend URL for local testing:
+## 📣 Want to sponsor?
 
-```bash
-sai config set backend-url http://127.0.0.1:8790
-sai config set backend-url none
-```
+You are reaching the most technical audience there is, in the calmest format
+there is: one line, while they wait. Set a budget, drop in a creative, go live.
 
-## VS Code extension
+→ **[Buy inventory at sponsoredai.dev](https://sponsoredai.dev)**
 
-The VS Code extension lives in [`vscode-extension/`](vscode-extension/). It adds:
+## 🧱 What's in this repo
 
-- Command Palette launchers for `sai codex`, `sai claude`, `sai overlay both`,
-  the wallet, dashboard, refresh, and CLI install.
-- A status bar wallet readout that prefers the backend-confirmed spendable
-  balance and labels local-only balances as unconfirmed.
-- A SAI activity-bar sponsor view for attended Claude/Codex wait states.
-
-Install it from the VS Code Marketplace as `Sacud.sponsoredai-credits`
-after publication, or install the `.vsix` attached to a tagged GitHub release.
-
-## Logs and error triage
-
-SAI writes local application logs to a rotating file by default:
-
-```bash
-sai logs path
-sai logs tail --lines 120
-```
-
-The default file is `SAI_HOME/logs/sai.log` (`%APPDATA%\SAI\logs\sai.log` on
-Windows unless `SAI_HOME` is set). HTTP request bodies are not logged because
-gateway traffic may contain prompts or API keys.
-
-Useful overrides:
-
-```bash
-SAI_LOG_LEVEL=DEBUG
-SAI_LOG_FILE=/var/log/sai/sai.log
-SAI_LOG_FILE=stderr
-SAI_LOG_FILE=off
-```
-
-## Qualified placement contract
-
-The paid unit is fixed:
+This is the **open-source SAI client** — the CLI, the local gateway, and the
+desktop overlay that run on your machine. It is published in full so you can
+audit it.
 
 ```text
-1 QP = 1 qualified five-second placement
+src/sai/            the CLI, PTY runner, gateway, overlay, privacy schema
+vscode-extension/   the VS Code surface (launchers, wallet, sponsor view)
+npm/                the @sponsoredai/cli launcher + platform packages
+site-v3/            the public marketing + trust pages
+tests/              the suite that guards the trust boundary
 ```
 
-A placement is billable only when:
+The hosted backend (sponsor server, billing, fraud, and payout engine) is a
+separate proprietary service operated by SAI. The client only talks to it over
+the documented public endpoints.
 
-- The backend issued the `placement_id`.
-- The campaign is live, approved, paid, and funded.
-- The card rendered in an interactive terminal or attended desktop overlay.
-- The run is not CI/headless.
-- The card stayed visible for at least 5 seconds.
-- The event arrived before placement expiry.
-- The placement event is not a duplicate.
-- Basic fraud filters pass.
+## 🛠️ Run and build from source
 
-The live contract is published, unauthenticated:
-
-```bash
-curl -fsS https://sponsoredai.dev/v1/metric-contract
-```
-
-### Paid clicks
-
-The sponsor URL in the terminal card is an OSC 8 hyperlink to a tracked redirect,
-`GET /c/<placement_id>/<click_token>`, which records the click and forwards to the
-sponsor destination. A click bills the sponsor a click multiplier (default 50)
-times the QP rate and pays the developer the same 60% net split. It only pays when
-the placement already qualified, the campaign is live and funded, and it is the
-first click for the placement; the redirect always forwards either way. Set
-`SAI_NO_HYPERLINKS=1` to render the plain URL instead.
-
-## Dashboard
-
-```bash
-sai dashboard
-```
-
-Serves the local ledger dashboard and opens `http://127.0.0.1:8787/`. It shows
-local display entries, gateway connection details, sponsor-card frequency, and
-the kill switch. The local ledger is not authoritative for spend, settlement, or
-cash-out — the backend ledger is.
-
-The dashboard and its `/api/overview` and `/api/config` endpoints are only served
-to loopback clients with a localhost `Host` header, because they expose the local
-API key.
-
-## Gateway
-
-`sai claude` and `sai codex` start the gateway automatically in the background on
-the default port if nothing is listening there yet (set `SAI_NO_AUTO_GATEWAY=1` to
-opt out). To run it manually:
+**CLI**
 
 ```bash
 sai login
-sai gateway serve --host 127.0.0.1 --port 8787
+sai run -- npm test          # wrap any long command
+sai overlay codex
+sai logs tail --lines 120
+sai dashboard                # local ledger at http://127.0.0.1:8787/
 ```
 
-Configure OpenAI-compatible clients with:
+**Gateway.** `sai claude` and `sai codex` start it automatically; run it by hand
+with `sai gateway serve --host 127.0.0.1 --port 8787`. Point an
+OpenAI-compatible client at `http://127.0.0.1:8787/v1`. With no upstream it
+returns a deterministic local mock; set a preset (`SAI_GATEWAY_PROVIDER`) plus
+that provider's key to proxy a real one. Your earnings are spendable on model
+calls without SAI ever seeing model traffic — the gateway requests a
+per-installation provider key whose spend limit equals your spendable balance,
+and calls go straight from your machine to the provider.
 
-```text
-base_url = "http://127.0.0.1:8787/v1"
-api_key  = "<output from sai gateway key>"
-```
-
-With no upstream configured, the gateway returns a deterministic local mock. To
-proxy a real provider, select a preset and set that provider's key:
-
-```bash
-export SAI_GATEWAY_PROVIDER="openai"
-export OPENAI_API_KEY="..."
-```
-
-Built-in provider presets:
-
-```text
-provider    key env             base URL
-openai      OPENAI_API_KEY      https://api.openai.com/v1
-openrouter  OPENROUTER_API_KEY  https://openrouter.ai/api/v1
-groq        GROQ_API_KEY        https://api.groq.com/openai/v1
-mistral     MISTRAL_API_KEY     https://api.mistral.ai/v1
-together    TOGETHER_API_KEY    https://api.together.ai/v1
-fireworks   FIREWORKS_API_KEY   https://api.fireworks.ai/inference/v1
-deepseek    DEEPSEEK_API_KEY    https://api.deepseek.com
-xai         XAI_API_KEY         https://api.x.ai/v1
-```
-
-Inspect local provider status without printing secrets:
-
-```bash
-sai gateway providers
-```
-
-Custom OpenAI-compatible upstreams also work:
-
-```bash
-export SAI_UPSTREAM_BASE_URL="https://api.example.com/v1"
-export SAI_UPSTREAM_API_KEY="..."
-```
-
-Server-side developer earnings are spendable on model calls without SAI ever
-seeing model traffic: the gateway asks the backend for a per-installation provider
-key whose cumulative spend limit equals the installation's spendable balance, then
-model calls go straight from your machine to the provider with that key. Set
-`SAI_NO_WALLET_SPEND=1` to opt out.
-
-## Build from source
+**Build**
 
 ```bash
 python -m pip install -e ".[test]"
 PYTHONPATH=src python -m sai --help
 python -m pytest
+
+# standalone binary (per-OS; PyInstaller does not cross-compile)
+python -m PyInstaller --onefile --name sai --paths src \
+  --exclude-module sai.backend scripts/pyinstaller_entry.py
 ```
 
-Build the standalone binary (per-OS; PyInstaller does not cross-compile):
+CI in `.github/workflows/` builds the Linux, macOS, and Windows binaries and
+publishes the npm launcher plus platform packages on tagged releases.
 
-```bash
-python -m PyInstaller --onefile --name sai --paths src --exclude-module sai.backend \
-  scripts/pyinstaller_entry.py
-```
+The POSIX runner uses a real PTY and tracks output timing, not content. On
+Windows a ConPTY compositor pins the sponsor line via `pywinpty`; without it the
+runner falls back to passthrough execution. The desktop overlay is tested on
+Windows x64 and macOS arm64 with Claude Desktop and the Codex app; Linux is
+supported for the terminal CLI only in this release.
 
-CI in `.github/workflows/` builds the Linux/macOS/Windows binaries and publishes
-the npm launcher plus the platform packages on tagged releases.
+## 📜 License
 
-## Implementation notes
+**AGPL-3.0-or-later** — see [`LICENSE`](LICENSE). Copyright © 2026 SAI.
 
-The POSIX runner uses a real PTY and tracks output timing, not output content. On
-Windows, a ConPTY compositor pins the sponsor line via `pywinpty`; without it, the
-runner falls back to passthrough process execution.
-
-The desktop overlay has been tested on Windows x64 and macOS arm64 with Claude
-Desktop and the Codex app. Linux is supported for the terminal CLI; the desktop
-overlay is not claimed as a tested Linux surface for this release.
-
-## License
-
-AGPL-3.0-or-later — see [`LICENSE`](LICENSE). Copyright © 2026 SAI.
-
-The AGPL covers this client. Because SAI holds the copyright, SAI also operates a
+The AGPL covers this client. Because SAI holds the copyright, it also operates a
 proprietary hosted backend; the AGPL's network-use and copyleft terms bind
 third-party redistributors, not the original author.
+
+<div align="center">
+<br>
+<sub>Built by <a href="https://sponsoredai.dev">SAI</a> · your wait is real estate · 60% is yours.</sub>
+</div>

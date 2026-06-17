@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SAI — social card</title>
+<style>
+  :root{
+    --paper:#f3efe5;--paper-2:#ece4d2;--card:#fbf8f1;--ink:#1b1812;--ink-soft:#5d5747;
+    --rule:#d8d1bd;--rule-soft:rgba(27,24,18,.10);--accent:#ffd83d;--accent-deep:#e9c21f;
+    --earn:#1d7a44;--earn-bright:#23925a;--term:#16140f;--term-ink:#efe9d6;--term-soft:#9a937d;
+    --coral:#d97757;--blue:#6f8dff;
+    --mono:"Cascadia Code","JetBrains Mono","SF Mono",Consolas,Menlo,ui-monospace,monospace;
+    --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased}
+  img,svg{display:block}
+  .mono{font-family:var(--mono)}
+  .num{font-variant-numeric:tabular-nums}
+  .hl{box-shadow:inset 0 -.16em 0 0 var(--accent)}
+
+  .card{position:relative;width:1200px;height:630px;
+    background-image:radial-gradient(rgba(27,24,18,.05) 1.4px,transparent 1.4px);
+    background-size:26px 26px;background-color:var(--paper)}
+  .frame{position:absolute;inset:22px;border:2px solid var(--ink);border-radius:18px;
+    background:rgba(251,248,241,.35);padding:30px 40px 34px;display:flex;flex-direction:column}
+
+  /* header */
+  .head{display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:2px solid var(--ink)}
+  .mark{width:48px;height:48px;border-radius:11px;background:var(--ink);color:var(--accent);
+    display:grid;place-items:center;font-family:var(--mono);font-weight:800;font-size:26px}
+  .brand{display:flex;flex-direction:column;line-height:1}
+  .brand .name{font-weight:800;font-size:23px;letter-spacing:-.01em}
+  .brand small{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--ink-soft);margin-top:5px}
+  .hchip{margin-left:auto;display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);
+    font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);
+    border:1.5px solid var(--ink);border-radius:999px;padding:9px 16px;background:var(--card)}
+  .hchip b{color:var(--earn);font-weight:700}
+  .hchip .live{width:9px;height:9px;border-radius:50%;background:var(--earn);box-shadow:0 0 0 4px rgba(29,122,68,.16)}
+
+  /* body */
+  .body{flex:1;display:grid;grid-template-columns:1.04fr .96fr;gap:38px;align-items:center;padding-top:18px}
+  .left{align-self:center}
+  h1{font-size:50px;line-height:1.02;letter-spacing:-.035em;font-weight:800}
+  .lede{margin-top:16px;max-width:30ch;font-size:19px;line-height:1.42;color:var(--ink-soft)}
+  .lede b{color:var(--ink)}
+  .never{margin-top:12px;font-size:17px;font-weight:800;color:var(--ink)}
+  .never .lock{color:var(--earn)}
+  .term{margin-top:18px;width:max-content;max-width:100%;border:2px solid var(--ink);border-radius:12px;
+    background:var(--term);color:var(--term-ink);font-family:var(--mono);font-size:16px;line-height:1.7;
+    padding:12px 18px;box-shadow:6px 6px 0 0 rgba(27,24,18,.16)}
+  .term .ps{color:var(--term-soft)}.term .y{color:var(--accent)}.term .dim{color:var(--term-soft)}
+  .chips{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+  .chips .c{font-family:var(--mono);font-size:12.5px;letter-spacing:.02em;color:var(--ink-soft);
+    border:1.5px solid var(--rule);border-radius:9px;padding:6px 11px;background:var(--card)}
+  .chips .c b{color:var(--ink)}
+
+  /* right device mock */
+  .app{border:2px solid var(--ink);background:var(--card);border-radius:16px;overflow:hidden;
+    box-shadow:8px 8px 0 0 rgba(27,24,18,.16)}
+  .app-bar{height:46px;display:flex;align-items:center;gap:9px;padding:0 16px;
+    border-bottom:1.5px solid var(--rule);background:var(--paper);font-size:14px;color:var(--ink-soft)}
+  .app-bar i{width:10px;height:10px;border-radius:50%;background:var(--term-soft);opacity:.45}
+  .app-bar i:first-child{background:var(--coral);opacity:.95}
+  .app-title{margin-left:5px;display:flex;align-items:center;gap:8px;font-weight:700;color:var(--ink)}
+  .hwallet{margin-left:auto;display:flex;align-items:center;gap:8px;border:1.5px solid var(--rule);
+    background:#fff;border-radius:999px;padding:5px 13px 5px 10px;font-size:12.5px;color:var(--ink-soft)}
+  .hwallet .d{width:8px;height:8px;border-radius:50%;background:var(--earn);box-shadow:0 0 0 3px rgba(29,122,68,.16)}
+  .hwallet b{color:var(--earn);font-weight:800}
+  .surface{position:relative;padding:18px 16px 60px;min-height:264px;background:#fffdf6}
+  .ovl{display:flex;align-items:center;gap:9px;background:rgba(22,20,15,.97);color:#d6d2c4;
+    border:1px solid rgba(255,255,255,.1);border-left:4px solid var(--earn-bright);border-radius:11px;
+    padding:13px 14px;font-family:var(--mono);font-size:14px;box-shadow:0 16px 34px rgba(0,0,0,.22),0 0 28px -6px rgba(35,146,90,.6)}
+  .ovl .ic{width:26px;height:26px;border-radius:7px;background:var(--accent);color:var(--ink);flex:0 0 auto;
+    display:grid;place-items:center;font-family:var(--mono);font-weight:800;font-size:15px}
+  .ovl .dim{color:#8b8b92}.ovl .sep{color:#55524c}.ovl .b{color:var(--blue);font-weight:700}
+  .ovl .msg{color:#d6d2c4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .ovl .tail{margin-left:auto;display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .ovl .pay{color:#5fcf8a;font-weight:700}
+  .working{display:flex;align-items:center;gap:10px;margin-top:22px;padding-left:4px;color:var(--coral);
+    font-family:var(--mono);font-size:15px;font-weight:600}
+  .working .meta{color:#b59b86;font-weight:500;font-size:13px}
+  .working .sp{color:var(--coral)}
+  .diff{margin-top:18px;margin-left:4px;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:#8a8170}
+  .diff .add{color:var(--earn)}
+  .composer{position:absolute;left:16px;right:16px;bottom:14px;display:flex;align-items:center;
+    justify-content:space-between;border:1.5px solid var(--rule);border-radius:11px;background:#fff;
+    padding:11px 12px 11px 15px;font-size:13px;color:#b3aa99}
+  .send{width:30px;height:30px;border-radius:8px;background:var(--coral);display:grid;place-items:center;color:#fff;font-size:15px}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="frame">
+
+      <div class="head">
+        <span class="mark">S</span>
+        <span class="brand"><span class="name">SAI</span><small>Sponsored AI Credits</small></span>
+        <span class="hchip"><span class="live"></span> live · you keep <b>60%</b></span>
+      </div>
+
+      <div class="body">
+        <div class="left">
+          <h1>Get paid while<br>your agent <span class="hl">thinks</span>.</h1>
+          <p class="lede">One quiet sponsor card during a real Claude&nbsp;Code or Codex wait.
+            <b>60% of the spend is yours</b>, as AI credits or cash-out.</p>
+          <p class="never"><span class="lock">●</span> Your code never leaves your machine.</p>
+          <div class="term">
+            <div><span class="ps">$</span> npm install <span class="y">-g @sponsoredai/cli</span></div>
+            <div><span class="ps">$</span> sai overlay <span class="y">both</span></div>
+          </div>
+          <div class="chips">
+            <span class="c">Local-first</span>
+            <span class="c"><b>Claude + Codex</b></span>
+            <span class="c">VS&nbsp;Code · terminal · overlay</span>
+            <span class="c">Windows · macOS · Linux</span>
+          </div>
+        </div>
+
+        <div class="right">
+          <div class="app">
+            <div class="app-bar">
+              <i></i><i></i><i></i>
+              <span class="app-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><g stroke="#d97757" stroke-width="2.3" stroke-linecap="round"><path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4"/></g></svg>
+                Claude
+              </span>
+              <span class="hwallet"><span class="d"></span> wallet <b class="num">0.154</b></span>
+            </div>
+            <div class="surface">
+              <div class="ovl">
+                <span class="ic">S</span>
+                <span class="dim">sponsored</span><span class="sep">·</span>
+                <span class="b">Lumen Cache</span><span class="sep">·</span>
+                <span class="msg">Builds that finish first</span>
+                <span class="tail">
+                  <svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="8" fill="none" stroke="rgba(148,148,156,.4)" stroke-width="3.4"/><circle cx="11" cy="11" r="8" fill="none" stroke="#23925a" stroke-width="3.4" stroke-linecap="round" stroke-dasharray="50.27" stroke-dashoffset="3" transform="rotate(-90 11 11)"/></svg>
+                  <span class="pay num">+0.018</span>
+                </span>
+              </div>
+              <div class="working"><span class="sp">✻</span> Cogitating… <span class="meta">12s · esc to interrupt</span></div>
+              <div class="diff">
+                <div>· refactor auth → token store</div>
+                <div class="add">+ qualified 5s · credited to wallet</div>
+              </div>
+              <div class="composer"><span>Reply to Claude…</span><span class="send">↑</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>

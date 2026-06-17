@@ -124,7 +124,7 @@
   .eyebrow::before{content:"";width:22px;height:2px;background:var(--accent)}
   .sec-h h2{font-size:clamp(28px,4vw,44px);line-height:1.04;letter-spacing:-.025em;font-weight:800;margin-top:14px;color:var(--ink)}
   .sec-h p{margin-top:14px;font-size:16px;color:var(--ink-soft);max-width:60ch}
-  .surfaces{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .surfaces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
   .surf{border:1.5px solid var(--ink);border-radius:14px;background:var(--card);overflow:hidden;box-shadow:var(--sh);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
   .surf:hover{transform:translateY(-4px);box-shadow:var(--sh-lg)}
   .surf-h{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
@@ -141,6 +141,17 @@
   .ovl-banner .ic img{width:100%;height:100%;object-fit:cover}
   .ovl-banner .b{color:var(--blue);font-weight:700}
   .ovl-banner .pay{margin-left:auto;color:#5fcf8a;font-weight:700}
+  .vs-mini{height:150px;border-radius:10px;border:1px solid #303030;background:#1e1e1e;color:#d4d4d4;overflow:hidden;font-family:var(--mono)}
+  .vs-mini-top{height:26px;background:#181818;border-bottom:1px solid #303030;display:flex;align-items:center;gap:6px;padding:0 9px;font-size:10px;color:#a7a7a7}
+  .vs-mini-dot{width:7px;height:7px;border-radius:50%;background:#5f5f5f}.vs-mini-dot.red{background:var(--coral)}.vs-mini-dot.y{background:var(--accent-deep)}.vs-mini-dot.g{background:var(--earn-bright)}
+  .vs-mini-body{display:grid;grid-template-columns:34px 1fr;height:124px}
+  .vs-mini-rail{background:#181818;border-right:1px solid #303030;display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:10px;color:#858585}
+  .vs-mini-mark{width:22px;height:22px;border-radius:5px;background:var(--accent);color:var(--ink);display:grid;place-items:center;font-weight:800}
+  .vs-mini-main{padding:10px 12px}
+  .vs-mini-card{border:1px solid #454545;border-radius:7px;background:#252526;padding:9px 10px;font-family:var(--sans);font-size:11.5px;line-height:1.35}
+  .vs-mini-card .tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:#9d9d9d}
+  .vs-mini-card b{display:block;color:#f2f2f2;margin-top:3px}.vs-mini-card .pay{color:#5fcf8a;font-weight:700;margin-top:5px}
+  .vs-mini-status{margin-top:9px;border-left:3px solid var(--accent);background:#252526;padding:7px 9px;font-size:10.5px;color:#bdbdbd}
   .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
   .step{position:relative;border:1.5px solid var(--ink);border-radius:13px;background:var(--card);padding:24px 22px;counter-increment:s;box-shadow:var(--sh);transition:transform .16s var(--ease),box-shadow .16s var(--ease)}
   .step:hover{transform:translateY(-3px);box-shadow:var(--sh-lg)}
@@ -178,12 +189,15 @@
   td{padding:11px 18px;border-bottom:1px solid var(--rule-soft);color:var(--ink-soft)}
   tr:last-child td{border-bottom:0}
   td .pill{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:999px}
-  .pill.queued{color:var(--ink-soft);border:1px solid var(--rule)}
+  .pill.queued,.pill.open{color:var(--ink-soft);border:1px solid var(--rule)}
+  .pill.live{color:var(--earn);border:1px solid var(--earn);background:rgba(29,122,68,.08)}
+  .pill.paused,.pill.review,.pill.checkout_created{color:#bf3a2b;border:1px solid rgba(191,58,43,.55);background:rgba(191,58,43,.07)}
   .empty{padding:26px 18px;text-align:center;color:var(--ink-soft);font-size:13px}
   .empty b{color:var(--ink)}.empty a{color:var(--earn);font-weight:700}
   .seat{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--rule-soft)}
   .seat .rank{font-family:var(--mono);font-weight:800;color:var(--ink);width:26px}
   .seat .who{color:var(--ink-soft)}
+  .seat .who small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:2px}
   .seat .amt{margin-left:auto;font-weight:700}
   .seat.you{background:rgba(255,216,61,.14)}.seat.you .who{color:var(--ink)}.seat.you .amt{color:var(--earn)}
   .priv{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
@@ -261,7 +275,7 @@
             Claude&nbsp;Code or Codex wait — then <b>60% of the spend lands in your wallet</b>, as AI credits or cash-out.
             <b>Your code never leaves the machine.</b></p>
           <div class="hero-cta">
-            <a class="btn yellow lg" href="https://marketplace.visualstudio.com/items?itemName=Sacud.sai-sponsored-ai-credits">Install for VS&nbsp;Code — earn ≈ <span class="est num" id="heroEst">$32</span>/mo&nbsp;→</a>
+            <a class="btn yellow lg" href="https://marketplace.visualstudio.com/items?itemName=Sacud.sponsoredai-credits">Install for VS&nbsp;Code — earn ≈ <span class="est num" id="heroEst">$32</span>/mo&nbsp;→</a>
             <a class="btn ghost lg" href="/sponsor">Become a sponsor</a>
           </div>
           <p class="fine">no code upload · one command to stop it · <a href="#install" style="color:var(--ink);text-decoration:underline">terminal &amp; desktop overlay too →</a></p>
@@ -321,11 +335,31 @@
   <section class="band darker sec" id="surfaces">
     <div class="wrap">
       <div class="sec-h">
-        <span class="eyebrow">Two surfaces, one quiet card</span>
+        <span class="eyebrow">Three surfaces, one quiet card</span>
         <h2>Runs where your agent already lives.</h2>
-        <p>The overlay above is one half. Wrap the terminal CLI too — same qualified five-second card, on both surfaces. Most tools only do one of these.</p>
+        <p>Install the VS&nbsp;Code extension, wrap the terminal CLI, or keep the desktop overlay on Claude Desktop and the Codex app. Same qualified five-second card, same wallet.</p>
       </div>
       <div class="surfaces">
+        <div class="surf">
+          <div class="surf-h">▣ VS&nbsp;Code extension — sidebar &amp; status bar <span class="pin">EXTENSION</span></div>
+          <div class="surf-b">
+            <div class="vs-mini">
+              <div class="vs-mini-top"><span class="vs-mini-dot red"></span><span class="vs-mini-dot y"></span><span class="vs-mini-dot g"></span><span>tokenback-workspace</span></div>
+              <div class="vs-mini-body">
+                <div class="vs-mini-rail"><span class="vs-mini-mark">S</span><span>{}</span><span>&gt;_</span></div>
+                <div class="vs-mini-main">
+                  <div class="vs-mini-card">
+                    <span class="tag">Sponsored</span>
+                    <b>Lumen Cache</b>
+                    <span>Builds that finish first</span>
+                    <div class="pay num">+0.018 credits</div>
+                  </div>
+                  <div class="vs-mini-status">Claude is applying changes… SAI card visible</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="surf">
           <div class="surf-h">⌘ Terminal — Claude&nbsp;Code &amp; Codex&nbsp;CLI <span class="pin">CLI</span></div>
           <div class="surf-b">
@@ -364,7 +398,7 @@
       <div class="steps">
         <div class="step">
           <h3>Wrap &amp; run</h3>
-          <p>Start with <code>sai claude</code> / <code>sai codex</code>, or <code>sai overlay both</code>. SAI measures idle &amp; visibility timing only — never prompts, code, or output.</p>
+          <p>Install the VS&nbsp;Code extension, start with <code>sai claude</code> / <code>sai codex</code>, or run <code>sai overlay both</code>. SAI measures idle &amp; visibility timing only — never prompts, code, or output.</p>
         </div>
         <div class="step">
           <h3>Waits become cards</h3>
@@ -417,24 +451,26 @@
       </div>
       <div class="grid2">
         <div class="panel">
-          <div class="panel-h"><h3>Bid market</h3><span class="flag">launch pricing</span></div>
+          <div class="panel-h"><h3>Bid market</h3><span class="flag" id="homeMarketFlag">live</span></div>
           <div class="stat-row">
-            <div class="stat"><div class="k">funded live</div><div class="v num">0</div></div>
-            <div class="stat"><div class="k">top bid / 1k</div><div class="v num">$30.00</div></div>
-            <div class="stat"><div class="k">dev / card</div><div class="v g num">+0.018</div></div>
+            <div class="stat"><div class="k">funded live</div><div class="v num" id="homeMktLive">1</div></div>
+            <div class="stat"><div class="k">top bid / 1k</div><div class="v num" id="homeMktBid">$30.00</div></div>
+            <div class="stat"><div class="k">dev / card</div><div class="v g num" id="homeMktCard">+0.018</div></div>
           </div>
           <table>
             <thead><tr><th>#</th><th>Campaign</th><th>Bid / 1k</th><th>Status</th></tr></thead>
-            <tbody><tr><td>1</td><td>Your campaign?</td><td class="num">$30.00</td><td><span class="pill queued">open</span></td></tr></tbody>
+            <tbody id="homeMarketRows"><tr><td>1</td><td>Sponsored AI</td><td class="num">$30.00</td><td><span class="pill live">LIVE</span></td></tr></tbody>
           </table>
-          <div class="empty"><b>0 funded campaigns live</b> — the book is empty and cards pay zero until a sponsor funds it. <a href="/sponsor">Be the first →</a></div>
+          <div class="empty" id="homeMarketNote"><b>Live funded book:</b> Sponsored AI is bidding $30.00 / 1k with 996 of 1,000 placements remaining. <a href="/market">See the order book →</a></div>
         </div>
         <div class="panel">
-          <div class="panel-h"><h3>Top earners</h3><span class="flag">opens at launch</span></div>
-          <div class="seat you"><span class="rank">#1</span><span class="who">Your machine — seat open</span><span class="amt num">$0.00</span></div>
-          <div class="seat"><span class="rank">#2</span><span class="who" style="opacity:.5">—</span><span class="amt num" style="opacity:.5">—</span></div>
-          <div class="seat"><span class="rank">#3</span><span class="who" style="opacity:.5">—</span><span class="amt num" style="opacity:.5">—</span></div>
-          <div class="empty">The board fills as developers install. Power the first spinner and <a href="#install">claim #1 →</a></div>
+          <div class="panel-h"><h3>Top earners</h3><span class="flag" id="topEarnersFlag">live ledger</span></div>
+          <div id="topEarnersRows">
+            <div class="seat you"><span class="rank">#1</span><span class="who">Wallet #1<small>17 qualified waits</small></span><span class="amt num">+0.051</span></div>
+            <div class="seat"><span class="rank">#2</span><span class="who">Wallet #2<small>2 qualified waits</small></span><span class="amt num">+0.036</span></div>
+            <div class="seat"><span class="rank">#3</span><span class="who">Wallet #3<small>6 qualified waits</small></span><span class="amt num">+0.007</span></div>
+          </div>
+          <div class="empty" id="topEarnersNote">31 qualified waits in the live ledger · 0.101 credits earned across 4 wallets.</div>
         </div>
       </div>
     </div>
@@ -479,7 +515,7 @@
         <span class="eyebrow">Install</span>
         <h2>Add it to VS&nbsp;Code, or the terminal.</h2>
         <p>Easiest in VS&nbsp;Code — one click from the Marketplace. Prefer the terminal? An npm launcher wraps the agent you already run. No forks, no cloud account, nothing uploaded.</p>
-        <a class="btn yellow lg" href="https://marketplace.visualstudio.com/items?itemName=Sacud.sai-sponsored-ai-credits" style="margin-top:18px">Install from the VS&nbsp;Code Marketplace →</a>
+        <a class="btn yellow lg" href="https://marketplace.visualstudio.com/items?itemName=Sacud.sponsoredai-credits" style="margin-top:18px">Install from the VS&nbsp;Code Marketplace →</a>
       </div>
       <p class="mono" style="font-size:11px;color:var(--ink-soft);margin:0 0 12px">or wrap the terminal CLI:</p>
       <div class="cmds">
@@ -564,9 +600,108 @@
     $("oDay").textContent="+"+day.toFixed(2); $("oClick").textContent="+"+PER_CLICK.toFixed(2);
     $("oMonth").textContent="+"+month.toFixed(2); $("oUsd").textContent="$"+month.toFixed(2);
     var est="$"+Math.round(month); $("heroEst").textContent=est; $("stickEst").textContent=est;
-  }
-  $("slider").addEventListener("input",calc); calc();
-  document.querySelectorAll(".copy").forEach(function(b){
+	  }
+	  $("slider").addEventListener("input",calc); calc();
+	  function num(v){var n=Number(v);return Number.isFinite(n)?n:null}
+	  function fetchJson(url){
+	    return fetch(url,{cache:"no-store"}).then(function(r){
+	      if(!r.ok) throw new Error("HTTP "+r.status);
+	      return r.json();
+	    });
+	  }
+	  function fmtMoney(v){return "$"+(Number(v)||0).toFixed(2)}
+	  function fmtCredits(v){return "+"+(Number(v)||0).toFixed(3)}
+	  function clearNode(el){while(el&&el.firstChild) el.removeChild(el.firstChild)}
+	  function flag(id,text,live){
+	    var el=$(id); if(!el) return;
+	    el.textContent=text;
+	    el.style.color=live?"var(--earn)":"var(--ink-soft)";
+	    el.style.borderColor=live?"var(--earn)":"var(--rule)";
+	  }
+	  function statusPill(statusText){
+	    var pill=document.createElement("span");
+	    var cls=String(statusText||"queued").toLowerCase().replace(/[^a-z0-9_-]+/g,"_");
+	    pill.className="pill "+cls;
+	    pill.textContent=String(statusText||"queued");
+	    return pill;
+	  }
+	  function renderHomeMarket(payload){
+	    if(!payload||typeof payload!=="object") return;
+	    var rows=Array.isArray(payload.rows)?payload.rows:[];
+	    var liveRows=rows.filter(function(row){return row&&row.status==="LIVE"});
+	    var payout=payload.live_payout&&typeof payload.live_payout==="object"?payload.live_payout:null;
+	    var topBid=liveRows.reduce(function(best,row){var bid=num(row.bid_per_1000_qp)||0;return bid>best?bid:best},0);
+	    if(topBid<=0&&payout&&payout.available) topBid=num(payout.bid_per_1000_qp)||0;
+	    var card=(payout&&payout.available)?num(payout.developer_payout):null;
+	    if(card!==null&&card>=0){PER_CARD=card;PER_CLICK=num(payout.developer_click_payout)||card*50;calc()}
+	    $("homeMktLive").textContent=String(liveRows.length);
+	    $("homeMktBid").textContent=fmtMoney(topBid);
+	    $("homeMktCard").textContent=fmtCredits(card===null?PER_CARD:card);
+	    flag("homeMarketFlag",liveRows.length?"live":"projected",liveRows.length>0);
+	    var tbody=$("homeMarketRows"); clearNode(tbody);
+	    rows.slice(0,3).forEach(function(row,idx){
+	      var tr=document.createElement("tr");
+	      function td(text,cls){var cell=document.createElement("td"); if(cls) cell.className=cls; cell.textContent=text; return cell}
+	      tr.appendChild(td(String(row.rank||idx+1)));
+	      tr.appendChild(td(String(row.campaign||"Sponsor")));
+	      tr.appendChild(td(fmtMoney(num(row.bid_per_1000_qp)||0),"num"));
+	      var st=document.createElement("td"); st.appendChild(statusPill(row.status)); tr.appendChild(st);
+	      tbody.appendChild(tr);
+	    });
+	    if(!rows.length){
+	      var tr=document.createElement("tr");
+	      ["1","Your campaign?","$30.00"].forEach(function(text,idx){var td=document.createElement("td");td.textContent=text;if(idx===2)td.className="num";tr.appendChild(td)});
+	      var td=document.createElement("td");td.appendChild(statusPill("open"));tr.appendChild(td);tbody.appendChild(tr);
+	    }
+	    var note=$("homeMarketNote"); clearNode(note);
+	    if(liveRows.length){
+	      var lead=liveRows[0],remaining=num(lead.remaining_impressions)||0,total=num(lead.total_impressions)||0;
+	      var b=document.createElement("b"); b.textContent="Live funded book:";
+	      note.appendChild(b);
+	      note.appendChild(document.createTextNode(" "+(lead.campaign||"Top campaign")+" is bidding "+fmtMoney(topBid)+" / 1k with "+remaining+" of "+total+" placements remaining. "));
+	    }else{
+	      var empty=document.createElement("b"); empty.textContent="0 funded campaigns live";
+	      note.appendChild(empty);
+	      note.appendChild(document.createTextNode(" — cards pay zero until a sponsor funds the book. "));
+	    }
+	    var a=document.createElement("a"); a.href="/market"; a.textContent="See the order book →"; note.appendChild(a);
+	  }
+	  function renderTopEarners(payload){
+	    if(!payload||typeof payload!=="object") return;
+	    var rows=Array.isArray(payload.rows)?payload.rows:[];
+	    var box=$("topEarnersRows"); clearNode(box);
+	    if(!rows.length){
+	      flag("topEarnersFlag","opens at launch",false);
+	      [1,2,3].forEach(function(rank){
+	        var seat=document.createElement("div"); seat.className="seat";
+	        seat.innerHTML='<span class="rank">#'+rank+'</span><span class="who">—</span><span class="amt num">—</span>';
+	        box.appendChild(seat);
+	      });
+	      $("topEarnersNote").textContent="The board fills as wallets qualify waits.";
+	      return;
+	    }
+	    flag("topEarnersFlag","live ledger",true);
+	    rows.slice(0,3).forEach(function(row,idx){
+	      var seat=document.createElement("div"); seat.className="seat"+(idx===0?" you":"");
+	      var rank=document.createElement("span"); rank.className="rank"; rank.textContent="#"+(row.rank||idx+1);
+	      var who=document.createElement("span"); who.className="who"; who.textContent=String(row.label||("Wallet #"+(idx+1)));
+	      var small=document.createElement("small"); var waits=Number(row.qualified_events)||0; small.textContent=waits+" qualified wait"+(waits===1?"":"s"); who.appendChild(small);
+	      var amt=document.createElement("span"); amt.className="amt num"; amt.textContent=fmtCredits(num(row.total_credits)||0);
+	      seat.appendChild(rank); seat.appendChild(who); seat.appendChild(amt); box.appendChild(seat);
+	    });
+	    var totals=payload.totals||{};
+	    var totalCredits=num(totals.total_credits)||rows.reduce(function(sum,row){return sum+(num(row.total_credits)||0)},0);
+	    var waitsTotal=Number(totals.qualified_events)||rows.reduce(function(sum,row){return sum+(Number(row.qualified_events)||0)},0);
+	    var wallets=Number(totals.developers)||rows.length;
+	    $("topEarnersNote").textContent=waitsTotal+" qualified waits in the live ledger · "+totalCredits.toFixed(3)+" credits earned across "+wallets+" wallets.";
+	  }
+	  function loadLiveBoards(){
+	    if(!window.fetch) return;
+	    fetchJson("/v1/market").then(renderHomeMarket).catch(function(){});
+	    fetchJson("/v1/top-earners?limit=3").then(renderTopEarners).catch(function(){});
+	  }
+	  loadLiveBoards();
+	  document.querySelectorAll(".copy").forEach(function(b){
     b.addEventListener("click",function(){
       if(!navigator.clipboard) return;
       navigator.clipboard.writeText(b.dataset.cmd||"").then(function(){
