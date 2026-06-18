@@ -51,6 +51,33 @@ class PackageBinaryTests(unittest.TestCase):
             with tarfile.open(archive, "r:gz") as tar:
                 self.assertIn("sai-darwin-arm64/sai", tar.getnames())
 
+    def test_packages_win32_onedir_directory_has_no_exe_suffix(self):
+        # The onedir directory must be sai-win32-x64/ (no .exe); the executable
+        # inside is sai.exe. Downstream CI smoke + npm staging expect this exact
+        # directory name, so guard against re-suffixing the directory itself.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "sai-onedir"
+            internal = source / "_internal"
+            internal.mkdir(parents=True)
+            (source / "sai.exe").write_bytes(b"MZ")
+            (internal / "base_library.zip").write_bytes(b"zip")
+            out = root / "release"
+
+            self.run_script("--source", str(source), "--output-dir", str(out), "--platform", "win32", "--arch", "x64")
+
+            target = out / "sai-win32-x64"
+            archive = out / "sai-win32-x64.tar.gz"
+            checksum = out / "sai-win32-x64.tar.gz.sha256"
+            self.assertTrue(target.is_dir())
+            self.assertFalse((out / "sai-win32-x64.exe").exists())
+            self.assertTrue((target / "sai.exe").is_file())
+            self.assertTrue((target / "_internal" / "base_library.zip").is_file())
+            self.assertTrue(archive.is_file())
+            self.assertIn("sai-win32-x64.tar.gz", checksum.read_text(encoding="utf-8"))
+            with tarfile.open(archive, "r:gz") as tar:
+                self.assertIn("sai-win32-x64/sai.exe", tar.getnames())
+
 
 if __name__ == "__main__":
     unittest.main()

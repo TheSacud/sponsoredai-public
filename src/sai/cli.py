@@ -32,7 +32,14 @@ from .runner import CommandRunner
 from .wallet import Wallet, WalletError
 
 
-GATEWAY_START_WAIT_SECONDS = 0.15
+# How long maybe_start_gateway() waits for a freshly-spawned gateway to answer
+# /healthz before warning the user. The wait loop returns the instant the
+# gateway is healthy, so this is a cap, not a fixed delay -- it only elapses in
+# full on a genuine failure to start. The old 0.15s was hopelessly short: a cold
+# gateway needs ~0.3s even from source and seconds as a frozen binary, so it
+# reported a false "did not start" on essentially every cold `sai claude`.
+# Keep roughly in sync with gateway.py:start_gateway_in_background's default.
+GATEWAY_START_WAIT_SECONDS = 8.0
 logger = logging.getLogger(__name__)
 
 
@@ -80,11 +87,34 @@ def gateway_running(host: str = "127.0.0.1", port: int = 8787, timeout: float = 
                 "Connection: close\r\n\r\n"
             )
             sock.sendall(request.encode("ascii"))
-            response = sock.recv(256)
+            # Read until the server closes (we asked for Connection: close).
+            # A single recv(256) used to truncate the response: the /healthz
+            # body ({"status": "ok"}) sits ~530 bytes in, after the security
+            # headers, so the `"ok"` check never matched and a healthy gateway
+            # was reported as down -- which made the agent wrapper spawn a
+            # duplicate and print "did not start" even when one was serving.
+            chunks: list[bytes] = []
+            total = 0
+            while total < 8192:  # the healthz response is tiny; cap to stay bounded
+                chunk = sock.recv(1024)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                total += len(chunk)
+            response = b"".join(chunks)
     except OSError:
         return False
     first_line = response.splitlines()[0] if response else b""
     return b" 200 " in first_line and b'"ok"' in response
+
+
+def _gateway_child_env() -> dict[str, str]:
+    """Environment for a detached gateway child: a copy of ours with the
+    PyInstaller onefile marker removed so the child does not reuse (and get
+    orphaned by) this process's extraction dir. No-op when not frozen."""
+    env = dict(os.environ)
+    env.pop("_MEIPASS2", None)
+    return env
 
 
 def start_gateway_in_background(
@@ -105,6 +135,13 @@ def start_gateway_in_background(
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
+        # Give the detached gateway its own runtime. A PyInstaller onefile parent
+        # exports _MEIPASS2 pointing at its private extraction dir; a child
+        # launched from sys.executable would inherit it, skip its own extraction,
+        # and bind to the parent's dir -- which is wiped when this `sai claude`
+        # process exits, orphaning the still-running gateway. Dropping it lets the
+        # gateway unpack (onefile) or resolve (onedir) its own runtime and survive.
+        "env": _gateway_child_env(),
     }
     if os.name == "nt":
         kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
@@ -569,7 +606,9 @@ def maybe_start_gateway(tool: str) -> None:
     if gateway_running():
         return
     if start_gateway_in_background():
-        print("SAI gateway starting in the background: http://127.0.0.1:8787/v1")
+        # start_gateway_in_background only returns True once /healthz answers, so
+        # the gateway is actually ready (not merely spawned) by the time we print.
+        print("SAI gateway ready in the background: http://127.0.0.1:8787/v1")
     else:
         logger.error("Gateway autostart failed", extra={"tool": tool})
         print(

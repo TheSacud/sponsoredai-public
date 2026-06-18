@@ -37,3 +37,10 @@ version = { attr = "sai.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+# Collect only our own tests. Without this, a bare `pytest` from the repo root
+# recurses everywhere -- and a locally staged onedir binary drops a
+# npm/platform/*/bin/_internal/ tree whose bundled winpty tests fail collection
+# (ModuleNotFoundError: flaky). Restricting the default roots keeps it bounded.
+testpaths = ["tests"]

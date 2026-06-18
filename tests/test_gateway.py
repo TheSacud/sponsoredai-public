@@ -1,4 +1,8 @@
+from __future__ import annotations
+
 import os
+from email.message import Message
+from io import BytesIO
 import json
 import tempfile
 import threading
@@ -9,6 +13,7 @@ from unittest import mock
 
 from sai.config import load_config, login, save_config
 from sai.gateway import (
+    MAX_PLACEMENT_BODY_BYTES,
     UpstreamConfig,
     WALLET_SPEND_PROVIDER,
     active_upstream_config,
@@ -24,6 +29,7 @@ from sai.gateway import (
     wallet_upstream_config,
 )
 from sai.gateway import GatewayHandler
+from sai.metrics import VSCODE_WAIT_SURFACE
 from sai.sponsors import install_auth_secret
 from sai.wallet import Wallet
 
@@ -288,6 +294,253 @@ class GatewayTests(unittest.TestCase):
                 server.server_close()
                 thread.join(timeout=5)
 
+    def _placement_handler(
+        self,
+        *,
+        path: str = "/v1/sai/placements/next",
+        body: bytes | None = None,
+        client: str = "127.0.0.1",
+        host: str = "127.0.0.1:8787",
+        content_type: str = "application/json",
+        origin: str | None = None,
+        sec_fetch_site: str | None = None,
+        content_length: int | None = None,
+    ):
+        payload = body if body is not None else json.dumps(
+            {"surface": VSCODE_WAIT_SURFACE, "tool": "codex", "attended": True}
+        ).encode("utf-8")
+        headers = Message()
+        headers["Host"] = host
+        headers["Content-Length"] = str(len(payload) if content_length is None else content_length)
+        headers["Content-Type"] = content_type
+        if origin is not None:
+            headers["Origin"] = origin
+        if sec_fetch_site is not None:
+            headers["Sec-Fetch-Site"] = sec_fetch_site
+        handler = object.__new__(GatewayHandler)
+        handler.path = path
+        handler.command = "POST"
+        handler.client_address = (client, 45678)
+        handler.headers = headers
+        handler.rfile = BytesIO(payload)
+        handler._sai_status = 0
+        sent = []
+
+        def send_json(status, response):
+            handler._sai_status = int(status)
+            sent.append((int(status), response))
+
+        handler._send_json = mock.Mock(side_effect=send_json)
+        handler.sent = sent
+        return handler
+
+    def test_placement_next_rejects_non_loopback_client(self):
+        handler = self._placement_handler(client="192.0.2.10")
+
+        with mock.patch("sai.gateway.fetch_placement_card") as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1][0], 403)
+        fetch.assert_not_called()
+
+    def test_placement_next_rejects_non_loopback_host(self):
+        handler = self._placement_handler(host="example.com")
+
+        with mock.patch("sai.gateway.fetch_placement_card") as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1][0], 403)
+        fetch.assert_not_called()
+
+    def test_placement_next_rejects_malformed_loopback_host_headers(self):
+        for host in ("[::1]evil:8787", "localhost:notaport", "127.0.0.1:8787:evil", "localhost:"):
+            with self.subTest(host=host):
+                handler = self._placement_handler(host=host)
+                with mock.patch("sai.gateway.fetch_placement_card") as fetch:
+                    handler._handle_sai_placement_next()
+                self.assertEqual(handler.sent[-1][0], 403)
+                fetch.assert_not_called()
+
+    def test_placement_next_rejects_simple_cross_site_post_content_type(self):
+        handler = self._placement_handler(content_type="text/plain")
+
+        with mock.patch("sai.gateway.fetch_placement_card") as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1][0], 403)
+        fetch.assert_not_called()
+
+    def test_placement_next_rejects_remote_origin(self):
+        handler = self._placement_handler(origin="https://evil.example")
+
+        with mock.patch("sai.gateway.fetch_placement_card") as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1][0], 403)
+        fetch.assert_not_called()
+
+    def test_placement_next_rejects_cross_site_fetch_metadata(self):
+        handler = self._placement_handler(sec_fetch_site="cross-site")
+
+        with mock.patch("sai.gateway.fetch_placement_card") as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1][0], 403)
+        fetch.assert_not_called()
+
+    def test_placement_next_accepts_ipv6_loopback_host(self):
+        handler = self._placement_handler(client="::1", host="[::1]:8787")
+
+        with mock.patch("sai.gateway.load_config", return_value={"country": "PT"}) as load, \
+                mock.patch("sai.gateway.fetch_placement_card", return_value={"placement": None}) as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1], (200, {"placement": None}))
+        load.assert_called_once()
+        fetch.assert_called_once_with({"country": "PT"}, tool="codex", surface=VSCODE_WAIT_SURFACE, attended=True)
+
+    def test_placement_next_calls_existing_helper_with_surface_and_attended(self):
+        handler = self._placement_handler(
+            body=json.dumps({"surface": VSCODE_WAIT_SURFACE, "tool": "codex", "attended": False}).encode("utf-8")
+        )
+        response = {"placement": {"placement_id": "plc_1", "signature": "sig_1"}}
+
+        with mock.patch("sai.gateway.load_config", return_value={"country": "PT"}) as load, \
+                mock.patch("sai.gateway.fetch_placement_card", return_value=response) as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1], (200, response))
+        load.assert_called_once()
+        fetch.assert_called_once_with({"country": "PT"}, tool="codex", surface=VSCODE_WAIT_SURFACE, attended=False)
+
+    def test_placement_logs_normalize_control_characters(self):
+        handler = self._placement_handler(
+            body=json.dumps({"surface": "vscode_ai_wait\n forged=1", "tool": "codex\ttool", "attended": True}).encode("utf-8")
+        )
+
+        with mock.patch("sai.gateway.load_config", return_value={}), \
+                mock.patch("sai.gateway.fetch_placement_card", return_value={"placement": None}), \
+                mock.patch("sai.gateway.logger.info") as log_info:
+            handler._handle_sai_placement_next()
+
+        logged = " ".join(str(arg) for call in log_info.call_args_list for arg in call.args)
+        self.assertIn("vscode_ai_wait forged=1", logged)
+        self.assertIn("codex tool", logged)
+        self.assertNotIn("\n", logged)
+        self.assertNotIn("\t", logged)
+
+    def test_placement_next_invalid_json_returns_400(self):
+        handler = self._placement_handler(body=b"{not-json")
+
+        with mock.patch("sai.gateway.fetch_placement_card") as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1][0], 400)
+        fetch.assert_not_called()
+
+    def test_placement_next_limits_body_size(self):
+        handler = self._placement_handler(body=b"{}", content_length=MAX_PLACEMENT_BODY_BYTES + 1)
+
+        with mock.patch("sai.gateway.fetch_placement_card") as fetch:
+            handler._handle_sai_placement_next()
+
+        self.assertEqual(handler.sent[-1][0], 413)
+        fetch.assert_not_called()
+
+    def test_placement_event_sends_ticket_from_body_without_logging_it(self):
+        ticket = {
+            "placement_id": "plc_1",
+            "signature": "sig_secret",
+            "campaign_id": "cmp_1",
+            "surface": VSCODE_WAIT_SURFACE,
+            "tool": "codex",
+            "url": "https://sponsor.example/private",
+        }
+        body = json.dumps(
+            {"ticket": ticket, "event": "qualified_5s", "visible_seconds": 5.2, "attended": True}
+        ).encode("utf-8")
+        handler = self._placement_handler(path="/v1/sai/placements/event", body=body)
+
+        with mock.patch("sai.gateway.load_config", return_value={"country": "PT"}), \
+                mock.patch("sai.gateway.record_placement_event", return_value={"billable": True}) as record, \
+                mock.patch("sai.gateway.logger.info") as log_info:
+            handler._handle_sai_placement_event()
+
+        self.assertEqual(handler.sent[-1], (200, {"billable": True}))
+        record.assert_called_once_with(
+            {"country": "PT"},
+            ticket,
+            event="qualified_5s",
+            visible_seconds=5.2,
+            attended=True,
+        )
+        logged = " ".join(str(arg) for call in log_info.call_args_list for arg in call.args)
+        self.assertNotIn("sig_secret", logged)
+        self.assertNotIn("sponsor.example", logged)
+
+    def test_placement_event_invalid_body_returns_400(self):
+        handler = self._placement_handler(
+            path="/v1/sai/placements/event",
+            body=json.dumps({"ticket": "not-a-ticket", "visible_seconds": "5.2", "attended": True}).encode("utf-8"),
+        )
+
+        with mock.patch("sai.gateway.record_placement_event") as record:
+            handler._handle_sai_placement_event()
+
+        self.assertEqual(handler.sent[-1][0], 400)
+        record.assert_not_called()
+
+    def test_placement_event_rejects_simple_cross_site_post_content_type(self):
+        handler = self._placement_handler(
+            path="/v1/sai/placements/event",
+            body=json.dumps({"ticket": {}, "event": "qualified_5s", "visible_seconds": 5.2, "attended": True}).encode("utf-8"),
+            content_type="text/plain",
+        )
+
+        with mock.patch("sai.gateway.record_placement_event") as record:
+            handler._handle_sai_placement_event()
+
+        self.assertEqual(handler.sent[-1][0], 403)
+        record.assert_not_called()
+
+    def test_placement_event_rejects_remote_origin(self):
+        handler = self._placement_handler(
+            path="/v1/sai/placements/event",
+            body=json.dumps({"ticket": {}, "event": "qualified_5s", "visible_seconds": 5.2, "attended": True}).encode("utf-8"),
+            origin="https://evil.example",
+        )
+
+        with mock.patch("sai.gateway.record_placement_event") as record:
+            handler._handle_sai_placement_event()
+
+        self.assertEqual(handler.sent[-1][0], 403)
+        record.assert_not_called()
+
+    def test_placement_event_rejects_cross_site_fetch_metadata(self):
+        handler = self._placement_handler(
+            path="/v1/sai/placements/event",
+            body=json.dumps({"ticket": {}, "event": "qualified_5s", "visible_seconds": 5.2, "attended": True}).encode("utf-8"),
+            sec_fetch_site="cross-site",
+        )
+
+        with mock.patch("sai.gateway.record_placement_event") as record:
+            handler._handle_sai_placement_event()
+
+        self.assertEqual(handler.sent[-1][0], 403)
+        record.assert_not_called()
+
+    def test_placement_event_rejects_non_finite_visible_seconds(self):
+        handler = self._placement_handler(
+            path="/v1/sai/placements/event",
+            body=b'{"ticket":{},"event":"qualified_5s","visible_seconds":NaN,"attended":true}',
+        )
+
+        with mock.patch("sai.gateway.record_placement_event") as record:
+            handler._handle_sai_placement_event()
+
+        self.assertEqual(handler.sent[-1][0], 400)
+        record.assert_not_called()
+
     def test_gateway_autostart_uses_python_module_in_source(self):
         with mock.patch("sai.gateway.gateway_running", return_value=True), \
                 mock.patch("sai.gateway.subprocess.Popen") as popen, \
@@ -307,6 +560,26 @@ class GatewayTests(unittest.TestCase):
 
         command = popen.call_args.args[0]
         self.assertEqual(command[:3], ["C:\\Program Files\\sai\\sai.exe", "gateway", "serve"])
+
+    def test_cli_gateway_running_detects_a_live_healthz(self):
+        # Regression: cli.gateway_running used a single recv(256), but a healthy
+        # /healthz response is ~530+ bytes (security headers) with the JSON body
+        # at the end, so the body marker fell outside the read window and a live
+        # gateway was reported as down -- the core of issue #2. Run the real CLI
+        # probe against a real GatewayHandler and require a True.
+        from sai.cli import gateway_running as cli_gateway_running
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), GatewayHandler)
+        port = server.server_address[1]
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            self.assertTrue(cli_gateway_running(port=port, timeout=2.0))
+            self.assertFalse(cli_gateway_running(port=port + 1, timeout=0.2))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)
 
 
 class BackendRequestHeaderTests(unittest.TestCase):

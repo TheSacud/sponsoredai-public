@@ -4,6 +4,7 @@ import hmac
 import hashlib
 import json
 import logging
+import math
 import os
 import secrets
 import subprocess
@@ -23,7 +24,14 @@ from .app_logging import configure_logging, log_destination_label
 from .config import USER_AGENT, load_config, save_config, set_frequency, set_kill_switch
 from .credits import sync_local_wallet
 from .dashboard import DASHBOARD_HTML, overview_payload
-from .sponsors import INSTALL_AUTH_SCHEME, hash_install_id, resolve_install_secret
+from .metrics import QP_EVENT, VSCODE_WAIT_SURFACE
+from .sponsors import (
+    INSTALL_AUTH_SCHEME,
+    fetch_placement_card,
+    hash_install_id,
+    record_placement_event,
+    resolve_install_secret,
+)
 
 
 MOCK_MODEL = "sai/mock-gpt-4o-mini"
@@ -39,6 +47,7 @@ DEFAULT_RATES = {
     "output_per_1k": 0.006,
 }
 MAX_BODY_BYTES = 16 * 1024 * 1024
+MAX_PLACEMENT_BODY_BYTES = 64 * 1024
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
         "default-src 'self'; "
@@ -299,6 +308,8 @@ def active_upstream_config() -> UpstreamConfig | None:
 
 
 _LOOPBACK_HOSTS = {"127.0.0.1", "::1", "::ffff:127.0.0.1", "localhost"}
+_LOCAL_CLIENT_HOSTS = {"127.0.0.1", "::1", "::ffff:127.0.0.1"}
+_LOCAL_HOST_HEADERS = {"127.0.0.1", "localhost", "::1"}
 
 
 def _is_loopback_origin(origin: str) -> bool:
@@ -312,6 +323,74 @@ def _is_loopback_origin(origin: str) -> bool:
         return False
     host = (parsed.hostname or "").strip().lower()
     return host in _LOOPBACK_HOSTS
+
+
+def _host_header_host(raw_host: str) -> str:
+    raw = raw_host.strip().lower()
+    if not raw:
+        return ""
+    if raw.startswith("["):
+        if not raw.startswith("[::1]"):
+            return ""
+        rest = raw[len("[::1]") :]
+        if not rest:
+            return "::1"
+        if rest.startswith(":") and _valid_host_port(rest[1:]):
+            return "::1"
+        return ""
+    host, sep, port = raw.partition(":")
+    if host not in {"127.0.0.1", "localhost"}:
+        return ""
+    if sep and not _valid_host_port(port):
+        return ""
+    return host
+
+
+def _valid_host_port(port: str) -> bool:
+    if not port.isdigit():
+        return False
+    try:
+        value = int(port)
+    except ValueError:
+        return False
+    return 0 <= value <= 65535
+
+
+def _metadata_label(value: Any, default: str = "-", limit: int = 64) -> str:
+    text = str(value if value is not None else default).strip()
+    if not text:
+        text = default
+    text = " ".join(text.split())
+    return text[:limit]
+
+
+def _payload_string(payload: dict[str, Any], key: str, default: str) -> str | None:
+    if key not in payload:
+        return default
+    value = payload.get(key)
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    return text or default
+
+
+def _payload_bool(payload: dict[str, Any], key: str, default: bool = False) -> bool | None:
+    if key not in payload:
+        return default
+    value = payload.get(key)
+    return value if isinstance(value, bool) else None
+
+
+def _payload_float(payload: dict[str, Any], key: str, default: float = 0.0) -> float | None:
+    if key not in payload:
+        return default
+    value = payload.get(key)
+    if isinstance(value, bool):
+        return None
+    if not isinstance(value, (int, float)):
+        return None
+    number = float(value)
+    return number if math.isfinite(number) and number >= 0 else None
 
 
 def _post_backend_json(
@@ -678,6 +757,12 @@ class GatewayHandler(BaseHTTPRequestHandler):
         if self.path == "/api/config":
             self._handle_config_update()
             return
+        if self.path == "/v1/sai/placements/next":
+            self._handle_sai_placement_next()
+            return
+        if self.path == "/v1/sai/placements/event":
+            self._handle_sai_placement_event()
+            return
         if self.path != "/v1/chat/completions":
             self._send_json(HTTPStatus.NOT_FOUND, {"error": {"message": "Not found"}})
             return
@@ -715,6 +800,63 @@ class GatewayHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.OK, response)
         finally:
             _inflight_end()
+
+    def _handle_sai_placement_next(self) -> None:
+        started = time.monotonic()
+        surface = VSCODE_WAIT_SURFACE
+        tool = "codex"
+        try:
+            if not self._local_client_allowed():
+                return
+            if not self._placement_csrf_safe_post():
+                return
+            payload = self._read_json(max_body_bytes=MAX_PLACEMENT_BODY_BYTES)
+            if payload is None:
+                return
+            parsed_surface = _payload_string(payload, "surface", VSCODE_WAIT_SURFACE)
+            parsed_tool = _payload_string(payload, "tool", "codex")
+            attended = _payload_bool(payload, "attended", default=False)
+            if parsed_surface is None or parsed_tool is None or attended is None:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": {"message": "Invalid placement request"}})
+                return
+            surface = parsed_surface
+            tool = parsed_tool
+            result = fetch_placement_card(load_config(), tool=tool, surface=surface, attended=attended)
+            self._send_json(HTTPStatus.OK, result)
+        finally:
+            self._log_placement_request("next", surface, tool, started)
+
+    def _handle_sai_placement_event(self) -> None:
+        started = time.monotonic()
+        surface = VSCODE_WAIT_SURFACE
+        tool = "codex"
+        try:
+            if not self._local_client_allowed():
+                return
+            if not self._placement_csrf_safe_post():
+                return
+            payload = self._read_json(max_body_bytes=MAX_PLACEMENT_BODY_BYTES)
+            if payload is None:
+                return
+            ticket = payload.get("ticket")
+            event = _payload_string(payload, "event", QP_EVENT)
+            visible_seconds = _payload_float(payload, "visible_seconds", default=0.0)
+            attended = _payload_bool(payload, "attended", default=False)
+            if not isinstance(ticket, dict) or event is None or visible_seconds is None or attended is None:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": {"message": "Invalid placement event request"}})
+                return
+            surface = _metadata_label(ticket.get("surface"), VSCODE_WAIT_SURFACE)
+            tool = _metadata_label(ticket.get("tool"), "codex")
+            result = record_placement_event(
+                load_config(),
+                ticket,
+                event=event,
+                visible_seconds=visible_seconds,
+                attended=attended,
+            )
+            self._send_json(HTTPStatus.OK, result)
+        finally:
+            self._log_placement_request("event", surface, tool, started)
 
     def _handle_config_update(self) -> None:
         if not self._dashboard_allowed():
@@ -763,6 +905,55 @@ class GatewayHandler(BaseHTTPRequestHandler):
         logger.warning("gateway dashboard denied client=%s host=%s route=%s", _log_hash(client), host, _request_route(self.path))
         return False
 
+    def _local_client_allowed(self) -> bool:
+        # Placement endpoints are unauthenticated compatibility shims for local
+        # VS Code. They do not expose gateway secrets, but they can transport a
+        # billable placement event, so keep them loopback-only even if the
+        # gateway itself is bound to 0.0.0.0 for model proxying.
+        client = self.client_address[0]
+        host = _host_header_host(self.headers.get("Host", ""))
+        if client in _LOCAL_CLIENT_HOSTS and host in _LOCAL_HOST_HEADERS:
+            return True
+        self._send_json(
+            HTTPStatus.FORBIDDEN,
+            {"error": {"message": "SAI placement endpoints are only served to localhost"}},
+        )
+        logger.warning("gateway placement denied client=%s host=%s route=%s", _log_hash(client), host, _request_route(self.path))
+        return False
+
+    def _placement_csrf_safe_post(self) -> bool:
+        # A hostile website can send a no-CORS "simple" POST to localhost even
+        # though it cannot read the response. Requiring JSON blocks simple form
+        # or text/plain posts, and the Origin/Sec-Fetch checks reject browsers
+        # that do identify a cross-site caller.
+        content_type = (self.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+        if content_type != "application/json":
+            self._reject_placement_csrf("application/json content-type required")
+            return False
+        origin = (self.headers.get("Origin") or "").strip()
+        if origin and not _is_loopback_origin(origin):
+            self._reject_placement_csrf("cross-origin request rejected")
+            return False
+        fetch_site = (self.headers.get("Sec-Fetch-Site") or "").strip().lower()
+        if fetch_site in {"cross-site", "same-site"}:
+            self._reject_placement_csrf("cross-site request rejected")
+            return False
+        return True
+
+    def _reject_placement_csrf(self, message: str) -> None:
+        logger.warning("gateway placement csrf rejected route=%s reason=%s", _request_route(self.path), message)
+        self._send_json(HTTPStatus.FORBIDDEN, {"error": {"message": message}})
+
+    def _log_placement_request(self, action: str, surface: str, tool: str, started: float) -> None:
+        logger.info(
+            "gateway placement request action=%s surface=%s tool=%s status=%s duration_ms=%s",
+            action,
+            _metadata_label(surface),
+            _metadata_label(tool),
+            self._sai_status,
+            int((time.monotonic() - started) * 1000),
+        )
+
     def _csrf_safe_write(self) -> bool:
         # Loopback alone does not stop CSRF: a page on any origin can POST to
         # 127.0.0.1 and flip frequency/kill_switch even though the same-origin
@@ -810,7 +1001,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
         self._send_json(HTTPStatus.UNAUTHORIZED, {"error": {"message": "Invalid or missing SAI API key"}})
         return False
 
-    def _read_json(self) -> dict[str, Any] | None:
+    def _read_json(self, max_body_bytes: int = MAX_BODY_BYTES) -> dict[str, Any] | None:
         try:
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
@@ -818,10 +1009,10 @@ class GatewayHandler(BaseHTTPRequestHandler):
         if length < 0:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": {"message": "Invalid Content-Length"}})
             return None
-        if length > MAX_BODY_BYTES:
+        if length > max_body_bytes:
             self._send_json(
                 HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
-                {"error": {"message": f"Request body exceeds {MAX_BODY_BYTES} bytes"}},
+                {"error": {"message": f"Request body exceeds {max_body_bytes} bytes"}},
             )
             return None
         try:
@@ -865,16 +1056,26 @@ def gateway_running(host: str = "127.0.0.1", port: int = 8787, timeout: float = 
     return isinstance(payload, dict) and payload.get("status") == "ok"
 
 
-def start_gateway_in_background(host: str = "127.0.0.1", port: int = 8787, wait_seconds: float = 1.5) -> bool:
-    """Spawn `sai gateway serve` detached from this process and wait for /healthz."""
+def start_gateway_in_background(host: str = "127.0.0.1", port: int = 8787, wait_seconds: float = 8.0) -> bool:
+    """Spawn `sai gateway serve` detached from this process and wait for /healthz.
+
+    The live agent-wrapper autostart is the copy in cli.py (kept urllib-free for
+    a cheap `sai claude` startup); keep this one's behaviour in step with it.
+    """
     if getattr(sys, "frozen", False):
         command = [sys.executable, "gateway", "serve", "--host", host, "--port", str(port)]
     else:
         command = [sys.executable, "-m", "sai", "gateway", "serve", "--host", host, "--port", str(port)]
+    # Drop the PyInstaller onefile marker so the detached child unpacks its own
+    # runtime instead of binding to (and being orphaned by) the parent's temp
+    # extraction dir. See cli._gateway_child_env.
+    child_env = dict(os.environ)
+    child_env.pop("_MEIPASS2", None)
     kwargs: dict[str, Any] = {
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
+        "env": child_env,
     }
     if os.name == "nt":
         kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP

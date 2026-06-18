@@ -218,7 +218,10 @@ test("manifest keeps sensitive settings machine-scoped and hides dev preview", (
   const properties = manifest.contributes.configuration.properties;
   assert.equal(manifest.name, "sponsoredai-credits");
   assert.equal(manifest.displayName, "SAI Credits by Sacud");
-  assert.equal(manifest.version, "0.0.2");
+  // Just require a well-formed version, not a pinned literal -- the extension
+  // has its own version line and this assertion would otherwise break on every
+  // bump (it did, 0.0.2 -> 0.0.3).
+  assert.equal(/^\d+\.\d+\.\d+$/.test(manifest.version), true, `version ${manifest.version} should be semver`);
   assert.equal(properties["sai.cliPath"].scope, "machine");
   assert.equal(properties["sai.gateway.host"].scope, "machine");
   assert.equal(properties["sai.gateway.port"].scope, "machine");
@@ -690,7 +693,8 @@ test("showMenu displays actions and dispatches the chosen one", async () => {
     "Start Overlay",
     "Wallet",
     "Open Dashboard",
-    "Install / Update CLI"
+    "Install / Update CLI",
+    "Diagnostics"
   ]);
   assert.equal(fake.terminals.length, 1);
   assert.equal(fake.terminals[0].name, "SAI Codex");

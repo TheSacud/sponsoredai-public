@@ -213,13 +213,19 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+const SAI_CLICK_HOSTS = new Set(["sponsoredai.dev", "www.sponsoredai.dev"]);
+
 export function safeHttpsUrl(value: string | undefined): string | undefined {
   if (!value) {
     return undefined;
   }
   try {
     const parsed = new URL(value);
-    return parsed.protocol === "https:" ? value : undefined;
+    return parsed.protocol === "https:"
+      && SAI_CLICK_HOSTS.has(parsed.hostname.toLowerCase())
+      && parsed.pathname.startsWith("/c/")
+      ? value
+      : undefined;
   } catch {
     return undefined;
   }
@@ -291,7 +297,7 @@ export function renderAdHtml(placement: SponsorPlacement | undefined): string {
       : "";
   // command: URI keeps the click inside the extension (records the paid click
   // and opens the verified redirect) instead of letting the webview navigate.
-  const cta = placement.click_url
+  const cta = safeHttpsUrl(placement.click_url)
     ? "<a class=\"cta\" href=\"command:sai.openSponsor\">Visit sponsor &rarr;</a>"
     : "";
   const iconHtml = icon

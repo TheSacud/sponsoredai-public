@@ -2,7 +2,7 @@
   "name": "sponsoredai-credits",
   "displayName": "SAI Credits by Sacud",
   "description": "Earn sponsored AI credits or cash-out eligible balance while Claude Code and Codex wait.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "Sacud",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -43,6 +43,7 @@
     "onCommand:sai.refreshWallet",
     "onCommand:sai.openDashboard",
     "onCommand:sai.installCli",
+    "onCommand:sai.diagnostics",
     "onView:sai.adBanner"
   ],
   "contributes": {
@@ -126,6 +127,11 @@
       {
         "command": "sai.installCli",
         "title": "SAI: Install CLI",
+        "category": "SAI"
+      },
+      {
+        "command": "sai.diagnostics",
+        "title": "SAI: Diagnostics",
         "category": "SAI"
       },
       {

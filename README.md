@@ -190,9 +190,13 @@ python -m pip install -e ".[test]"
 PYTHONPATH=src python -m sai --help
 python -m pytest
 
-# standalone binary (per-OS; PyInstaller does not cross-compile)
-python -m PyInstaller --onefile --name sai --paths src \
-  --exclude-module sai.backend scripts/pyinstaller_entry.py
+# standalone binary (per-OS; PyInstaller does not cross-compile).
+# onedir, not onefile: a onefile binary re-extracts its whole bundle to a temp
+# dir on every invocation, adding seconds of startup to each `sai` command.
+python -m PyInstaller --onedir --name sai --paths src \
+  --exclude-module sai.backend --exclude-module sai.dev_mock \
+  --collect-data certifi scripts/pyinstaller_entry.py
+# Windows additionally needs `--collect-all winpty` for the ConPTY compositor.
 ```
 
 CI in `.github/workflows/` builds the Linux, macOS, and Windows binaries and

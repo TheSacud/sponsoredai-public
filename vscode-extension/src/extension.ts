@@ -1,11 +1,14 @@
 import * as vscode from "vscode";
 import {
   fetchSaiPlacement,
+  readSaiVersion,
   readGatewayStatus,
   readSaiWalletJson,
   recordSaiPlacementEvent,
   SaiCliError,
+  saiPlacementDiagnosticsSnapshot,
   type GatewayStatusOptions,
+  type PlacementTransportOptions,
   type ReadSaiOptions
 } from "./saiCli";
 import { runSaiTerminalCommand, type SaiTerminalCommandOptions } from "./terminals";
@@ -59,6 +62,13 @@ function gatewayStatusOptions(): GatewayStatusOptions {
   };
 }
 
+function saiPlacementOptions(): PlacementTransportOptions {
+  return {
+    ...saiCliOptions(),
+    gateway: gatewayStatusOptions()
+  };
+}
+
 export const COMMANDS = {
   showMenu: "sai.showMenu",
   startCodex: "sai.startCodex",
@@ -67,7 +77,8 @@ export const COMMANDS = {
   wallet: "sai.wallet",
   refreshWallet: "sai.refreshWallet",
   openDashboard: "sai.openDashboard",
-  installCli: "sai.installCli"
+  installCli: "sai.installCli",
+  diagnostics: "sai.diagnostics"
 } as const;
 
 type VscodeApi = Pick<typeof vscode, "StatusBarAlignment" | "commands" | "window">;
@@ -76,7 +87,7 @@ export interface SaiCliReader {
   readWalletJson(): Promise<unknown>;
 }
 
-type MenuAction = "codex" | "claude" | "overlay" | "wallet" | "dashboard" | "installCli";
+type MenuAction = "codex" | "claude" | "overlay" | "wallet" | "dashboard" | "installCli" | "diagnostics";
 
 interface MenuItem extends vscode.QuickPickItem {
   readonly action: MenuAction;
@@ -128,6 +139,7 @@ export class SaiExtensionController {
     this.registerCommand(context, COMMANDS.refreshWallet, () => this.refreshWalletStatus());
     this.registerCommand(context, COMMANDS.openDashboard, () => this.runSaiTerminal("dashboard"));
     this.registerCommand(context, COMMANDS.installCli, () => this.confirmInstallCli());
+    this.registerCommand(context, COMMANDS.diagnostics, () => this.showDiagnostics());
 
     void this.refreshWalletStatus();
   }
@@ -172,7 +184,8 @@ export class SaiExtensionController {
       { label: "Start Overlay", action: "overlay" },
       { label: "Wallet", action: "wallet" },
       { label: "Open Dashboard", action: "dashboard" },
-      { label: "Install / Update CLI", action: "installCli" }
+      { label: "Install / Update CLI", action: "installCli" },
+      { label: "Diagnostics", action: "diagnostics" }
     ];
 
     const selected = await this.api.window.showQuickPick(items, {
@@ -207,7 +220,38 @@ export class SaiExtensionController {
       case "installCli":
         await this.confirmInstallCli();
         return;
+      case "diagnostics":
+        await this.showDiagnostics();
+        return;
     }
+  }
+
+  private async showDiagnostics(): Promise<void> {
+    const diagnostics = saiPlacementDiagnosticsSnapshot();
+    let version = "unavailable";
+    try {
+      version = await readSaiVersion(saiCliOptions());
+    } catch (error) {
+      version = error instanceof SaiCliError ? error.reason : "unavailable";
+    }
+
+    const endpointAvailable = diagnostics.gatewayPlacementEndpointAvailable === undefined
+      ? "unknown"
+      : diagnostics.gatewayPlacementEndpointAvailable ? "yes" : "no";
+    const fallbackUsed = diagnostics.fallbackToCliUsed ? "yes" : "no";
+    await this.api.window.showQuickPick(
+      [
+        { label: `sai --version: ${version}` },
+        { label: `Gateway placement endpoint: ${endpointAvailable}` },
+        { label: `Placement CLI fallback used: ${fallbackUsed}` },
+        { label: `Last gateway placement error: ${diagnostics.lastGatewayPlacementError ?? "none"}` },
+        { label: `Last CLI placement error: ${diagnostics.lastCliPlacementError ?? "none"}` }
+      ],
+      {
+        title: "SAI Diagnostics",
+        placeHolder: "Recent local placement transport state"
+      }
+    );
   }
 
   private async showWallet(): Promise<void> {
@@ -394,9 +438,9 @@ function setupAdBanner(context: vscode.ExtensionContext, controller: SaiExtensio
   );
 
   const engine = new AdEngine({
-    fetchPlacement: async (attended) => parsePlacement(await fetchSaiPlacement({ attended }, saiCliOptions())),
+    fetchPlacement: async (attended) => parsePlacement(await fetchSaiPlacement({ tool: "codex", attended }, saiPlacementOptions())),
     recordQualified: async (placement, visibleSeconds, attended) => {
-      await recordSaiPlacementEvent(placement, { event: "qualified_5s", visibleSeconds, attended }, saiCliOptions());
+      await recordSaiPlacementEvent(placement, { event: "qualified_5s", visibleSeconds, attended }, saiPlacementOptions());
     },
     showCard: (placement) => provider.showCard(placement),
     clearCard: () => provider.clearCard(),

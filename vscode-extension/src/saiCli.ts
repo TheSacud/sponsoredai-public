@@ -68,9 +68,47 @@ const UNSAFE_PATH_CHARS = /["%!^&|<>`\r\n\t]/;
 export const SAI_PLACEMENT_NEXT_ARGS = ["placement", "next", "--json"] as const;
 export const SAI_PLACEMENT_EVENT_ARGS = ["placement", "event", "--json"] as const;
 export const VSCODE_WAIT_SURFACE = "vscode_ai_wait";
+export const DEFAULT_PLACEMENT_TOOL = "codex";
+const DEFAULT_GATEWAY_PLACEMENT_TIMEOUT_MS = 800;
+const MAX_GATEWAY_PLACEMENT_RESPONSE_BYTES = 128 * 1024;
+
+export interface GatewayPlacementOptions {
+  readonly enabled?: boolean;
+  readonly host?: string;
+  readonly port?: number;
+  readonly timeoutMs?: number;
+}
+
+export interface PlacementTransportOptions extends ReadSaiOptions {
+  readonly gateway?: GatewayPlacementOptions;
+}
+
+export interface SaiPlacementDiagnostics {
+  readonly gatewayPlacementEndpointAvailable?: boolean;
+  readonly fallbackToCliUsed: boolean;
+  readonly lastGatewayPlacementError?: string;
+  readonly lastCliPlacementError?: string;
+}
+
+const placementDiagnostics: {
+  gatewayPlacementEndpointAvailable?: boolean;
+  fallbackToCliUsed: boolean;
+  lastGatewayPlacementError?: string;
+  lastCliPlacementError?: string;
+} = {
+  fallbackToCliUsed: false
+};
+
+export function saiPlacementDiagnosticsSnapshot(): SaiPlacementDiagnostics {
+  return { ...placementDiagnostics };
+}
 
 export async function readSaiWalletJson(options: ReadSaiOptions = {}): Promise<unknown> {
   return runSaiJsonCommand([...SAI_WALLET_ARGS], options);
+}
+
+export async function readSaiVersion(options: ReadSaiOptions = {}): Promise<string> {
+  return (await runSaiTextCommand(["--version"], options)).trim();
 }
 
 export interface PlacementRequest {
@@ -78,11 +116,19 @@ export interface PlacementRequest {
   readonly attended?: boolean;
 }
 
-export async function fetchSaiPlacement(request: PlacementRequest = {}, options: ReadSaiOptions = {}): Promise<unknown> {
+export async function fetchSaiPlacement(request: PlacementRequest = {}, options: PlacementTransportOptions = {}): Promise<unknown> {
+  return runPlacementWithGatewayFallback(
+    () => fetchGatewayPlacement(request, options.gateway),
+    () => fetchSaiPlacementViaCli(request, options),
+    options.gateway
+  );
+}
+
+function fetchSaiPlacementViaCli(request: PlacementRequest = {}, options: ReadSaiOptions = {}): Promise<unknown> {
   const args = [
     ...SAI_PLACEMENT_NEXT_ARGS,
     "--surface", VSCODE_WAIT_SURFACE,
-    "--tool", request.tool ?? "claude"
+    "--tool", request.tool ?? DEFAULT_PLACEMENT_TOOL
   ];
   if (request.attended) {
     args.push("--attended");
@@ -99,6 +145,18 @@ export interface PlacementEventRequest {
 export async function recordSaiPlacementEvent(
   ticket: unknown,
   request: PlacementEventRequest = {},
+  options: PlacementTransportOptions = {}
+): Promise<unknown> {
+  return runPlacementWithGatewayFallback(
+    () => recordGatewayPlacementEvent(ticket, request, options.gateway),
+    () => recordSaiPlacementEventViaCli(ticket, request, options),
+    options.gateway
+  );
+}
+
+function recordSaiPlacementEventViaCli(
+  ticket: unknown,
+  request: PlacementEventRequest = {},
   options: ReadSaiOptions = {}
 ): Promise<unknown> {
   const args = [
@@ -113,6 +171,181 @@ export async function recordSaiPlacementEvent(
   // stdin, never argv, so the short-lived signature cannot appear in a process
   // list on a shared machine.
   return runSaiJsonCommand(args, options, JSON.stringify(ticket ?? {}));
+}
+
+export function fetchGatewayPlacement(
+  request: PlacementRequest = {},
+  options: GatewayPlacementOptions = {}
+): Promise<unknown> {
+  return postGatewayPlacementJson(
+    "/v1/sai/placements/next",
+    {
+      surface: VSCODE_WAIT_SURFACE,
+      tool: request.tool ?? DEFAULT_PLACEMENT_TOOL,
+      attended: Boolean(request.attended)
+    },
+    options
+  );
+}
+
+export function recordGatewayPlacementEvent(
+  ticket: unknown,
+  request: PlacementEventRequest = {},
+  options: GatewayPlacementOptions = {}
+): Promise<unknown> {
+  return postGatewayPlacementJson(
+    "/v1/sai/placements/event",
+    {
+      ticket: ticket ?? {},
+      event: request.event ?? "qualified_5s",
+      visible_seconds: request.visibleSeconds ?? 0,
+      attended: Boolean(request.attended)
+    },
+    options
+  );
+}
+
+type GatewayPlacementErrorReason = "notFound" | "timeout" | "unreachable" | "invalidJson" | "responseTooLarge" | "failed";
+
+class GatewayPlacementError extends Error {
+  public readonly reason: GatewayPlacementErrorReason;
+  public readonly statusCode?: number;
+
+  public constructor(reason: GatewayPlacementErrorReason, message: string, statusCode?: number) {
+    super(message);
+    this.name = "GatewayPlacementError";
+    this.reason = reason;
+    this.statusCode = statusCode;
+  }
+}
+
+async function runPlacementWithGatewayFallback(
+  gatewayCall: () => Promise<unknown>,
+  cliCall: () => Promise<unknown>,
+  gatewayOptions: GatewayPlacementOptions | undefined
+): Promise<unknown> {
+  if (gatewayOptions?.enabled !== false) {
+    try {
+      const payload = await gatewayCall();
+      placementDiagnostics.gatewayPlacementEndpointAvailable = true;
+      placementDiagnostics.fallbackToCliUsed = false;
+      placementDiagnostics.lastGatewayPlacementError = undefined;
+      placementDiagnostics.lastCliPlacementError = undefined;
+      return payload;
+    } catch (error) {
+      placementDiagnostics.gatewayPlacementEndpointAvailable = false;
+      placementDiagnostics.lastGatewayPlacementError = placementErrorSummary(error);
+      if (!shouldFallbackFromGateway(error)) {
+        placementDiagnostics.fallbackToCliUsed = false;
+        throw error;
+      }
+    }
+  }
+
+  placementDiagnostics.fallbackToCliUsed = true;
+  try {
+    const payload = await cliCall();
+    placementDiagnostics.lastCliPlacementError = undefined;
+    return payload;
+  } catch (error) {
+    placementDiagnostics.lastCliPlacementError = placementErrorSummary(error);
+    throw error;
+  }
+}
+
+function shouldFallbackFromGateway(error: unknown): boolean {
+  return error instanceof GatewayPlacementError
+    && ["notFound", "timeout", "unreachable", "invalidJson", "responseTooLarge"].includes(error.reason);
+}
+
+function placementErrorSummary(error: unknown): string {
+  if (error instanceof GatewayPlacementError) {
+    return error.statusCode ? `${error.reason}:${error.statusCode}` : error.reason;
+  }
+  if (error instanceof SaiCliError) {
+    return error.exitCode ? `${error.reason}:${error.exitCode}` : error.reason;
+  }
+  return error instanceof Error ? error.name : "failed";
+}
+
+function postGatewayPlacementJson(
+  pathName: "/v1/sai/placements/next" | "/v1/sai/placements/event",
+  payload: Record<string, unknown>,
+  options: GatewayPlacementOptions
+): Promise<unknown> {
+  const host = normalizeGatewayHost(options.host);
+  const port = normalizeGatewayPort(options.port);
+  const timeout = options.timeoutMs ?? DEFAULT_GATEWAY_PLACEMENT_TIMEOUT_MS;
+  const body = JSON.stringify(payload);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      callback();
+    };
+    const request = http.request(
+      {
+        host,
+        port,
+        path: pathName,
+        method: "POST",
+        timeout,
+        headers: {
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(body)
+        }
+      },
+      (response) => {
+        const statusCode = response.statusCode ?? 0;
+        if (statusCode !== 200) {
+          response.resume();
+          const reason: GatewayPlacementErrorReason = statusCode === 404 ? "notFound" : "failed";
+          finish(() => reject(new GatewayPlacementError(reason, "SAI gateway placement endpoint failed.", statusCode)));
+          return;
+        }
+
+        let responseBody = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          responseBody += chunk;
+          if (responseBody.length > MAX_GATEWAY_PLACEMENT_RESPONSE_BYTES) {
+            request.destroy();
+            finish(() => reject(new GatewayPlacementError("responseTooLarge", "SAI gateway placement response is too large.")));
+          }
+        });
+        response.on("end", () => {
+          finish(() => {
+            try {
+              resolve(JSON.parse(responseBody) as unknown);
+            } catch {
+              reject(new GatewayPlacementError("invalidJson", "SAI gateway placement endpoint returned invalid JSON."));
+            }
+          });
+        });
+      }
+    );
+
+    request.on("error", (error) => {
+      finish(() => reject(classifyGatewayPlacementError(error)));
+    });
+    request.on("timeout", () => {
+      request.destroy();
+      finish(() => reject(new GatewayPlacementError("timeout", "SAI gateway placement endpoint timed out.")));
+    });
+    request.end(body);
+  });
+}
+
+function classifyGatewayPlacementError(error: unknown): GatewayPlacementError {
+  const errno = error as NodeJS.ErrnoException;
+  if (errno.code === "ECONNREFUSED" || errno.code === "EHOSTUNREACH" || errno.code === "ENETUNREACH") {
+    return new GatewayPlacementError("unreachable", "SAI gateway placement endpoint is unreachable.");
+  }
+  return new GatewayPlacementError("failed", "SAI gateway placement endpoint failed.");
 }
 
 async function runSaiJsonCommand(commandArgs: readonly string[], options: ReadSaiOptions, input?: string): Promise<unknown> {

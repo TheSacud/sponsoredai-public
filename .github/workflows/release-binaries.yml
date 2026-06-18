@@ -83,7 +83,10 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: x64
-            pyinstaller_mode: "--onefile"
+            # onedir, like macOS: a onefile binary re-extracts its whole bundle
+            # to a temp dir on every short CLI invocation (seconds of startup,
+            # worse with on-access AV scanning). onedir extracts once at install.
+            pyinstaller_mode: "--onedir"
             pyinstaller_output: dist/sai
             collect: "--collect-data certifi"
           - os: macos-latest
@@ -97,8 +100,13 @@ jobs:
           - os: windows-2025
             platform: win32
             arch: x64
-            pyinstaller_mode: "--onefile"
-            pyinstaller_output: dist/sai.exe
+            # onedir, like macOS: a onefile .exe self-extracts its whole bundle
+            # (Python runtime + winpty + certifi) to a temp dir on every launch,
+            # which on Windows costs several seconds per `sai` command -- worse
+            # under Defender scanning each extracted DLL of an unsigned exe.
+            # onedir pays that cost once at install. See issue #1.
+            pyinstaller_mode: "--onedir"
+            pyinstaller_output: dist/sai
             # pywinpty is a native, lazily-imported dep; --collect-all bundles
             # its extension + binaries so the frozen exe can drive the ConPTY
             # compositor instead of silently falling back.
@@ -121,12 +129,12 @@ jobs:
       - name: Smoke packaged binary
         shell: bash
         run: |
+          # All platforms are now onedir: the executable lives inside the
+          # packaged directory next to its _internal/ runtime.
           if [ "${{ matrix.platform }}" = "win32" ]; then
-            release/sai-${{ matrix.platform }}-${{ matrix.arch }}.exe --version
-          elif [ "${{ matrix.platform }}" = "darwin" ]; then
-            release/sai-${{ matrix.platform }}-${{ matrix.arch }}/sai --version
+            release/sai-${{ matrix.platform }}-${{ matrix.arch }}/sai.exe --version
           else
-            release/sai-${{ matrix.platform }}-${{ matrix.arch }} --version
+            release/sai-${{ matrix.platform }}-${{ matrix.arch }}/sai --version
           fi
       - uses: actions/upload-artifact@v7
         with:
@@ -220,9 +228,11 @@ jobs:
           merge-multiple: true
       - name: Stage platform packages
         run: |
+          # Every platform is now a onedir directory artifact (stage handles
+          # both a file and a directory source; a directory ships bin/_internal).
           node npm/scripts/stage-platform-package.js --target darwin-arm64 --source release/sai-darwin-arm64
           node npm/scripts/stage-platform-package.js --target linux-x64 --source release/sai-linux-x64
-          node npm/scripts/stage-platform-package.js --target win32-x64 --source release/sai-win32-x64.exe
+          node npm/scripts/stage-platform-package.js --target win32-x64 --source release/sai-win32-x64
       - name: Verify npm package contents
         run: |
           npm pack ./npm/platform/darwin-arm64 --dry-run

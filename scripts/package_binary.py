@@ -59,24 +59,36 @@ def main() -> int:
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    target_name = binary_name(args.platform, args.arch)
-    target = args.output_dir / target_name
 
     if args.source.is_dir():
-        remove_if_exists(target.with_name(f"{target.name}.sha256"))
+        # onedir build: package the whole tree as a directory. The directory
+        # itself must NOT carry an executable extension -- binary_name() suffixes
+        # win32 with ".exe", which would name the directory "sai-win32-x64.exe/"
+        # while every downstream step (CI smoke, npm staging, the release asset)
+        # expects "sai-win32-x64/". The executable *inside* keeps its name.
+        dir_name = f"sai-{args.platform}-{args.arch}"
+        target = args.output_dir / dir_name
+        # Clean stale artifacts for this target: the dir's own archive/checksum,
+        # plus a single-file binary a previous onefile build would have left.
+        remove_if_exists(target.with_name(f"{dir_name}.tar.gz"))
+        remove_if_exists(target.with_name(f"{dir_name}.tar.gz.sha256"))
+        remove_if_exists(args.output_dir / binary_name(args.platform, args.arch))
+        remove_if_exists(args.output_dir / f"{binary_name(args.platform, args.arch)}.sha256")
         replace_tree(args.source, target)
         executable = target / ("sai.exe" if args.platform == "win32" else "sai")
         if not executable.is_file():
             raise SystemExit(f"Expected executable missing from packaged directory: {executable}")
         if args.platform != "win32":
             executable.chmod(executable.stat().st_mode | 0o755)
-        archive_base = args.output_dir / target_name
-        archive_path = Path(shutil.make_archive(str(archive_base), "gztar", root_dir=args.output_dir, base_dir=target_name))
+        archive_path = Path(
+            shutil.make_archive(str(target), "gztar", root_dir=args.output_dir, base_dir=dir_name)
+        )
         print(f"Packaged {target}")
         print(f"Archive {archive_path}")
         write_checksum(archive_path)
         return 0
 
+    target = args.output_dir / binary_name(args.platform, args.arch)
     remove_if_exists(target.with_name(f"{target.name}.tar.gz"))
     remove_if_exists(target.with_name(f"{target.name}.tar.gz.sha256"))
     replace_file(args.source, target)

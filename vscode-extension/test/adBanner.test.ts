@@ -32,7 +32,7 @@ function placement(extra: Record<string, unknown> = {}) {
       sponsor: "Acme",
       message: "Ship faster",
       url: "https://acme.example/x",
-      click_url: "https://backend/c/plc_1/clt_1",
+      click_url: "https://sponsoredai.dev/c/plc_1/clt_1",
       credit_amount: 0.02,
       surface: "vscode_ai_wait",
       tool: "claude",
@@ -93,8 +93,11 @@ test("renderAdHtml only loads trusted brand icons and gates the CTA on click_url
   assert.match(ad.renderAdHtml(undefined), /An ad appears here/);
 });
 
-test("safeHttpsUrl only allows https URLs", () => {
-  assert.equal(ad.safeHttpsUrl("https://sponsoredai.dev/click"), "https://sponsoredai.dev/click");
+test("safeHttpsUrl only allows SAI https click redirects", () => {
+  assert.equal(ad.safeHttpsUrl("https://sponsoredai.dev/c/plc_1/clt_1"), "https://sponsoredai.dev/c/plc_1/clt_1");
+  assert.equal(ad.safeHttpsUrl("https://www.sponsoredai.dev/c/plc_1/clt_1"), "https://www.sponsoredai.dev/c/plc_1/clt_1");
+  assert.equal(ad.safeHttpsUrl("https://sponsoredai.dev/not-click"), undefined);
+  assert.equal(ad.safeHttpsUrl("https://evil.example/c/plc_1/clt_1"), undefined);
   assert.equal(ad.safeHttpsUrl("http://sponsoredai.dev/click"), undefined);
   assert.equal(ad.safeHttpsUrl("not a url"), undefined);
 });
