@@ -366,6 +366,8 @@ def _main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command_name == "wallet":
+        from .update_check import check_for_update, update_notice
+
         config = ensure_config_saved()
         wallet = Wallet()
         # Reconcile the local display ledger against the authoritative backend
@@ -374,6 +376,11 @@ def _main(argv: Sequence[str] | None = None) -> int:
         # backend leaves the local figures as-is.
         summary = sync_local_wallet(config=config, wallet=wallet) if not args.no_sync else None
         entries = wallet.entries()[-8:]
+        # Passive update check (cached, best-effort, never blocks or raises): the
+        # CLI has no auto-update, so a newer published version is surfaced here.
+        # The VS Code status bar reads this same JSON, so the extension learns of
+        # an update from the wallet read without its own npm probe.
+        update_info = check_for_update()
         payload = {
             "balance": wallet.balance(),
             "recent_entries": entries,
@@ -381,6 +388,11 @@ def _main(argv: Sequence[str] | None = None) -> int:
             "gateway_spends_wallet": False,
             "backend_confirmed": summary is not None,
             "backend": summary,
+            "update": {
+                "available": update_info is not None,
+                "current": __version__,
+                "latest": update_info.latest if update_info else None,
+            },
         }
         if args.json:
             print(json.dumps(payload, indent=2, sort_keys=True))
@@ -405,6 +417,8 @@ def _main(argv: Sequence[str] | None = None) -> int:
                         f"  {entry['timestamp']} {entry['kind']:>5} "
                         f"{entry['amount']:+.3f} {entry['source']}"
                     )
+            if update_info is not None:
+                print(update_notice(update_info), file=sys.stderr)
         return 0
 
     if args.command_name == "placement":
@@ -531,6 +545,13 @@ def handle_passthrough(raw_argv: Sequence[str]) -> int:
 
     maybe_start_gateway(tool)
     receipt = CommandRunner(config).run(command, tool=tool)
+    # The agent has exited and the terminal is back to normal flow, so a one-line
+    # update nudge here cannot clobber a repainting viewport (it would mid-session).
+    # TTY-gated and cached, so it stays silent in pipes/CI and costs nothing once
+    # the daily check has run.
+    from .update_check import notify_terminal_update
+
+    notify_terminal_update()
     return receipt.exit_code
 
 

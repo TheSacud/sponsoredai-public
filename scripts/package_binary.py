@@ -20,6 +20,36 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def replace_file(source: Path, target: Path) -> None:
+    if target.is_dir():
+        shutil.rmtree(target)
+    elif target.exists():
+        target.unlink()
+    shutil.copy2(source, target)
+
+
+def replace_tree(source: Path, target: Path) -> None:
+    if target.is_dir():
+        shutil.rmtree(target)
+    elif target.exists():
+        target.unlink()
+    shutil.copytree(source, target)
+
+
+def write_checksum(path: Path) -> None:
+    checksum = sha256(path)
+    checksum_path = path.with_name(f"{path.name}.sha256")
+    checksum_path.write_text(f"{checksum}  {path.name}\n", encoding="utf-8")
+    print(f"Checksum {checksum_path}")
+
+
+def remove_if_exists(path: Path) -> None:
+    if path.is_dir():
+        shutil.rmtree(path)
+    elif path.exists():
+        path.unlink()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Package a SAI release binary with a checksum.")
     parser.add_argument("--source", required=True, type=Path)
@@ -31,16 +61,30 @@ def main() -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     target_name = binary_name(args.platform, args.arch)
     target = args.output_dir / target_name
-    shutil.copy2(args.source, target)
 
+    if args.source.is_dir():
+        remove_if_exists(target.with_name(f"{target.name}.sha256"))
+        replace_tree(args.source, target)
+        executable = target / ("sai.exe" if args.platform == "win32" else "sai")
+        if not executable.is_file():
+            raise SystemExit(f"Expected executable missing from packaged directory: {executable}")
+        if args.platform != "win32":
+            executable.chmod(executable.stat().st_mode | 0o755)
+        archive_base = args.output_dir / target_name
+        archive_path = Path(shutil.make_archive(str(archive_base), "gztar", root_dir=args.output_dir, base_dir=target_name))
+        print(f"Packaged {target}")
+        print(f"Archive {archive_path}")
+        write_checksum(archive_path)
+        return 0
+
+    remove_if_exists(target.with_name(f"{target.name}.tar.gz"))
+    remove_if_exists(target.with_name(f"{target.name}.tar.gz.sha256"))
+    replace_file(args.source, target)
     if args.platform != "win32":
         target.chmod(target.stat().st_mode | 0o755)
 
-    checksum = sha256(target)
-    checksum_path = target.with_name(f"{target.name}.sha256")
-    checksum_path.write_text(f"{checksum}  {target.name}\n", encoding="utf-8")
     print(f"Packaged {target}")
-    print(f"Checksum {checksum_path}")
+    write_checksum(target)
     return 0
 
 

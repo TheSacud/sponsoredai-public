@@ -7,7 +7,7 @@ import * as path from "node:path";
 import test from "node:test";
 import type * as ExtensionModule from "../src/extension";
 import { SaiCliError, readSaiWalletJson, type ExecFileRunner } from "../src/saiCli";
-import { runSaiTerminalCommand, terminalCommandFor } from "../src/terminals";
+import { quoteTerminalCommand, runSaiTerminalCommand, terminalCommandFor } from "../src/terminals";
 import { formatWalletStatus, parseSaiWalletPayload, walletQuickPickItems } from "../src/wallet";
 
 type Disposable = { dispose(): void };
@@ -99,9 +99,12 @@ function createFakeApi() {
     quickPickItems?: unknown[];
     warningMessage?: string;
     warningActions?: string[];
-  } = {};
+    infoMessages: string[];
+    infoActions: string[][];
+  } = { infoMessages: [], infoActions: [] };
   let nextQuickPick: unknown;
   let nextWarning: string | undefined;
+  let nextInfo: string | undefined;
 
   const api = {
     StatusBarAlignment: { Left: 1 },
@@ -135,6 +138,11 @@ function createFakeApi() {
         calls.warningMessage = message;
         calls.warningActions = actions;
         return nextWarning;
+      },
+      async showInformationMessage(message: string, ...actions: string[]): Promise<string | undefined> {
+        calls.infoMessages.push(message);
+        calls.infoActions.push(actions);
+        return nextInfo;
       }
     }
   };
@@ -150,6 +158,9 @@ function createFakeApi() {
     },
     setNextWarning(value: string | undefined): void {
       nextWarning = value;
+    },
+    setNextInfo(value: string | undefined): void {
+      nextInfo = value;
     }
   };
 }
@@ -207,7 +218,7 @@ test("manifest keeps sensitive settings machine-scoped and hides dev preview", (
   const properties = manifest.contributes.configuration.properties;
   assert.equal(manifest.name, "sponsoredai-credits");
   assert.equal(manifest.displayName, "SAI Credits by Sacud");
-  assert.equal(manifest.version, "0.0.1");
+  assert.equal(manifest.version, "0.0.2");
   assert.equal(properties["sai.cliPath"].scope, "machine");
   assert.equal(properties["sai.gateway.host"].scope, "machine");
   assert.equal(properties["sai.gateway.port"].scope, "machine");
@@ -227,6 +238,14 @@ test("generates fixed terminal commands and launches Codex terminal", async () =
   assert.equal(terminalCommandFor("overlay"), "sai overlay both");
   assert.equal(terminalCommandFor("dashboard"), "sai dashboard");
   assert.equal(terminalCommandFor("installCli"), "npm install -g @sponsoredai/cli");
+  assert.equal(
+    terminalCommandFor("overlay", { saiCommand: "/Users/Duarte/SAI Build/sai", platform: "darwin" }),
+    "'/Users/Duarte/SAI Build/sai' overlay both"
+  );
+  assert.equal(
+    quoteTerminalCommand("C:\\Program Files\\SAI\\sai.exe", "win32"),
+    "\"C:\\Program Files\\SAI\\sai.exe\""
+  );
 
   const fake = createFakeApi();
   const controller = extension.createExtensionController(fake.api as never, {
@@ -242,6 +261,23 @@ test("generates fixed terminal commands and launches Codex terminal", async () =
   assert.equal(fake.terminals[0].name, "SAI Codex");
   assert.equal(fake.terminals[0].shown, true);
   assert.deepEqual(fake.terminals[0].sent, ["sai codex"]);
+});
+
+test("terminal launch commands honor configured sai path", async () => {
+  const fake = createFakeApi();
+  const controller = extension.createExtensionController(
+    fake.api as never,
+    { readWalletJson: async () => sampleWalletPayload() },
+    () => ({ saiCommand: "/Users/Duarte/SAI Build/sai", platform: "darwin" })
+  );
+  controller.activate(createContext() as never);
+
+  const command = fake.registeredCommands.get(extension.COMMANDS.startOverlay);
+  assert.ok(command);
+  await command();
+
+  assert.equal(fake.terminals[0].name, "SAI Overlay");
+  assert.deepEqual(fake.terminals[0].sent, ["'/Users/Duarte/SAI Build/sai' overlay both"]);
 });
 
 test("opens a fresh terminal per launch instead of re-sending into a live one", () => {
@@ -708,4 +744,59 @@ test("Install CLI cancellation does not open a terminal", async () => {
   await command();
 
   assert.equal(fake.terminals.length, 0);
+});
+
+function walletPayloadWithUpdate(latest = "0.2.4", current = "0.2.3") {
+  return {
+    ...sampleWalletPayload(),
+    update: { available: true, current, latest }
+  };
+}
+
+test("a newer CLI version surfaces a passive update toast once per version", async () => {
+  const fake = createFakeApi();
+  const controller = extension.createExtensionController(fake.api as never, {
+    readWalletJson: async () => walletPayloadWithUpdate()
+  });
+  controller.activate(createContext() as never);
+
+  // Two explicit refreshes (plus the one activation fires) all report the same
+  // latest version; the nudge must appear exactly once, not on every refresh.
+  await controller.refreshWalletStatus();
+  await controller.refreshWalletStatus();
+
+  assert.equal(fake.calls.infoMessages.length, 1);
+  assert.match(fake.calls.infoMessages[0], /0\.2\.4/);
+  assert.match(fake.calls.infoMessages[0], /0\.2\.3/);
+  assert.deepEqual(fake.calls.infoActions[0], ["Update CLI"]);
+});
+
+test("choosing Update from the toast opens the Install / Update CLI terminal", async () => {
+  const fake = createFakeApi();
+  fake.setNextInfo("Update CLI");
+  fake.setNextWarning("Open Terminal");
+  const controller = extension.createExtensionController(fake.api as never, {
+    readWalletJson: async () => walletPayloadWithUpdate()
+  });
+  controller.activate(createContext() as never);
+  await controller.refreshWalletStatus();
+  // Flush the toast's then-chain (toast choice -> confirmInstallCli -> warning).
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(fake.terminals.length, 1);
+  assert.equal(fake.terminals[0].name, "SAI CLI Install");
+  assert.equal(fake.terminals[0].cwd, os.homedir());
+  assert.deepEqual(fake.terminals[0].sent, ["npm install -g @sponsoredai/cli"]);
+});
+
+test("no update toast when the CLI reports it is up to date", async () => {
+  const fake = createFakeApi();
+  const controller = extension.createExtensionController(fake.api as never, {
+    readWalletJson: async () => ({ ...sampleWalletPayload(), update: { available: false, current: "0.2.4" } })
+  });
+  controller.activate(createContext() as never);
+  await controller.refreshWalletStatus();
+
+  assert.equal(fake.calls.infoMessages.length, 0);
 });

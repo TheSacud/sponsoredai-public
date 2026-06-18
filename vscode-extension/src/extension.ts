@@ -8,7 +8,7 @@ import {
   type GatewayStatusOptions,
   type ReadSaiOptions
 } from "./saiCli";
-import { runSaiTerminalCommand } from "./terminals";
+import { runSaiTerminalCommand, type SaiTerminalCommandOptions } from "./terminals";
 import { AdEngine, parsePlacement, safeHttpsUrl, SaiAdViewProvider } from "./adBanner";
 import {
   formatWalletStatus,
@@ -86,6 +86,8 @@ const DEFAULT_CLI: SaiCliReader = {
   readWalletJson: readSaiWalletJson
 };
 
+type SaiTerminalOptionsProvider = () => SaiTerminalCommandOptions;
+
 export class SaiExtensionController {
   private statusBarItem?: vscode.StatusBarItem;
   // Monotonic id for the latest in-flight refresh. A slower earlier request must
@@ -96,10 +98,14 @@ export class SaiExtensionController {
   private sponsorActive = false;
   private lastWalletText?: string;
   private lastWalletTooltip?: string;
+  // The latest version we have already nudged about, so a passive update toast
+  // shows once per new version per session instead of on every wallet refresh.
+  private notifiedUpdateVersion?: string;
 
   public constructor(
     private readonly api: VscodeApi,
-    private readonly cli: SaiCliReader = DEFAULT_CLI
+    private readonly cli: SaiCliReader = DEFAULT_CLI,
+    private readonly terminalOptions: SaiTerminalOptionsProvider = () => ({})
   ) {}
 
   public activate(context: vscode.ExtensionContext): void {
@@ -115,12 +121,12 @@ export class SaiExtensionController {
     context.subscriptions.push(this.statusBarItem);
 
     this.registerCommand(context, COMMANDS.showMenu, () => this.showMenu());
-    this.registerCommand(context, COMMANDS.startCodex, () => runSaiTerminalCommand(this.api.window, "codex"));
-    this.registerCommand(context, COMMANDS.startClaude, () => runSaiTerminalCommand(this.api.window, "claude"));
-    this.registerCommand(context, COMMANDS.startOverlay, () => runSaiTerminalCommand(this.api.window, "overlay"));
+    this.registerCommand(context, COMMANDS.startCodex, () => this.runSaiTerminal("codex"));
+    this.registerCommand(context, COMMANDS.startClaude, () => this.runSaiTerminal("claude"));
+    this.registerCommand(context, COMMANDS.startOverlay, () => this.runSaiTerminal("overlay"));
     this.registerCommand(context, COMMANDS.wallet, () => this.showWallet());
     this.registerCommand(context, COMMANDS.refreshWallet, () => this.refreshWalletStatus());
-    this.registerCommand(context, COMMANDS.openDashboard, () => runSaiTerminalCommand(this.api.window, "dashboard"));
+    this.registerCommand(context, COMMANDS.openDashboard, () => this.runSaiTerminal("dashboard"));
     this.registerCommand(context, COMMANDS.installCli, () => this.confirmInstallCli());
 
     void this.refreshWalletStatus();
@@ -140,6 +146,7 @@ export class SaiExtensionController {
         return snapshot;
       }
       this.setWalletStatus(formatWalletStatus(snapshot), walletTooltip(snapshot));
+      this.maybeNotifyUpdate(snapshot);
       return snapshot;
     } catch (error) {
       if (seq !== this.refreshSeq) {
@@ -183,19 +190,19 @@ export class SaiExtensionController {
   private async runMenuAction(action: MenuAction): Promise<void> {
     switch (action) {
       case "codex":
-        runSaiTerminalCommand(this.api.window, "codex");
+        this.runSaiTerminal("codex");
         return;
       case "claude":
-        runSaiTerminalCommand(this.api.window, "claude");
+        this.runSaiTerminal("claude");
         return;
       case "overlay":
-        runSaiTerminalCommand(this.api.window, "overlay");
+        this.runSaiTerminal("overlay");
         return;
       case "wallet":
         await this.showWallet();
         return;
       case "dashboard":
-        runSaiTerminalCommand(this.api.window, "dashboard");
+        this.runSaiTerminal("dashboard");
         return;
       case "installCli":
         await this.confirmInstallCli();
@@ -216,6 +223,34 @@ export class SaiExtensionController {
     });
   }
 
+  // Passive nudge: the CLI auto-updates nowhere, so when the wallet read reports
+  // a newer published version, surface it once (per version, per session) with a
+  // one-click path into the existing Install / Update CLI flow. Never modal, and
+  // tolerant of a host that lacks showInformationMessage (the unit-test fake).
+  private maybeNotifyUpdate(snapshot: WalletSnapshot): void {
+    const update = snapshot.update;
+    if (!update?.available || !update.latest) {
+      return;
+    }
+    if (this.notifiedUpdateVersion === update.latest) {
+      return;
+    }
+    this.notifiedUpdateVersion = update.latest;
+    const show = this.api.window.showInformationMessage;
+    if (typeof show !== "function") {
+      return;
+    }
+    const action = "Update CLI";
+    const current = update.current ? ` (you have ${update.current})` : "";
+    void Promise.resolve(
+      show(`A new SAI CLI ${update.latest} is available${current}.`, action)
+    ).then((choice) => {
+      if (choice === action) {
+        void this.confirmInstallCli();
+      }
+    });
+  }
+
   private async confirmInstallCli(): Promise<void> {
     const confirmed = await this.api.window.showWarningMessage(
       "Install or update the SAI CLI globally with npm? This opens a visible integrated terminal and runs npm install -g @sponsoredai/cli. "
@@ -227,6 +262,10 @@ export class SaiExtensionController {
     if (confirmed === "Open Terminal") {
       runSaiTerminalCommand(this.api.window, "installCli");
     }
+  }
+
+  private runSaiTerminal(action: "codex" | "claude" | "overlay" | "dashboard"): void {
+    runSaiTerminalCommand(this.api.window, action, this.terminalOptions());
   }
 
   // Sets the wallet text/tooltip, remembering it so it can be restored after a
@@ -309,8 +348,12 @@ export class SaiExtensionController {
   }
 }
 
-export function createExtensionController(api: VscodeApi = vscode, cli: SaiCliReader = DEFAULT_CLI): SaiExtensionController {
-  return new SaiExtensionController(api, cli);
+export function createExtensionController(
+  api: VscodeApi = vscode,
+  cli: SaiCliReader = DEFAULT_CLI,
+  terminalOptions: SaiTerminalOptionsProvider = () => ({})
+): SaiExtensionController {
+  return new SaiExtensionController(api, cli, terminalOptions);
 }
 
 // Wire the sidebar sponsor banner: a webview that shows a placement while the
@@ -419,6 +462,9 @@ export function activate(context: vscode.ExtensionContext): SaiExtensionControll
   // CLI (or a non-standard install) drives the whole surface, not just the ads.
   const controller = createExtensionController(vscode, {
     readWalletJson: () => readSaiWalletJson(saiCliOptions())
+  }, () => {
+    const options = saiCliOptions();
+    return options.command ? { saiCommand: options.command } : {};
   });
   controller.activate(context);
   try {

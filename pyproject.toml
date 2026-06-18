@@ -4,7 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sai-credits"
-version = "0.2.3"
+# Single source of truth: src/sai/__init__.py __version__. Bump it with
+# `python scripts/set_version.py X.Y.Z`, which also stamps npm/package.json so the
+# CLI version can never drift between the wheel and the npm launcher.
+dynamic = ["version"]
 description = "Local-first CLI and overlay for sponsored AI credits and cash-out while Claude Code and Codex wait."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,6 +15,7 @@ license = { text = "AGPL-3.0-or-later" }
 authors = [{ name = "SAI" }]
 keywords = ["ai", "cli", "claude-code", "codex", "wallet", "gateway", "cash-out", "developer-payouts", "sponsored-credits", "terminal-overlay"]
 dependencies = [
+    'certifi>=2024.2.2',
     'pywinpty>=2.0; sys_platform == "win32"',
     'pyobjc-framework-Cocoa>=10.0; sys_platform == "darwin"',
     'pyobjc-framework-Quartz>=10.0; sys_platform == "darwin"',
@@ -27,6 +31,9 @@ sai = "sai.cli:main"
 Homepage = "https://sponsoredai.dev"
 Repository = "https://github.com/TheSacud/sponsoredai-public"
 Issues = "https://github.com/TheSacud/sponsoredai-public/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "sai.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

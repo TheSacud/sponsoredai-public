@@ -48,6 +48,7 @@ test("parsePlacement returns the card for a valid payload", () => {
   assert.equal(card?.placement_id, "plc_1");
   assert.equal(card?.signature, "sig_1");
   assert.equal(card?.sponsor, "Acme");
+  assert.equal(card?.brand_icon_url, undefined);
 });
 
 test("parsePlacement rejects payloads missing placement_id or signature", () => {
@@ -67,11 +68,24 @@ test("renderAdHtml escapes content and sets a strict CSP", () => {
   assert.match(html, /A&amp;B/);
 });
 
-test("renderAdHtml does not load remote brand icons and gates the CTA on click_url", () => {
+test("renderAdHtml only loads trusted brand icons and gates the CTA on click_url", () => {
   const remoteIcon = ad.parsePlacement(placement({ brand_icon_url: "https://cdn.example/i.png" }));
   const remoteIconHtml = ad.renderAdHtml(remoteIcon);
   assert.equal(remoteIconHtml.includes("<img"), false);
   assert.equal(remoteIconHtml.includes("img-src https:"), false);
+
+  const trustedIcon = ad.parsePlacement(placement({ brand_icon_url: "https://sponsoredai.dev/c/icon/c1" }));
+  const trustedIconHtml = ad.renderAdHtml(trustedIcon);
+  assert.match(trustedIconHtml, /<img class="brandIcon"/);
+  assert.match(trustedIconHtml, /src="https:\/\/sponsoredai\.dev\/c\/icon\/c1"/);
+  assert.match(trustedIconHtml, /img-src https:\/\/sponsoredai\.dev/);
+
+  const ownPlacementWithoutIcon = ad.parsePlacement(placement({
+    sponsor: "Sponsored AI",
+    url: "https://sponsoredai.dev/?sai_placement=plc_1"
+  }));
+  const ownHtml = ad.renderAdHtml(ownPlacementWithoutIcon);
+  assert.equal(ownHtml.includes("<img"), false);
 
   const noClick = ad.parsePlacement(placement({ click_url: undefined }));
   assert.equal(ad.renderAdHtml(noClick).includes("command:sai.openSponsor"), false);

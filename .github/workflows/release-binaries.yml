@@ -46,6 +46,33 @@ jobs:
           .venv-smoke/bin/python -m pip install dist/*.whl
           .venv-smoke/bin/sai --version
 
+  version-guard:
+    name: version guard
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Assert tag matches the single source of truth
+        # Nothing publishes unless the release tag, src/sai/__init__.py __version__,
+        # pyproject (dynamic) and every npm package.json all agree. This is what
+        # makes a version drift impossible to ship rather than only discouraged.
+        run: |
+          python scripts/check_versions.py
+          TAG="${GITHUB_REF_NAME#v}"
+          INIT="$(python - <<'PY'
+          import re
+          print(re.search(r'__version__\s*=\s*"([^"]+)"', open("src/sai/__init__.py").read()).group(1))
+          PY
+          )"
+          if [ "$TAG" != "$INIT" ]; then
+            echo "::error::release tag v$TAG does not match __version__ $INIT" >&2
+            exit 1
+          fi
+          echo "version guard OK: v$TAG"
+
   build:
     name: build ${{ matrix.platform }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
@@ -56,21 +83,26 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: x64
+            pyinstaller_mode: "--onefile"
             pyinstaller_output: dist/sai
-            collect: ""
+            collect: "--collect-data certifi"
           - os: macos-latest
             platform: darwin
             arch: arm64
+            # macOS uses onedir to avoid PyInstaller onefile extraction on every
+            # short CLI invocation. The npm package ships bin/sai plus _internal.
+            pyinstaller_mode: "--onedir"
             pyinstaller_output: dist/sai
-            collect: ""
+            collect: "--collect-data certifi"
           - os: windows-2025
             platform: win32
             arch: x64
+            pyinstaller_mode: "--onefile"
             pyinstaller_output: dist/sai.exe
             # pywinpty is a native, lazily-imported dep; --collect-all bundles
             # its extension + binaries so the frozen exe can drive the ConPTY
             # compositor instead of silently falling back.
-            collect: "--collect-all winpty"
+            collect: "--collect-data certifi --collect-all winpty"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -83,7 +115,7 @@ jobs:
         # never ship inside the client binary. In the public client repo the module
         # is absent anyway; this keeps the build clean (and any source-repo build
         # client-only too). The VPS runs the backend from source, not this binary.
-        run: python -m PyInstaller --onefile --name sai --paths src --exclude-module sai.backend --exclude-module sai.dev_mock ${{ matrix.collect }} scripts/pyinstaller_entry.py
+        run: python -m PyInstaller ${{ matrix.pyinstaller_mode }} --name sai --paths src --exclude-module sai.backend --exclude-module sai.dev_mock ${{ matrix.collect }} scripts/pyinstaller_entry.py
       - name: Package binary
         run: python scripts/package_binary.py --source "${{ matrix.pyinstaller_output }}" --output-dir release --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}"
       - name: Smoke packaged binary
@@ -91,6 +123,8 @@ jobs:
         run: |
           if [ "${{ matrix.platform }}" = "win32" ]; then
             release/sai-${{ matrix.platform }}-${{ matrix.arch }}.exe --version
+          elif [ "${{ matrix.platform }}" = "darwin" ]; then
+            release/sai-${{ matrix.platform }}-${{ matrix.arch }}/sai --version
           else
             release/sai-${{ matrix.platform }}-${{ matrix.arch }} --version
           fi
@@ -117,6 +151,9 @@ jobs:
         working-directory: vscode-extension
         run: npm run package
       - name: Publish to VS Code Marketplace when configured
+        # Publish only from the public repo (the build/test/package steps above
+        # still run as CI in both repos); see publish-npm for the rationale.
+        if: github.repository == 'TheSacud/sponsoredai-public'
         working-directory: vscode-extension
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
@@ -126,7 +163,17 @@ jobs:
             exit 0
           fi
           NAME="$(node -p "require('./package.json').name")"
+          PUBLISHER="$(node -p "require('./package.json').publisher")"
           VERSION="$(node -p "require('./package.json').version")"
+          # The extension is on its own version line, so a release tag that only
+          # bumped the CLI must not fail here re-publishing an unchanged extension.
+          # Skip when this version is already on the Marketplace; if the lookup is
+          # unavailable, fall through to a normal publish attempt (prior behavior).
+          PUBLISHED="$(npx --yes @vscode/vsce show "${PUBLISHER}.${NAME}" --json 2>/dev/null | jq -r '.versions[].version' 2>/dev/null || true)"
+          if printf '%s\n' "$PUBLISHED" | grep -qx "$VERSION"; then
+            echo "Extension ${PUBLISHER}.${NAME}@${VERSION} is already published; skipping."
+            exit 0
+          fi
           npx vsce publish --packagePath "${NAME}-${VERSION}.vsix"
       - uses: actions/upload-artifact@v7
         with:
@@ -135,8 +182,9 @@ jobs:
 
   github-release:
     name: upload release assets
-    needs: [build, pytest, python-package, vscode-extension]
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, pytest, python-package, vscode-extension, version-guard]
+    # The published GitHub release belongs to the public repo only (see publish-npm).
+    if: startsWith(github.ref, 'refs/tags/') && github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v7
@@ -150,12 +198,15 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "SAI CLI binaries and VS Code extension"
-          gh release upload "$TAG" release/* --clobber
+          find release -maxdepth 1 -type f -print0 | xargs -0 gh release upload "$TAG" --clobber
 
   publish-npm:
     name: publish npm packages
-    needs: [build, pytest, python-package]
-    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build, pytest, python-package, version-guard]
+    # Only the public repo publishes. The same workflow lives in the private dev
+    # repo (it is synced), so without this guard a tag pushed there would also try
+    # to publish to npm. github.repository is the owner/name of the running repo.
+    if: startsWith(github.ref, 'refs/tags/') && github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

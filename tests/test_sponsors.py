@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
@@ -40,12 +41,12 @@ class RemotePlacementClientHeaderTests(unittest.TestCase):
         # silently break every placement fetch. The client must identify itself.
         captured = {}
 
-        def fake_urlopen(request, timeout=None):
+        def fake_urlopen(request, timeout=None, **_kwargs):
             captured["request"] = request
             return _FakeResponse()
 
         client = RemotePlacementClient("https://backend.test", "deadbeef", "install-secret-xyz", timeout=1.0)
-        with patch("sai.sponsors.urllib.request.urlopen", side_effect=fake_urlopen):
+        with patch("sai.http_client.urllib.request.urlopen", side_effect=fake_urlopen):
             client._post("/v1/placements/next", {"x": 1})
 
         request = captured["request"]
@@ -59,16 +60,67 @@ class RemotePlacementClientHeaderTests(unittest.TestCase):
         # backend persists for placement events).
         captured = {}
 
-        def fake_urlopen(request, timeout=None):
+        def fake_urlopen(request, timeout=None, **_kwargs):
             captured["request"] = request
             return _FakeResponse()
 
         client = RemotePlacementClient("https://backend.test", "deadbeef", "install-secret-xyz", timeout=1.0)
-        with patch("sai.sponsors.urllib.request.urlopen", side_effect=fake_urlopen):
+        with patch("sai.http_client.urllib.request.urlopen", side_effect=fake_urlopen):
             client._post("/v1/placements/next", {"x": 1})
 
         request = captured["request"]
         self.assertEqual(request.get_header("Authorization"), "SAI-Install install-secret-xyz")
+
+    def test_next_placement_logs_remote_error_detail(self):
+        client = RemotePlacementClient("https://backend.test", "deadbeef", "install-secret-xyz", timeout=1.0)
+        with (
+            patch(
+                "sai.http_client.urllib.request.urlopen",
+                side_effect=urllib.error.URLError(OSError("certificate verify failed")),
+            ),
+            self.assertLogs("sai.sponsors", level="INFO") as logs,
+        ):
+            self.assertIsNone(
+                client.next_placement(
+                    "desktop_overlay",
+                    {},
+                    terminal_is_interactive=True,
+                    surface="desktop_overlay",
+                )
+            )
+
+        line = "\n".join(logs.output)
+        self.assertIn("path=/v1/installations/register", line)
+        self.assertIn("surface=desktop_overlay", line)
+        self.assertIn("URLError:OSError:certificate verify failed", line)
+
+    def test_next_placement_logs_http_status_for_placement_fetch(self):
+        client = RemotePlacementClient("https://backend.test", "deadbeef", "install-secret-xyz", timeout=1.0)
+        calls = []
+
+        def fake_urlopen(request, timeout=None, **_kwargs):
+            calls.append(request.full_url)
+            if request.full_url.endswith("/v1/installations/register"):
+                return _FakeResponse(b'{"status": "registered"}')
+            raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", hdrs=None, fp=None)
+
+        with (
+            patch("sai.http_client.urllib.request.urlopen", side_effect=fake_urlopen),
+            self.assertLogs("sai.sponsors", level="INFO") as logs,
+        ):
+            self.assertIsNone(
+                client.next_placement(
+                    "desktop_overlay",
+                    {},
+                    terminal_is_interactive=True,
+                    surface="desktop_overlay",
+                )
+            )
+
+        self.assertTrue(calls[-1].endswith("/v1/placements/next"))
+        line = "\n".join(logs.output)
+        self.assertIn("path=/v1/placements/next", line)
+        self.assertIn("HTTPError:403:Forbidden", line)
 
     def test_install_auth_secret_is_deterministic_and_decoupled_from_hash(self):
         secret = install_auth_secret("ins_example")
@@ -127,14 +179,14 @@ class IssuedSecretAdoptionTests(unittest.TestCase):
     def _run_next_placement(self, client, register_body):
         captured = []
 
-        def fake_urlopen(request, timeout=None):
+        def fake_urlopen(request, timeout=None, **_kwargs):
             body = request.data.decode("utf-8") if request.data else ""
             captured.append((request.full_url, body))
             if request.full_url.endswith("/v1/installations/register"):
                 return _FakeResponse(register_body)
             return _FakeResponse(b'{"placement": null}')
 
-        with patch("sai.sponsors.urllib.request.urlopen", side_effect=fake_urlopen):
+        with patch("sai.http_client.urllib.request.urlopen", side_effect=fake_urlopen):
             card = client.next_placement("codex", {}, terminal_is_interactive=True)
         register_payload = next(body for url, body in captured if url.endswith("/register"))
         return card, register_payload

@@ -5,6 +5,8 @@ import logging
 import os
 import secrets
 import sys
+import tempfile
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -85,22 +87,52 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
+# Serializes config writes within a process so concurrent writers (e.g. the
+# threaded gateway refreshing a spend key while a request handler saves config)
+# cannot race on the temp file or interleave their os.replace.
+_WRITE_LOCK = threading.Lock()
+
+
 def write_json_atomic(path: Path, payload: dict[str, Any], private: bool = False) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    with tmp.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2, sort_keys=True)
-        fh.write("\n")
-    if private and os.name == "posix":
-        os.chmod(tmp, 0o600)
-    for attempt in range(5):
+    if os.name == "posix":
+        # The SAI home holds the API key + per-install secret; keep the directory
+        # private so a co-located local user cannot traverse or list it.
         try:
-            os.replace(tmp, path)
-            break
-        except PermissionError:
-            if os.name != "nt" or attempt == 4:
-                raise
-            time.sleep(0.05 * (attempt + 1))
+            os.chmod(path.parent, 0o700)
+        except OSError:
+            pass
+    data = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    with _WRITE_LOCK:
+        # mkstemp creates a uniquely-named temp file with 0600 perms, so a secret
+        # is never even transiently world-readable and two threads in the same
+        # process can never collide on a shared temp path. The previous
+        # open("w")-then-chmod left a 0644 window, and a PID-only temp name made
+        # concurrent writers clobber one file.
+        fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=f"{path.name}.", suffix=".tmp")
+        tmp = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(data)
+            if not private and os.name == "posix":
+                # Non-secret files keep group/other-readable perms, matching the
+                # prior umask-default behavior for these paths.
+                os.chmod(tmp, 0o644)
+            for attempt in range(5):
+                try:
+                    os.replace(tmp, path)
+                    tmp = None
+                    break
+                except PermissionError:
+                    if os.name != "nt" or attempt == 4:
+                        raise
+                    time.sleep(0.05 * (attempt + 1))
+        finally:
+            if tmp is not None:
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
 
 
 def _default_config() -> dict[str, Any]:

@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .config import USER_AGENT, load_config
+from .http_client import urlopen
 from .sponsors import INSTALL_AUTH_SCHEME, hash_install_id, resolve_install_secret
 from .wallet import Wallet
 
@@ -97,7 +98,7 @@ def fetch_backend_credits(config: dict[str, Any] | None = None, timeout: float =
     request.add_header("User-Agent", USER_AGENT)
     request.add_header("Authorization", f"{INSTALL_AUTH_SCHEME} {secret}")
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with urlopen(request, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
     except (OSError, ValueError) as exc:
         logger.debug("Backend credit fetch failed route=%s error=%s", urlparse(url).path or "/", type(exc).__name__)

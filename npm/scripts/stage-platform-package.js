@@ -49,6 +49,27 @@ function writeJson(file, payload) {
   fs.writeFileSync(file, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
+function copyStagedBinary(source, binDir, target) {
+  fs.rmSync(binDir, { recursive: true, force: true });
+  fs.mkdirSync(binDir, { recursive: true });
+
+  const sourceStat = fs.statSync(source);
+  const destination = path.join(binDir, target.binaryName);
+  if (sourceStat.isDirectory()) {
+    fs.cpSync(source, binDir, { recursive: true });
+  } else {
+    fs.copyFileSync(source, destination);
+  }
+
+  if (!fs.existsSync(destination)) {
+    fail(`staged package is missing ${path.relative(binDir, destination)}`);
+  }
+  if (!target.binaryName.endsWith(".exe")) {
+    fs.chmodSync(destination, 0o755);
+  }
+  return destination;
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const source = args.source && path.resolve(args.source);
@@ -86,12 +107,7 @@ function main() {
   writeJson(packageJsonPath, platformPackage);
 
   const binDir = path.join(packageDir, "bin");
-  fs.mkdirSync(binDir, { recursive: true });
-  const destination = path.join(binDir, target.binaryName);
-  fs.copyFileSync(source, destination);
-  if (!target.binaryName.endsWith(".exe")) {
-    fs.chmodSync(destination, 0o755);
-  }
+  const destination = copyStagedBinary(source, binDir, target);
 
   console.log(`[sai] staged ${target.packageName}@${platformPackage.version}: ${destination}`);
 }

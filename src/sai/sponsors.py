@@ -44,6 +44,7 @@ from .metrics import (
     RENDERED_EVENT,
     VSCODE_WAIT_SURFACE,
 )
+from .http_client import urlopen
 from .privacy import sanitize_event
 from .wallet import Wallet
 
@@ -230,21 +231,18 @@ class RemotePlacementClient:
             payload["attended_interactive"] = bool(terminal_is_interactive)
         else:
             payload["terminal_interactive"] = bool(terminal_is_interactive)
-        try:
-            register = self._post(
-                "/v1/installations/register",
-                # Ask for a server-issued secret until we hold one; once adopted
-                # this stays False so the backend never re-issues.
-                {**payload, "request_install_secret": not self.secret_is_issued},
-            )
-            self._adopt_issued_secret(register)
-            response = self._post("/v1/placements/next", payload)
-        except (OSError, urllib.error.URLError, TimeoutError, ValueError) as exc:
-            logger.info(
-                "remote placement unavailable path=/v1/placements/next surface=%s error=%s",
-                surface,
-                type(exc).__name__,
-            )
+        register = self._post_or_none(
+            "/v1/installations/register",
+            # Ask for a server-issued secret until we hold one; once adopted this
+            # stays False so the backend never re-issues.
+            {**payload, "request_install_secret": not self.secret_is_issued},
+            surface=surface,
+        )
+        if register is None:
+            return None
+        self._adopt_issued_secret(register)
+        response = self._post_or_none("/v1/placements/next", payload, surface=surface)
+        if response is None:
             return None
 
         placement = response.get("placement") if isinstance(response, dict) else None
@@ -285,14 +283,25 @@ class RemotePlacementClient:
     def record_event(self, placement_id: str, payload: dict[str, Any]) -> dict[str, Any] | None:
         payload = dict(payload)
         payload.setdefault("install_id_hash", self.install_id_hash)
+        surface = str(payload.get("surface") or "")
+        path = f"/v1/placements/{placement_id}/events"
+        return self._post_or_none(path, payload, surface=surface)
+
+    def _post_or_none(
+        self,
+        path: str,
+        payload: dict[str, Any],
+        *,
+        surface: str,
+    ) -> dict[str, Any] | None:
         try:
-            return self._post(f"/v1/placements/{placement_id}/events", payload)
+            return self._post(path, payload)
         except (OSError, urllib.error.URLError, TimeoutError, ValueError) as exc:
             logger.info(
-                "remote placement event failed placement=%s event=%s error=%s",
-                placement_id[:16],
-                payload.get("event") or "-",
-                type(exc).__name__,
+                "remote placement unavailable path=%s surface=%s error=%s",
+                path,
+                surface or "-",
+                remote_error_detail(exc),
             )
             return None
 
@@ -330,11 +339,26 @@ class RemotePlacementClient:
         # capture request bodies.
         if self.install_secret:
             request.add_header("Authorization", f"{INSTALL_AUTH_SCHEME} {self.install_secret}")
-        with urllib.request.urlopen(request, timeout=self.timeout) as response:
+        with urlopen(request, timeout=self.timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
         if not isinstance(data, dict):
             raise ValueError("Expected JSON object")
         return data
+
+
+def remote_error_detail(exc: BaseException) -> str:
+    """Compact, credential-free reason for backend transport failures."""
+    if isinstance(exc, urllib.error.HTTPError):
+        return _clip_error(f"HTTPError:{exc.code}:{exc.reason}")
+    reason = getattr(exc, "reason", None)
+    if reason is not None and reason is not exc:
+        return _clip_error(f"{exc.__class__.__name__}:{reason.__class__.__name__}:{reason}")
+    return _clip_error(f"{exc.__class__.__name__}:{exc}")
+
+
+def _clip_error(text: str, limit: int = 180) -> str:
+    clean = " ".join(str(text).split())
+    return clean if len(clean) <= limit else clean[: limit - 1] + "..."
 
 
 def hash_install_id(install_id: str) -> str:

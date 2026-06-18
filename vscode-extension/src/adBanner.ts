@@ -9,6 +9,7 @@ export interface SponsorPlacement {
   readonly sponsor: string;
   readonly message: string;
   readonly url: string;
+  readonly brand_icon_url?: string;
   readonly click_url?: string;
   readonly credit_amount?: number;
   readonly surface?: string;
@@ -50,6 +51,7 @@ export function parsePlacement(payload: unknown): SponsorPlacement | undefined {
     sponsor: optString(record.sponsor) ?? "Sponsor",
     message: optString(record.message) ?? "",
     url: optString(record.url) ?? "",
+    brand_icon_url: optString(record.brand_icon_url),
     click_url: optString(record.click_url),
     credit_amount: typeof record.credit_amount === "number" ? record.credit_amount : undefined,
     surface: optString(record.surface),
@@ -223,15 +225,53 @@ export function safeHttpsUrl(value: string | undefined): string | undefined {
   }
 }
 
+const SAI_ICON_HOSTS = new Set(["sponsoredai.dev", "www.sponsoredai.dev"]);
+
+export function safeBrandIconUrl(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "https:" || !SAI_ICON_HOSTS.has(parsed.hostname.toLowerCase())) {
+      return undefined;
+    }
+    return parsed.pathname.startsWith("/c/icon/") ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+interface IconSource {
+  readonly src: string;
+  readonly cspSource: string;
+}
+
+function iconSource(placement: SponsorPlacement | undefined): IconSource | undefined {
+  if (!placement) {
+    return undefined;
+  }
+  const remote = safeBrandIconUrl(placement.brand_icon_url);
+  if (remote) {
+    return { src: remote, cspSource: new URL(remote).origin };
+  }
+  return undefined;
+}
+
 export function renderAdHtml(placement: SponsorPlacement | undefined): string {
+  const icon = iconSource(placement);
+  const imgCsp = icon ? ` img-src ${icon.cspSource};` : "";
   const head =
     "<!DOCTYPE html><html><head><meta charset=\"utf-8\">"
-    + "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline';\">"
+    + `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';${imgCsp}">`
     + "<style>"
     + "body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);background:transparent;margin:0;padding:12px;font-size:13px;}"
     + ".tag{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--vscode-descriptionForeground);}"
     + ".card{border:1px solid var(--vscode-panel-border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;}"
     + ".row{display:flex;align-items:center;gap:8px;}"
+    + ".brandRow{display:flex;align-items:center;gap:10px;min-width:0;}"
+    + ".brandIcon{width:28px;height:28px;border-radius:6px;object-fit:contain;flex:0 0 auto;}"
+    + ".brandText{min-width:0;display:flex;flex-direction:column;gap:2px;}"
     + ".sponsor{font-weight:600;}"
     + ".msg{color:var(--vscode-foreground);}"
     + ".credit{color:var(--vscode-charts-green,#3fb950);font-weight:600;}"
@@ -254,12 +294,20 @@ export function renderAdHtml(placement: SponsorPlacement | undefined): string {
   const cta = placement.click_url
     ? "<a class=\"cta\" href=\"command:sai.openSponsor\">Visit sponsor &rarr;</a>"
     : "";
+  const iconHtml = icon
+    ? `<img class="brandIcon" src="${escapeHtml(icon.src)}" alt="">`
+    : "";
 
   return (
     head
     + "<div class=\"card\">"
-    + "<div class=\"row\"><span class=\"tag\">Sponsored</span></div>"
-    + `<div class="row"><span class="sponsor">${escapeHtml(placement.sponsor)}</span></div>`
+    + "<div class=\"brandRow\">"
+    + iconHtml
+    + "<div class=\"brandText\">"
+    + "<div class=\"tag\">Sponsored</div>"
+    + `<div class="sponsor">${escapeHtml(placement.sponsor)}</div>`
+    + "</div>"
+    + "</div>"
     + `<div class="msg">${escapeHtml(placement.message)}</div>`
     + credit
     + cta

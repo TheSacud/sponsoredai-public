@@ -15,6 +15,15 @@ export interface WalletBackendSummary {
   readonly authoritative: number;
 }
 
+// A newer published CLI is available. The CLI has no auto-update, so this is the
+// nudge to re-run "Install / Update CLI". The CLI computes it (cached npm probe)
+// and ships it inside `sai wallet --json`.
+export interface WalletUpdateInfo {
+  readonly available: boolean;
+  readonly current?: string;
+  readonly latest?: string;
+}
+
 export interface WalletSnapshot {
   // Local display ledger balance. NOT authoritative: the CLI reconciles it to
   // the backend but it can drift, and it is denominated in AI credits.
@@ -32,6 +41,9 @@ export interface WalletSnapshot {
   // the most recent ledger entries, so earlier earnings today fall outside it.
   readonly earnedTodayApproximate: boolean;
   readonly recentEntries: readonly WalletLedgerEntry[];
+  // Present when the CLI reported on its own version. `available` true means a
+  // newer published CLI exists and the user should re-run "Install / Update CLI".
+  readonly update?: WalletUpdateInfo;
 }
 
 export interface WalletDisplayItem {
@@ -78,7 +90,19 @@ export function parseSaiWalletPayload(payload: unknown, now = new Date()): Walle
     backend: parseBackendSummary(payload.backend),
     earnedToday: roundCredits(earnedToday),
     earnedTodayApproximate: rawEntries.length >= MAX_LEDGER_WINDOW,
-    recentEntries
+    recentEntries,
+    update: parseUpdateInfo(payload.update)
+  };
+}
+
+function parseUpdateInfo(value: unknown): WalletUpdateInfo | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  return {
+    available: value.available === true,
+    current: readString(value.current),
+    latest: readString(value.latest)
   };
 }
 
@@ -110,6 +134,15 @@ export function walletTooltip(snapshot: WalletSnapshot): string {
 
 export function walletQuickPickItems(snapshot: WalletSnapshot): WalletDisplayItem[] {
   const items: WalletDisplayItem[] = [];
+
+  if (snapshot.update?.available) {
+    const from = snapshot.update.current ?? "current";
+    const to = snapshot.update.latest ?? "latest";
+    items.push({
+      label: `$(arrow-up) Update available: ${from} → ${to}`,
+      description: "Run SAI: Install / Update CLI to update the SAI CLI"
+    });
+  }
 
   if (snapshot.backend) {
     items.push({
