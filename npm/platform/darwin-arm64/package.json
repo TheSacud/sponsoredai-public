@@ -1,6 +1,6 @@
 {
   "name": "@sponsoredai/cli-darwin-arm64",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "macOS arm64 binary for @sponsoredai/cli.",
   "license": "AGPL-3.0-or-later",
   "homepage": "https://sponsoredai.dev",

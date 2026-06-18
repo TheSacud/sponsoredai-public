@@ -11,7 +11,7 @@ from sai.overlay.driver import (
     _STATUS_SHOWING,
 )
 from sai.overlay.geometry import place_banner
-from sai.overlay.lock import InstanceLock
+from sai.overlay.lock import InstanceLock, _process_alive
 from sai.overlay.visibility import VisibilityState
 from sai.overlay.win32 import Rect
 
@@ -365,6 +365,40 @@ class InstanceLockTests(unittest.TestCase):
         self.assertTrue(lock.acquire())
         self.assertEqual(lock._owner_pid(), os.getpid())
         lock.release()
+
+    def test_windows_process_alive_requires_still_active_exit_code(self):
+        class FakeKernel32:
+            def OpenProcess(self, *_args):
+                return 123
+
+            def GetExitCodeProcess(self, _handle, out):
+                out._obj.value = 0
+                return 1
+
+            def CloseHandle(self, _handle):
+                return 1
+
+        with mock.patch("sai.overlay.lock.os.name", "nt"), \
+                mock.patch("ctypes.windll", create=True) as windll:
+            windll.kernel32 = FakeKernel32()
+            self.assertFalse(_process_alive(12345))
+
+    def test_windows_process_alive_accepts_still_active_exit_code(self):
+        class FakeKernel32:
+            def OpenProcess(self, *_args):
+                return 123
+
+            def GetExitCodeProcess(self, _handle, out):
+                out._obj.value = 259
+                return 1
+
+            def CloseHandle(self, _handle):
+                return 1
+
+        with mock.patch("sai.overlay.lock.os.name", "nt"), \
+                mock.patch("ctypes.windll", create=True) as windll:
+            windll.kernel32 = FakeKernel32()
+            self.assertTrue(_process_alive(12345))
 
 
 class ProbeTickHookTests(unittest.TestCase):

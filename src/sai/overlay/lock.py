@@ -37,12 +37,20 @@ def _process_alive(pid: int) -> bool:
     if os.name == "nt":
         import ctypes
 
-        # OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION). A handle means it lives.
+        # OpenProcess can succeed for a terminating/exited process object whose
+        # PID has not fully disappeared yet. Confirm it is still active before
+        # treating a billing lock owner as live.
+        STILL_ACTIVE = 259
         handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
-        if handle:
+        if not handle:
+            return False
+        try:
+            exit_code = ctypes.c_ulong()
+            if not ctypes.windll.kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return False
+            return exit_code.value == STILL_ACTIVE
+        finally:
             ctypes.windll.kernel32.CloseHandle(handle)
-            return True
-        return False
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
