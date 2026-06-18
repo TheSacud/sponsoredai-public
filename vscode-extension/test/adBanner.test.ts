@@ -51,6 +51,11 @@ test("parsePlacement returns the card for a valid payload", () => {
   assert.equal(card?.brand_icon_url, undefined);
 });
 
+test("parsePlacement preserves local transport metadata", () => {
+  const card = ad.parsePlacement(placement({ sai_transport: "cli" }));
+  assert.equal(card?.sai_transport, "cli");
+});
+
 test("parsePlacement rejects payloads missing placement_id or signature", () => {
   assert.equal(ad.parsePlacement({ placement: null }), undefined);
   assert.equal(ad.parsePlacement({ placement: { signature: "s" } }), undefined);

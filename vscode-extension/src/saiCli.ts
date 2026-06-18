@@ -69,6 +69,7 @@ export const SAI_PLACEMENT_NEXT_ARGS = ["placement", "next", "--json"] as const;
 export const SAI_PLACEMENT_EVENT_ARGS = ["placement", "event", "--json"] as const;
 export const VSCODE_WAIT_SURFACE = "vscode_ai_wait";
 export const DEFAULT_PLACEMENT_TOOL = "codex";
+export const SAI_PLACEMENT_TRANSPORT_FIELD = "sai_transport";
 const DEFAULT_GATEWAY_PLACEMENT_TIMEOUT_MS = 800;
 const MAX_GATEWAY_PLACEMENT_RESPONSE_BYTES = 128 * 1024;
 
@@ -120,7 +121,8 @@ export async function fetchSaiPlacement(request: PlacementRequest = {}, options:
   return runPlacementWithGatewayFallback(
     () => fetchGatewayPlacement(request, options.gateway),
     () => fetchSaiPlacementViaCli(request, options),
-    options.gateway
+    effectiveGatewayOptions(options),
+    true
   );
 }
 
@@ -147,10 +149,13 @@ export async function recordSaiPlacementEvent(
   request: PlacementEventRequest = {},
   options: PlacementTransportOptions = {}
 ): Promise<unknown> {
+  if (placementTransport(ticket) === "cli") {
+    return runPlacementCliOnly(() => recordSaiPlacementEventViaCli(ticket, request, options));
+  }
   return runPlacementWithGatewayFallback(
     () => recordGatewayPlacementEvent(ticket, request, options.gateway),
     () => recordSaiPlacementEventViaCli(ticket, request, options),
-    options.gateway
+    effectiveGatewayOptions(options)
   );
 }
 
@@ -222,7 +227,8 @@ class GatewayPlacementError extends Error {
 async function runPlacementWithGatewayFallback(
   gatewayCall: () => Promise<unknown>,
   cliCall: () => Promise<unknown>,
-  gatewayOptions: GatewayPlacementOptions | undefined
+  gatewayOptions: GatewayPlacementOptions | undefined,
+  annotatePlacement = false
 ): Promise<unknown> {
   if (gatewayOptions?.enabled !== false) {
     try {
@@ -231,7 +237,7 @@ async function runPlacementWithGatewayFallback(
       placementDiagnostics.fallbackToCliUsed = false;
       placementDiagnostics.lastGatewayPlacementError = undefined;
       placementDiagnostics.lastCliPlacementError = undefined;
-      return payload;
+      return annotatePlacement ? annotatePlacementTransport(payload, "gateway") : payload;
     } catch (error) {
       placementDiagnostics.gatewayPlacementEndpointAvailable = false;
       placementDiagnostics.lastGatewayPlacementError = placementErrorSummary(error);
@@ -246,11 +252,56 @@ async function runPlacementWithGatewayFallback(
   try {
     const payload = await cliCall();
     placementDiagnostics.lastCliPlacementError = undefined;
+    return annotatePlacement ? annotatePlacementTransport(payload, "cli") : payload;
+  } catch (error) {
+    placementDiagnostics.lastCliPlacementError = placementErrorSummary(error);
+    throw error;
+  }
+}
+
+async function runPlacementCliOnly(cliCall: () => Promise<unknown>): Promise<unknown> {
+  placementDiagnostics.fallbackToCliUsed = true;
+  try {
+    const payload = await cliCall();
+    placementDiagnostics.lastCliPlacementError = undefined;
     return payload;
   } catch (error) {
     placementDiagnostics.lastCliPlacementError = placementErrorSummary(error);
     throw error;
   }
+}
+
+function effectiveGatewayOptions(options: PlacementTransportOptions): GatewayPlacementOptions | undefined {
+  if (options.command) {
+    return { ...options.gateway, enabled: false };
+  }
+  return options.gateway;
+}
+
+function annotatePlacementTransport(payload: unknown, transport: "gateway" | "cli"): unknown {
+  if (!payload || typeof payload !== "object") {
+    return payload;
+  }
+  const outer = payload as Record<string, unknown>;
+  const placement = outer.placement;
+  if (!placement || typeof placement !== "object") {
+    return payload;
+  }
+  return {
+    ...outer,
+    placement: {
+      ...(placement as Record<string, unknown>),
+      [SAI_PLACEMENT_TRANSPORT_FIELD]: transport
+    }
+  };
+}
+
+function placementTransport(ticket: unknown): "gateway" | "cli" | undefined {
+  if (!ticket || typeof ticket !== "object") {
+    return undefined;
+  }
+  const value = (ticket as Record<string, unknown>)[SAI_PLACEMENT_TRANSPORT_FIELD];
+  return value === "gateway" || value === "cli" ? value : undefined;
 }
 
 function shouldFallbackFromGateway(error: unknown): boolean {

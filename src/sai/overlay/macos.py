@@ -904,6 +904,9 @@ class MacStatusItem:
 
     def _rebuild_menu(self) -> None:
         menu = self._AppKit.NSMenu.alloc().initWithTitle_("SAI")
+        # Honour our own setEnabled_ (e.g. the disabled status line) instead of
+        # AppKit's automatic target/action-based enabling.
+        menu.setAutoenablesItems_(False)
         on = getattr(self._AppKit, "NSControlStateValueOn", 1)
         off = getattr(self._AppKit, "NSControlStateValueOff", 0)
         for spec in self._controller.items():
@@ -916,9 +919,22 @@ class MacStatusItem:
             item.setTarget_(self._target)
             item.setTag_(int(spec["id"]))
             item.setState_(on if spec.get("checked") else off)
+            item.setEnabled_(not spec.get("disabled", False))
             menu.addItem_(item)
         self._item.setMenu_(menu)
         self._menu = menu
+
+    def set_tooltip(self, text: str) -> None:
+        """Update the status-item hover tooltip and refresh the menu's status
+        line. Best-effort; never raises into the overlay loop."""
+        self._tooltip = text or ""
+        try:
+            button = self._item.button()
+            if button is not None:
+                button.setToolTip_(self._tooltip)
+            self._rebuild_menu()
+        except Exception:  # noqa: BLE001 - cosmetic; must not disturb the loop
+            logger.debug("status item tooltip update failed", exc_info=True)
 
     def _invoke(self, item_id: int) -> None:
         try:

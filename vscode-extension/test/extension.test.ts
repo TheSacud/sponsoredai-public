@@ -266,6 +266,31 @@ test("generates fixed terminal commands and launches Codex terminal", async () =
   assert.deepEqual(fake.terminals[0].sent, ["sai codex"]);
 });
 
+test("placement tool follows the last launched agent terminal", async () => {
+  const fake = createFakeApi();
+  const controller = extension.createExtensionController(fake.api as never, {
+    readWalletJson: async () => sampleWalletPayload()
+  });
+  controller.activate(createContext() as never);
+
+  assert.equal(controller.currentPlacementTool(), "codex");
+
+  const startClaude = fake.registeredCommands.get(extension.COMMANDS.startClaude);
+  assert.ok(startClaude);
+  await startClaude();
+  assert.equal(controller.currentPlacementTool(), "claude");
+
+  const startOverlay = fake.registeredCommands.get(extension.COMMANDS.startOverlay);
+  assert.ok(startOverlay);
+  await startOverlay();
+  assert.equal(controller.currentPlacementTool(), "claude");
+
+  const startCodex = fake.registeredCommands.get(extension.COMMANDS.startCodex);
+  assert.ok(startCodex);
+  await startCodex();
+  assert.equal(controller.currentPlacementTool(), "codex");
+});
+
 test("terminal launch commands honor configured sai path", async () => {
   const fake = createFakeApi();
   const controller = extension.createExtensionController(

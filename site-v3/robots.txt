@@ -1,0 +1,18 @@
+User-agent: GPTBot
+Disallow: /
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /login
+Disallow: /me
+Disallow: /v1/
+Disallow: /c/
+Disallow: /_internal/
+Disallow: /promo
+
+Sitemap: https://sponsoredai.dev/sitemap.xml

@@ -46,6 +46,20 @@ DEFAULT_ANCHOR = "top"
 TICK_SECONDS = 0.2
 logger = logging.getLogger(__name__)
 
+# Human-facing one-liners surfaced on the tray so a billable overlay that is
+# alive but showing nothing (no placement, app not focused, paused) reads as
+# working rather than broken. Deliberately does NOT claim a sponsor when there
+# is none -- "no_card" stays "no sponsor", never an example card.
+_STATUS_SHOWING = "Showing a sponsor"
+_STATUS_BY_REASON = {
+    "dismissed": "Dismissed for this session",
+    "disabled": "Sponsor ads are off",
+    "target_not_foreground": "Waiting — open Claude or Codex",
+    "user_idle": "Paused while you're away",
+    "no_card": "No sponsor to show right now",
+    "target_rect_missing": "Locating the app window…",
+}
+
 
 class SessionDriver:
     def __init__(
@@ -62,6 +76,7 @@ class SessionDriver:
         clock: Callable[[], float] = time.monotonic,
         input_presence_seconds: float = DEFAULT_INPUT_PRESENCE_SECONDS,
         tick_seconds: float = TICK_SECONDS,
+        on_status: Optional[Callable[[str], None]] = None,
     ) -> None:
         self._monitor = monitor
         self._window = window
@@ -74,10 +89,12 @@ class SessionDriver:
         self._clock = clock
         self._input_presence_seconds = input_presence_seconds
         self._tick_seconds = tick_seconds
+        self._on_status = on_status
         self._card = None
         self._displaying = False
         self._dismissed = False
         self._last_hidden_reason: str | None = None
+        self._last_status: str | None = None
 
     def dismiss(self) -> None:
         """User clicked the banner's close box: hide it for the rest of this
@@ -181,9 +198,23 @@ class SessionDriver:
             self._set_reward_progress(None)
         self._displaying = True
         self._last_hidden_reason = None
+        self._emit_status(_STATUS_SHOWING)
         if not was_displaying:
             logger.info("overlay visible card=%s anchor=%s dpi=%s", self._card_id(), self._anchor, dpi)
         return state
+
+    def _emit_status(self, text: str) -> None:
+        """Push a one-line status to the tray, deduped so an unchanged state is
+        not re-sent every tick. A status sink must never disturb the loop."""
+        if text == self._last_status:
+            return
+        self._last_status = text
+        if self._on_status is None:
+            return
+        try:
+            self._on_status(text)
+        except Exception:  # noqa: BLE001 - the overlay must outlive a bad status sink
+            logger.debug("overlay status sink failed", exc_info=True)
 
     def _update_reward_progress(self, now: float) -> None:
         progress = None
@@ -211,6 +242,7 @@ class SessionDriver:
         if was_displaying or self._last_hidden_reason != reason:
             logger.info("overlay hidden reason=%s card=%s", reason, self._card_id())
         self._last_hidden_reason = reason
+        self._emit_status(_STATUS_BY_REASON.get(reason, "Idle"))
 
     def run(
         self,

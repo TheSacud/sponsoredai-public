@@ -8,6 +8,7 @@ from sai.overlay.tray import (
     FREQ_BY_ID,
     ID_PRIVACY,
     ID_QUIT,
+    ID_STATUS,
     ID_TERMS,
     ID_TOGGLE,
     TrayController,
@@ -45,6 +46,24 @@ class TrayControllerTests(unittest.TestCase):
         self.assertTrue(toggle["checked"])  # ads enabled (no kill switch)
         normal = next(i for i in items if i.get("label") == "Frequency: normal")
         self.assertTrue(normal["checked"])
+
+    def test_set_status_adds_disabled_line_atop_menu_and_is_a_no_op(self):
+        self.assertNotIn(ID_STATUS, [i.get("id") for i in self.ctl.items()])  # none by default
+        self.ctl.set_status("No sponsor to show right now")
+        items = self.ctl.items()
+        self.assertEqual(items[0]["id"], ID_STATUS)
+        self.assertEqual(items[0]["label"], "No sponsor to show right now")
+        self.assertTrue(items[0]["disabled"])
+        self.assertTrue(items[1].get("sep"))  # separated from the controls below
+        # Invoking the status line opens nothing and never quits.
+        self.ctl.invoke(ID_STATUS)
+        self.assertEqual(self.opened, [])
+        self.assertEqual(self.quit_called, [])
+
+    def test_blank_status_clears_the_line(self):
+        self.ctl.set_status("something")
+        self.ctl.set_status("   ")
+        self.assertNotIn(ID_STATUS, [i.get("id") for i in self.ctl.items()])
 
     def test_toggle_flips_the_kill_switch(self):
         self.assertFalse(kill_switch_active())
@@ -127,6 +146,8 @@ class TrayIconSmokeTests(unittest.TestCase):
         icon = TrayIcon(controller, tooltip="SAI test")
         try:
             self.assertTrue(icon.added)  # Shell_NotifyIcon NIM_ADD succeeded
+            icon.set_tooltip("No sponsor to show right now")  # NIM_MODIFY, must not drop the icon
+            self.assertTrue(icon.added)
         finally:
             icon.close()
         self.assertFalse(icon.added)

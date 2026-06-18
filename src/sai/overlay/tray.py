@@ -21,6 +21,7 @@ from .win32 import is_windows
 logger = logging.getLogger(__name__)
 
 ID_TOGGLE = 1
+ID_STATUS = 2
 ID_TERMS = 20
 ID_PRIVACY = 21
 ID_QUIT = 99
@@ -42,11 +43,22 @@ class TrayController:
         self._config = config
         self._on_quit = on_quit
         self._open = opener
+        self._status: str | None = None
+
+    def set_status(self, text: str) -> None:
+        """Record what the overlay is currently doing, shown as a disabled line
+        atop the menu. Lets a billable overlay with no placement read as alive,
+        not broken -- without ever inventing an example sponsor card."""
+        self._status = (text or "").strip() or None
 
     def items(self) -> List[Dict]:
         enabled = not kill_switch_active()
         freq = self._config.get("frequency", "normal")
-        items: List[Dict] = [
+        items: List[Dict] = []
+        if self._status:
+            items.append({"id": ID_STATUS, "label": self._status, "disabled": True})
+            items.append({"sep": True})
+        items += [
             {"id": ID_TOGGLE, "label": "Show sponsor ads", "checked": enabled},
             {"sep": True},
         ]
@@ -92,10 +104,10 @@ WM_DESTROY = 0x0002
 WM_LBUTTONUP = 0x0202
 WM_RBUTTONUP = 0x0205
 WM_CONTEXTMENU = 0x007B
-NIM_ADD, NIM_DELETE = 0x00000000, 0x00000002
+NIM_ADD, NIM_MODIFY, NIM_DELETE = 0x00000000, 0x00000001, 0x00000002
 NIF_MESSAGE, NIF_ICON, NIF_TIP = 0x00000001, 0x00000002, 0x00000004
 IDI_APPLICATION = 32512
-MF_STRING, MF_CHECKED, MF_SEPARATOR = 0x0000, 0x0008, 0x0800
+MF_STRING, MF_GRAYED, MF_CHECKED, MF_SEPARATOR = 0x0000, 0x0001, 0x0008, 0x0800
 TPM_RIGHTBUTTON, TPM_RETURNCMD = 0x0002, 0x0100
 WS_POPUP = 0x80000000
 
@@ -314,6 +326,25 @@ class TrayIcon:
     def added(self) -> bool:
         return self._added
 
+    def set_tooltip(self, text: str) -> None:
+        """Update the tray icon's hover tooltip (NIM_MODIFY). Best-effort: a
+        failed status refresh must never disturb the overlay."""
+        if not self._added:
+            return
+        ctypes = self._ctypes
+        # szTip is a fixed 128-wchar buffer; leave room for the terminator.
+        self._tooltip = (text or "")[:127]
+        nid = self._NID()
+        nid.cbSize = ctypes.sizeof(self._NID)
+        nid.hWnd = self._hwnd
+        nid.uID = 1
+        nid.uFlags = NIF_TIP
+        nid.szTip = self._tooltip
+        try:
+            self._shell32.Shell_NotifyIconW(NIM_MODIFY, ctypes.byref(nid))
+        except OSError:
+            logger.debug("tray tooltip update failed", exc_info=True)
+
     def _on_message(self, hwnd, message, wparam, lparam):
         if message == self.CALLBACK:
             event = lparam & 0xFFFF
@@ -332,7 +363,11 @@ class TrayIcon:
                 if item.get("sep"):
                     self._user32.AppendMenuW(hmenu, MF_SEPARATOR, 0, None)
                 else:
-                    flags = MF_STRING | (MF_CHECKED if item.get("checked") else 0)
+                    flags = MF_STRING
+                    if item.get("checked"):
+                        flags |= MF_CHECKED
+                    if item.get("disabled"):
+                        flags |= MF_GRAYED
                     self._user32.AppendMenuW(hmenu, flags, item["id"], item["label"])
             point = self._POINT()
             self._user32.GetCursorPos(ctypes.byref(point))

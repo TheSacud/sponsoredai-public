@@ -4,7 +4,12 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from sai.overlay.driver import PERSISTENT_IDLE_SECONDS, SessionDriver
+from sai.overlay.driver import (
+    PERSISTENT_IDLE_SECONDS,
+    SessionDriver,
+    _STATUS_BY_REASON,
+    _STATUS_SHOWING,
+)
 from sai.overlay.geometry import place_banner
 from sai.overlay.lock import InstanceLock
 from sai.overlay.visibility import VisibilityState
@@ -121,7 +126,7 @@ class FakeSurface:
         self.reward_progresses.append(progress)
 
 
-def build(monitor_state, *, cards=None, enabled=True, settle_value=0.0, work_area=None, rect=Rect(100, 100, 1100, 900), dpi=96):
+def build(monitor_state, *, cards=None, enabled=True, settle_value=0.0, work_area=None, rect=Rect(100, 100, 1100, 900), dpi=96, on_status=None):
     session = FakeSession(cards=cards, settle_value=settle_value)
     window = FakeWindow()
     monitor = FakeMonitor(monitor_state)
@@ -134,6 +139,7 @@ def build(monitor_state, *, cards=None, enabled=True, settle_value=0.0, work_are
         config={},
         enabled=(lambda: enabled),
         clock=lambda: 10.0,
+        on_status=on_status,
     )
     return driver, monitor, window, session
 
@@ -280,6 +286,44 @@ class SessionDriverTests(unittest.TestCase):
         self.assertEqual(window.pumps, 3)
         self.assertEqual(session.settles, 1)
         self.assertEqual(earned, 0.0)
+
+
+class StatusSignalTests(unittest.TestCase):
+    """The driver pushes a one-line status to the tray on each state change so a
+    billable overlay showing nothing reads as alive, not broken."""
+
+    def test_showing_a_card_reports_showing(self):
+        seen = []
+        driver, *_ = build(vstate(), cards=["CARD"], on_status=seen.append)
+        driver.tick()
+        self.assertEqual(seen, [_STATUS_SHOWING])
+
+    def test_attended_but_no_card_reports_no_sponsor(self):
+        seen = []
+        driver, *_ = build(vstate(), cards=[], on_status=seen.append)
+        driver.tick()
+        self.assertEqual(seen, [_STATUS_BY_REASON["no_card"]])
+
+    def test_target_not_foreground_reports_waiting(self):
+        seen = []
+        driver, *_ = build(vstate(fg=False), on_status=seen.append)
+        driver.tick()
+        self.assertEqual(seen, [_STATUS_BY_REASON["target_not_foreground"]])
+
+    def test_unchanged_state_is_not_re_emitted_every_tick(self):
+        seen = []
+        driver, monitor, *_ = build(vstate(fg=False), on_status=seen.append)
+        driver.tick()
+        driver.tick()
+        self.assertEqual(seen, [_STATUS_BY_REASON["target_not_foreground"]])
+
+    def test_status_sink_exception_never_breaks_the_tick(self):
+        def boom(_text):
+            raise RuntimeError("sink down")
+
+        driver, _monitor, window, _session = build(vstate(fg=False), on_status=boom)
+        driver.tick()  # must not raise
+        self.assertEqual(window.hides, 1)
 
 
 class InstanceLockTests(unittest.TestCase):

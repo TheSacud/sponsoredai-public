@@ -490,6 +490,18 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(handler.sent[-1][0], 400)
         record.assert_not_called()
 
+    def test_placement_event_rejects_unsupported_event(self):
+        handler = self._placement_handler(
+            path="/v1/sai/placements/event",
+            body=json.dumps({"ticket": {}, "event": "rendered", "visible_seconds": 0.0, "attended": True}).encode("utf-8"),
+        )
+
+        with mock.patch("sai.gateway.record_placement_event") as record:
+            handler._handle_sai_placement_event()
+
+        self.assertEqual(handler.sent[-1][0], 400)
+        record.assert_not_called()
+
     def test_placement_event_rejects_simple_cross_site_post_content_type(self):
         handler = self._placement_handler(
             path="/v1/sai/placements/event",

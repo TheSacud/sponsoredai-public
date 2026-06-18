@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.4
+
+- Preserve placement transport provenance so CLI-fetched placements qualify through the CLI path.
+- Honor `sai.cliPath` for the placement surface when a custom CLI is configured.
+- Attribute VS Code wait placements to the last launched Codex or Claude terminal.
+- Reject unsupported local gateway placement events.
+
 ## 0.0.1
 
 - Initial public Marketplace release.

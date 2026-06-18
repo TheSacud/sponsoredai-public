@@ -845,6 +845,9 @@ class GatewayHandler(BaseHTTPRequestHandler):
             if not isinstance(ticket, dict) or event is None or visible_seconds is None or attended is None:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"error": {"message": "Invalid placement event request"}})
                 return
+            if event != QP_EVENT:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": {"message": "Unsupported placement event"}})
+                return
             surface = _metadata_label(ticket.get("surface"), VSCODE_WAIT_SURFACE)
             tool = _metadata_label(ticket.get("tool"), "codex")
             result = record_placement_event(

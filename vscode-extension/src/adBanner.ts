@@ -15,6 +15,7 @@ export interface SponsorPlacement {
   readonly surface?: string;
   readonly tool?: string;
   readonly session_id?: string;
+  readonly sai_transport?: string;
 }
 
 // The ad is only billable for a continuously-visible wait of at least this long
@@ -56,7 +57,8 @@ export function parsePlacement(payload: unknown): SponsorPlacement | undefined {
     credit_amount: typeof record.credit_amount === "number" ? record.credit_amount : undefined,
     surface: optString(record.surface),
     tool: optString(record.tool),
-    session_id: optString(record.session_id)
+    session_id: optString(record.session_id),
+    sai_transport: optString(record.sai_transport)
   };
 }
 

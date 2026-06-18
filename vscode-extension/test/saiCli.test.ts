@@ -11,6 +11,7 @@ import {
   recordGatewayPlacementEvent,
   recordSaiPlacementEvent,
   SaiCliError,
+  SAI_PLACEMENT_TRANSPORT_FIELD,
   saiPlacementDiagnosticsSnapshot,
   type ExecFileRunner
 } from "../src/saiCli";
@@ -83,7 +84,9 @@ test("fetchSaiPlacement builds the vscode_ai_wait args and parses JSON", async (
     "codex",
     "--attended"
   ]);
-  assert.deepEqual(result, payload);
+  assert.deepEqual(result, {
+    placement: { ...payload.placement, [SAI_PLACEMENT_TRANSPORT_FIELD]: "cli" }
+  });
 });
 
 test("fetchSaiPlacement omits --attended when not attended", async () => {
@@ -204,7 +207,9 @@ test("fetchSaiPlacement uses the gateway when available and does not spawn the C
       { attended: true },
       { ...POSIX_OPTS, gateway: { port }, execFileRunner: fakeRunner(captured, "{}") }
     );
-    assert.deepEqual(result, payload);
+    assert.deepEqual(result, {
+      placement: { ...payload.placement, [SAI_PLACEMENT_TRANSPORT_FIELD]: "gateway" }
+    });
     assert.deepEqual(captured, []);
     assert.deepEqual(saiPlacementDiagnosticsSnapshot(), {
       gatewayPlacementEndpointAvailable: true,
@@ -230,7 +235,9 @@ test("fetchSaiPlacement falls back to CLI when gateway endpoint returns 404", as
       { tool: "codex", attended: true },
       { ...POSIX_OPTS, gateway: { port }, execFileRunner: fakeRunner(captured, JSON.stringify(cliPayload)) }
     );
-    assert.deepEqual(result, cliPayload);
+    assert.deepEqual(result, {
+      placement: { ...cliPayload.placement, [SAI_PLACEMENT_TRANSPORT_FIELD]: "cli" }
+    });
     assert.equal(captured.length, 1);
     assert.equal(saiPlacementDiagnosticsSnapshot().gatewayPlacementEndpointAvailable, false);
     assert.equal(saiPlacementDiagnosticsSnapshot().fallbackToCliUsed, true);
@@ -255,7 +262,9 @@ test("fetchSaiPlacement falls back to CLI when gateway is offline", async () => 
     { ...POSIX_OPTS, gateway: { port, timeoutMs: 300 }, execFileRunner: fakeRunner(captured, JSON.stringify(cliPayload)) }
   );
 
-  assert.deepEqual(result, cliPayload);
+  assert.deepEqual(result, {
+    placement: { ...cliPayload.placement, [SAI_PLACEMENT_TRANSPORT_FIELD]: "cli" }
+  });
   assert.equal(captured.length, 1);
   assert.equal(saiPlacementDiagnosticsSnapshot().fallbackToCliUsed, true);
 });
@@ -273,7 +282,9 @@ test("fetchSaiPlacement falls back to CLI when gateway returns invalid JSON", as
       { attended: true },
       { ...POSIX_OPTS, gateway: { port }, execFileRunner: fakeRunner(captured, JSON.stringify(cliPayload)) }
     );
-    assert.deepEqual(result, cliPayload);
+    assert.deepEqual(result, {
+      placement: { ...cliPayload.placement, [SAI_PLACEMENT_TRANSPORT_FIELD]: "cli" }
+    });
     assert.equal(captured.length, 1);
     assert.equal(saiPlacementDiagnosticsSnapshot().lastGatewayPlacementError, "invalidJson");
   } finally {
@@ -294,7 +305,9 @@ test("fetchSaiPlacement falls back to CLI when gateway response is too large", a
       { attended: true },
       { ...POSIX_OPTS, gateway: { port }, execFileRunner: fakeRunner(captured, JSON.stringify(cliPayload)) }
     );
-    assert.deepEqual(result, cliPayload);
+    assert.deepEqual(result, {
+      placement: { ...cliPayload.placement, [SAI_PLACEMENT_TRANSPORT_FIELD]: "cli" }
+    });
     assert.equal(captured.length, 1);
     assert.equal(saiPlacementDiagnosticsSnapshot().lastGatewayPlacementError, "responseTooLarge");
   } finally {
@@ -318,6 +331,68 @@ test("recordSaiPlacementEvent uses the gateway when available and does not spawn
     );
     assert.deepEqual(result, { billable: true });
     assert.deepEqual(captured, []);
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("recordSaiPlacementEvent keeps CLI provenance and does not switch back to gateway", async () => {
+  const captured: Captured[] = [];
+  const seen: string[] = [];
+  const ticket = {
+    placement_id: "plc_cli",
+    signature: "sig_cli",
+    campaign_id: "c1",
+    [SAI_PLACEMENT_TRANSPORT_FIELD]: "cli"
+  };
+  const server = http.createServer(async (req, res) => {
+    seen.push(req.url ?? "");
+    await requestBody(req);
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ billable: true, via: "gateway" }));
+  });
+  const port = await listenLocal(server);
+  try {
+    const result = await recordSaiPlacementEvent(
+      ticket,
+      { event: "qualified_5s", visibleSeconds: 5.2, attended: true },
+      { ...POSIX_OPTS, gateway: { port }, execFileRunner: fakeRunner(captured, JSON.stringify({ billable: true, via: "cli" })) }
+    );
+    assert.deepEqual(result, { billable: true, via: "cli" });
+    assert.equal(captured.length, 1);
+    assert.deepEqual(seen, []);
+  } finally {
+    await closeServer(server);
+  }
+});
+
+test("fetchSaiPlacement uses a configured command instead of a reachable gateway", async () => {
+  const captured: Captured[] = [];
+  const seen: string[] = [];
+  const cliPayload = { placement: { placement_id: "plc_cli", signature: "sig_cli", sponsor: "CLI" } };
+  const server = http.createServer(async (req, res) => {
+    seen.push(req.url ?? "");
+    await requestBody(req);
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ placement: { placement_id: "plc_gateway", signature: "sig_gateway" } }));
+  });
+  const port = await listenLocal(server);
+  try {
+    const result = await fetchSaiPlacement(
+      { attended: true },
+      {
+        ...POSIX_OPTS,
+        command: "/opt/custom/sai",
+        trustCommand: true,
+        gateway: { port },
+        execFileRunner: fakeRunner(captured, JSON.stringify(cliPayload))
+      }
+    );
+    assert.deepEqual(result, {
+      placement: { ...cliPayload.placement, [SAI_PLACEMENT_TRANSPORT_FIELD]: "cli" }
+    });
+    assert.equal(captured.length, 1);
+    assert.deepEqual(seen, []);
   } finally {
     await closeServer(server);
   }

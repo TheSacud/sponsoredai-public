@@ -123,11 +123,6 @@ def run_overlay(target: str = "claude", anchor: str = DEFAULT_ANCHOR, billable: 
         logger.info("another SAI billing authority is active; overlay runs credit-0")
 
     session = build_billable_session(config) if bill else build_credit0_session(config)
-    driver = SessionDriver(
-        monitor=monitor, window=window, session=session,
-        probe=probe, surface=surface, config=config, anchor=anchor,
-    )
-    holder["driver"] = driver
 
     stop = {"requested": False}
 
@@ -141,11 +136,30 @@ def run_overlay(target: str = "claude", anchor: str = DEFAULT_ANCHOR, billable: 
     # thread by window.pump(). Never let a tray failure stop the overlay.
     from .tray import TrayController
 
+    controller = TrayController(config, on_quit=_request_stop)
     tray = None
     try:
-        tray = backend["TrayIcon"](TrayController(config, on_quit=_request_stop))
+        tray = backend["TrayIcon"](controller)
     except (OSError, RuntimeError):
         logger.warning("tray icon unavailable; overlay runs without it", exc_info=True)
+
+    def _publish_status(text: str) -> None:
+        # Surface what the overlay is doing on the tray (tooltip + a menu line),
+        # so a billable overlay with no placement reads as alive, not broken --
+        # without ever showing an example card when there is no real demand.
+        controller.set_status(text)
+        if tray is not None:
+            try:
+                tray.set_tooltip(text)
+            except Exception:  # noqa: BLE001 - a status refresh must not stop the overlay
+                logger.debug("tray status update failed", exc_info=True)
+
+    driver = SessionDriver(
+        monitor=monitor, window=window, session=session,
+        probe=probe, surface=surface, config=config, anchor=anchor,
+        on_status=_publish_status,
+    )
+    holder["driver"] = driver
 
     mode = "billing" if bill else "credit-0 preview"
     logger.info("overlay starting target=%s mode=%s anchor=%s", target, mode, anchor)

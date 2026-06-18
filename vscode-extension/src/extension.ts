@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import {
+  DEFAULT_PLACEMENT_TOOL,
   fetchSaiPlacement,
   readSaiVersion,
   readGatewayStatus,
@@ -98,6 +99,7 @@ const DEFAULT_CLI: SaiCliReader = {
 };
 
 type SaiTerminalOptionsProvider = () => SaiTerminalCommandOptions;
+type PlacementTool = "codex" | "claude";
 
 export class SaiExtensionController {
   private statusBarItem?: vscode.StatusBarItem;
@@ -112,6 +114,7 @@ export class SaiExtensionController {
   // The latest version we have already nudged about, so a passive update toast
   // shows once per new version per session instead of on every wallet refresh.
   private notifiedUpdateVersion?: string;
+  private placementTool: PlacementTool = DEFAULT_PLACEMENT_TOOL;
 
   public constructor(
     private readonly api: VscodeApi,
@@ -308,7 +311,14 @@ export class SaiExtensionController {
     }
   }
 
+  public currentPlacementTool(): PlacementTool {
+    return this.placementTool;
+  }
+
   private runSaiTerminal(action: "codex" | "claude" | "overlay" | "dashboard"): void {
+    if (action === "codex" || action === "claude") {
+      this.placementTool = action;
+    }
     runSaiTerminalCommand(this.api.window, action, this.terminalOptions());
   }
 
@@ -438,7 +448,7 @@ function setupAdBanner(context: vscode.ExtensionContext, controller: SaiExtensio
   );
 
   const engine = new AdEngine({
-    fetchPlacement: async (attended) => parsePlacement(await fetchSaiPlacement({ tool: "codex", attended }, saiPlacementOptions())),
+    fetchPlacement: async (attended) => parsePlacement(await fetchSaiPlacement({ tool: controller.currentPlacementTool(), attended }, saiPlacementOptions())),
     recordQualified: async (placement, visibleSeconds, attended) => {
       await recordSaiPlacementEvent(placement, { event: "qualified_5s", visibleSeconds, attended }, saiPlacementOptions());
     },
