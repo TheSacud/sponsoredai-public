@@ -3,10 +3,11 @@ from __future__ import annotations
 import argparse
 import logging
 import json
+import math
 import os
 import sys
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 from . import __version__
 from .app_logging import configure_logging, current_log_path, log_destination_label, tail_log_lines
@@ -16,10 +17,11 @@ from .config import (
     load_config,
     login,
     runtime_paths,
+    save_config,
     set_frequency,
     set_kill_switch,
 )
-from .credits import spendable_balance, sync_local_wallet
+from .credits import last_summary, spendable_balance, sync_local_wallet
 from .metrics import (
     CLICK_EVENT,
     QP_EVENT,
@@ -42,12 +44,32 @@ from .wallet import Wallet, WalletError
 GATEWAY_START_WAIT_SECONDS = 8.0
 logger = logging.getLogger(__name__)
 
+SAI_LAUNCH_CWD_ENV = "SAI_LAUNCH_CWD"
+
 
 def _is_windows() -> bool:
     # Indirection so tests can exercise the Windows-only terminal-font branch
     # without patching the global os.name (which would make pathlib raise on
     # POSIX CI runners).
     return os.name == "nt"
+
+
+def apply_launch_cwd_from_env() -> None:
+    raw = os.environ.get(SAI_LAUNCH_CWD_ENV, "").strip()
+    if not raw:
+        return
+    target = Path(raw)
+    if not target.is_absolute():
+        logger.warning("ignoring non-absolute launch cwd path=%s", raw)
+        return
+    try:
+        if not target.is_dir():
+            logger.warning("ignoring missing launch cwd path=%s", raw)
+            return
+        os.chdir(target)
+        logger.info("launch cwd applied path=%s", target)
+    except OSError as exc:
+        logger.warning("could not apply launch cwd path=%s error=%s", raw, exc)
 
 
 def default_backend_db_path() -> Path:
@@ -74,6 +96,26 @@ def _dev_mock_available() -> bool:
     # public client package strips both modules, so do not advertise this command
     # unless the full development checkout is present.
     return _backend_available() and _module_available("dev_mock")
+
+
+def _positive_finite_float(value: str) -> float:
+    try:
+        parsed = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a number") from exc
+    if not math.isfinite(parsed) or parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a positive finite number")
+    return parsed
+
+
+def _positive_int(value: str) -> int:
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be an integer") from exc
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be a positive integer")
+    return parsed
 
 
 def gateway_running(host: str = "127.0.0.1", port: int = 8787, timeout: float = 0.2) -> bool:
@@ -192,6 +234,41 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip reconciling the local ledger against the backend before showing it",
     )
+
+    status_cmd = sub.add_parser("status", help="Show concise local SAI status")
+    status_cmd.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    status_cmd.add_argument(
+        "--sync",
+        action="store_true",
+        help="Reconcile wallet against the backend before showing status",
+    )
+    status_cmd.add_argument(
+        "--timeout",
+        type=_positive_finite_float,
+        default=0.75,
+        help="Seconds to wait for backend health/sync checks (default: 0.75)",
+    )
+
+    doctor_cmd = sub.add_parser("doctor", help="Diagnose local SAI CLI readiness")
+    doctor_cmd.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    doctor_cmd.add_argument(
+        "--timeout",
+        type=_positive_finite_float,
+        default=1.5,
+        help="Seconds to wait for backend health checks (default: 1.5)",
+    )
+
+    preview_cmd = sub.add_parser("preview", help="Preview SAI UI surfaces without billing")
+    preview_sub = preview_cmd.add_subparsers(dest="preview_command", required=True)
+    banner_cmd = preview_sub.add_parser("banner", help="Render sample CLI sponsor banners")
+    banner_cmd.add_argument(
+        "--width",
+        type=_positive_int,
+        action="append",
+        help="Preview a specific terminal width; repeat for several widths",
+    )
+    banner_cmd.add_argument("--no-color", action="store_true", help="Disable ANSI colour in the preview")
+    banner_cmd.add_argument("--no-hyperlinks", action="store_true", help="Disable OSC 8 terminal hyperlinks")
 
     placement_cmd = sub.add_parser(
         "placement",
@@ -458,6 +535,15 @@ def _main(argv: Sequence[str] | None = None) -> int:
                 print(update_notice(update_info), file=sys.stderr)
         return 0
 
+    if args.command_name == "status":
+        return handle_status(args)
+
+    if args.command_name == "doctor":
+        return handle_doctor(args)
+
+    if args.command_name == "preview":
+        return handle_preview(args, parser)
+
     if args.command_name == "placement":
         from .sponsors import fetch_placement_card, record_placement_event
 
@@ -509,13 +595,19 @@ def _main(argv: Sequence[str] | None = None) -> int:
             return 1
         code = str(result.get("code") or "")
         dashboard_url = str(result.get("dashboard_url") or "")
+        try:
+            latest = load_config()
+            latest[LINK_NUDGE_CONFIG_KEY] = True
+            save_config(latest)
+        except ConfigError:
+            logger.debug("could not persist developer link started state", exc_info=True)
         if args.json:
             print(json.dumps(result, indent=2, sort_keys=True))
         else:
             pretty = f"{code[:4]}-{code[4:]}" if len(code) == 8 else code
             minutes = max(1, int(result.get("expires_in_seconds") or 0) // 60)
             print(f"Pairing code: {pretty}")
-            print(f"Open {dashboard_url}, sign in, and enter the code to link this installation.")
+            print(f"Open {dashboard_url}; after sign-in the dashboard links this installation automatically.")
             print(f"The code expires in {minutes} minutes and can be used once.")
         if getattr(args, "open", False) and dashboard_url:
             # dashboard_url is backend-supplied; only ever launch http/https.
@@ -572,6 +664,7 @@ def handle_passthrough(raw_argv: Sequence[str]) -> int:
             return 2
 
     config = ensure_config_saved()
+    apply_launch_cwd_from_env()
 
     if command_name == "run":
         command = rest
@@ -589,10 +682,33 @@ def handle_passthrough(raw_argv: Sequence[str]) -> int:
     from .update_check import notify_terminal_update
 
     notify_terminal_update()
+    maybe_print_developer_link_nudge(config, tool, int(receipt.exit_code or 0))
     return receipt.exit_code
 
 
 GATEWAY_AUTOSTART_TOOLS = {"claude", "codex"}
+LINK_NUDGE_CONFIG_KEY = "developer_link_nudge_shown_at"
+
+
+def maybe_print_developer_link_nudge(config: dict[str, Any], tool: str, exit_code: int) -> None:
+    if exit_code != 0 or tool not in GATEWAY_AUTOSTART_TOOLS:
+        return
+    if os.environ.get("SAI_NO_LINK_NUDGE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return
+    if not sys.stderr.isatty():
+        return
+    if not config.get("backend_url") or not config.get("install_id"):
+        return
+    if config.get(LINK_NUDGE_CONFIG_KEY) or config.get("developer_dashboard_linked"):
+        return
+    print("SAI: track this machine on the web dashboard with `sai link --open`.", file=sys.stderr)
+    print("SAI: after sign-in, the pairing code links automatically.", file=sys.stderr)
+    try:
+        latest = load_config()
+        latest[LINK_NUDGE_CONFIG_KEY] = True
+        save_config(latest)
+    except ConfigError:
+        logger.debug("could not persist developer link nudge state", exc_info=True)
 
 
 def maybe_start_gateway(tool: str) -> None:
@@ -712,6 +828,444 @@ def print_fonts_status(fonts) -> int:
     if not enabled:
         print("Run `sai fonts install` to install one, or set SAI_ICONS=on to force icons.")
     return 0
+
+
+def handle_status(args: argparse.Namespace) -> int:
+    payload = build_status_payload(sync=bool(args.sync), timeout=max(0.1, float(args.timeout)))
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+
+    print("SAI status")
+    print(_status_line("Backend", payload["backend"]["status"], payload["backend"]["detail"]))
+    ads = payload["ads"]
+    ads_detail = (
+        f"on, {ads['frequency']} frequency"
+        if ads["enabled"]
+        else "off: " + "; ".join(ads["reasons"])
+    )
+    print(_status_line("Ads", "ok" if ads["enabled"] else "warn", ads_detail))
+    banner = payload["cli_banner"]
+    print(_status_line("CLI banner", "ok" if banner["ready"] else "warn", banner["detail"]))
+    gateway = payload["gateway"]
+    print(
+        _status_line(
+            "Gateway",
+            "ok" if gateway["running"] else "info",
+            "running on http://127.0.0.1:8787/v1" if gateway["running"] else "stopped",
+        )
+    )
+    wallet_status = payload["wallet"]
+    print(_status_line("Wallet", "ok", _wallet_status_text(wallet_status)))
+    billing = payload["billing_lock"]
+    print(_status_line("Billing", billing["status"], billing["detail"]))
+    print(_status_line("Last placement", "info", _last_placement_text(payload["last_placement"])))
+    return 0
+
+
+def build_status_payload(*, sync: bool = False, timeout: float = 0.75) -> dict[str, Any]:
+    config = ensure_config_saved()
+    wallet = Wallet()
+    backend_url = config.get("backend_url")
+    if isinstance(backend_url, str) and backend_url.strip():
+        backend = _backend_health_check(backend_url, timeout=timeout)
+    else:
+        backend = _doctor_check("backend", "warn", "backend_url is not configured")
+
+    summary = sync_local_wallet(config=config, wallet=wallet, timeout=timeout) if sync else last_summary()
+    entries = wallet.entries()
+    disabled = _ads_disabled_reasons(config)
+
+    from .config import interactive_terminal
+    from .sponsors import RemotePlacementClient
+
+    terminal = interactive_terminal()
+    placement_client = RemotePlacementClient.from_config(config)
+    backend_ok = backend.get("status") == "ok"
+    paid_ready = terminal and not disabled and placement_client is not None and backend_ok
+    ready = terminal and not disabled
+    if paid_ready:
+        banner_detail = "ready for paid placements"
+    elif ready and placement_client is not None:
+        banner_detail = "configured; backend health not confirmed"
+    elif ready:
+        banner_detail = "ready for example cards; backend placement auth missing"
+    elif disabled:
+        banner_detail = "blocked: " + "; ".join(disabled)
+    else:
+        banner_detail = "blocked: stdin/stdout are not both TTYs"
+    billing = _billing_lock_check()
+    ads_check = _doctor_check(
+        "ads",
+        "ok" if not disabled else "warn",
+        "enabled" if not disabled else "; ".join(disabled),
+    )
+    banner_check = _doctor_check("cli_banner", "ok" if ready else "warn", banner_detail)
+
+    return {
+        "overall": _overall_status([backend, billing, ads_check, banner_check]),
+        "version": __version__,
+        "backend": backend,
+        "ads": {
+            "enabled": not disabled,
+            "frequency": config.get("frequency", "normal"),
+            "reasons": disabled,
+        },
+        "cli_banner": {
+            "ready": ready,
+            "paid_ready": paid_ready,
+            "terminal_interactive": terminal,
+            "placement_auth_ready": placement_client is not None,
+            "detail": banner_detail,
+        },
+        "gateway": {
+            "running": gateway_running(),
+            "url": "http://127.0.0.1:8787/v1",
+        },
+        "wallet": _wallet_status(wallet, summary=summary, synced=sync),
+        "billing_lock": billing,
+        "last_placement": _last_sponsor_entry(entries),
+    }
+
+
+def _status_line(label: str, status: str, detail: str) -> str:
+    return f"{label}: {status} - {detail}"
+
+
+def _wallet_status(wallet: Wallet, *, summary: dict[str, Any] | None, synced: bool) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "local_balance": wallet.balance(),
+        "backend_confirmed": summary is not None,
+        "synced": synced,
+    }
+    if summary is not None:
+        payload.update(
+            {
+                "spendable_balance": spendable_balance(summary),
+                "pending_balance": float(summary.get("pending_balance", 0) or 0),
+                "available_balance": float(summary.get("available_balance", 0) or 0),
+                "settled_balance": float(summary.get("settled_balance", 0) or 0),
+            }
+        )
+    return payload
+
+
+def _wallet_status_text(wallet_status: dict[str, Any]) -> str:
+    local = float(wallet_status.get("local_balance", 0) or 0)
+    if wallet_status.get("backend_confirmed"):
+        spendable = float(wallet_status.get("spendable_balance", 0) or 0)
+        pending = float(wallet_status.get("pending_balance", 0) or 0)
+        synced = "synced" if wallet_status.get("synced") else "cached"
+        return f"{local:.3f} local, {spendable:.3f} spendable backend, {pending:.3f} pending ({synced})"
+    return f"{local:.3f} local display credits; run `sai status --sync` to confirm backend balance"
+
+
+def _last_sponsor_entry(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for entry in reversed(entries):
+        source = str(entry.get("source") or "")
+        metadata = entry.get("metadata") if isinstance(entry.get("metadata"), dict) else {}
+        if source.startswith("sponsor:") or metadata.get("placement_id"):
+            return {
+                "timestamp": entry.get("timestamp"),
+                "sponsor": metadata.get("sponsor") or source.removeprefix("sponsor:") or "sponsor",
+                "amount": float(entry.get("amount", 0) or 0),
+                "placement_id": metadata.get("placement_id"),
+                "visible_seconds": metadata.get("visible_seconds"),
+            }
+    return None
+
+
+def _last_placement_text(entry: dict[str, Any] | None) -> str:
+    if entry is None:
+        return "none recorded locally"
+    sponsor = entry.get("sponsor") or "sponsor"
+    amount = float(entry.get("amount", 0) or 0)
+    timestamp = entry.get("timestamp") or "unknown time"
+    visible = entry.get("visible_seconds")
+    suffix = f", visible {visible}s" if visible is not None else ""
+    return f"{sponsor} {amount:+.3f} at {timestamp}{suffix}"
+
+
+def handle_doctor(args: argparse.Namespace) -> int:
+    config = ensure_config_saved()
+    paths = runtime_paths()
+    checks: list[dict[str, Any]] = []
+
+    checks.append(_doctor_check("version", "ok", f"sai {__version__}"))
+    checks.append(_doctor_check("config", "ok", str(paths.config_file)))
+    checks.append(_doctor_check("home", "ok", str(paths.home)))
+
+    backend_url = config.get("backend_url")
+    if isinstance(backend_url, str) and backend_url.strip():
+        checks.append(_backend_health_check(backend_url, timeout=max(0.1, float(args.timeout))))
+    else:
+        checks.append(_doctor_check("backend", "warn", "backend_url is not configured"))
+
+    from .config import ci_environment, interactive_terminal
+    from .sponsors import RemotePlacementClient
+
+    placement_client = RemotePlacementClient.from_config(config)
+    checks.append(
+        _doctor_check(
+            "placement_auth",
+            "ok" if placement_client is not None else "warn",
+            "install credential available" if placement_client is not None else "missing backend_url or install_id",
+        )
+    )
+
+    disabled = _ads_disabled_reasons(config)
+    checks.append(
+        _doctor_check(
+            "ads",
+            "ok" if not disabled else "warn",
+            "enabled" if not disabled else "; ".join(disabled),
+        )
+    )
+
+    terminal = interactive_terminal()
+    checks.append(
+        _doctor_check(
+            "terminal",
+            "ok" if terminal else "warn",
+            "stdin/stdout are interactive" if terminal else "stdin/stdout are not both TTYs",
+        )
+    )
+
+    from .ansi import UNICODE_OK, styles_enabled
+
+    checks.append(
+        _doctor_check(
+            "unicode",
+            "ok" if UNICODE_OK else "info",
+            "terminal can render Unicode glyphs" if UNICODE_OK else "Unicode fallback mode",
+        )
+    )
+    checks.append(
+        _doctor_check(
+            "color",
+            "ok" if styles_enabled() else "info",
+            "ANSI color enabled" if styles_enabled() else "ANSI color disabled by environment",
+        )
+    )
+    hyperlink_disabled = os.environ.get("SAI_NO_HYPERLINKS", "").lower() in {"1", "true", "yes", "on"}
+    checks.append(
+        _doctor_check(
+            "hyperlinks",
+            "ok" if not hyperlink_disabled else "info",
+            "OSC 8 hyperlinks enabled" if not hyperlink_disabled else "disabled by SAI_NO_HYPERLINKS",
+        )
+    )
+    checks.append(
+        _doctor_check(
+            "ci",
+            "warn" if ci_environment() else "ok",
+            "CI detected; sponsor cards are disabled" if ci_environment() else "not running in CI",
+        )
+    )
+
+    gateway = gateway_running()
+    checks.append(
+        _doctor_check(
+            "gateway",
+            "ok" if gateway else "info",
+            "local gateway is listening on 127.0.0.1:8787"
+            if gateway
+            else "local gateway is not running; wrappers can auto-start it",
+        )
+    )
+
+    checks.append(_pywinpty_check())
+    checks.append(_billing_lock_check())
+
+    overall = _overall_status(checks)
+    payload = {
+        "overall": overall,
+        "version": __version__,
+        "config_path": str(paths.config_file),
+        "checks": checks,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        print("SAI doctor")
+        print(f"Overall: {overall}")
+        for check in checks:
+            print(f"[{check['status']:<5}] {check['name']:<15} {check['detail']}")
+    return 1 if overall == "error" else 0
+
+
+def handle_preview(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
+    if args.preview_command == "banner":
+        return handle_preview_banner(args)
+    parser.error("preview requires a subcommand")
+    return 2
+
+
+def handle_preview_banner(args: argparse.Namespace) -> int:
+    widths = args.width or [100, 80, 60, 40]
+    widths = [width for width in widths if width > 0]
+    if not widths:
+        print("sai: preview banner requires positive widths", file=sys.stderr)
+        return 2
+
+    from .ansi import visible_length
+    from .sponsors import LOCAL_SPONSORS, SponsorCard
+
+    paid = SponsorCard(
+        id="preview_paid",
+        sponsor="Acme Cloud",
+        message="Ship faster agent workflows with hosted preview environments",
+        url="https://acme.example/sai?utm_source=sai",
+        credit_amount=0.012,
+        placement_id="plc_preview",
+        campaign_id="cmp_preview",
+        click_url="https://sponsoredai.dev/c/plc_preview/click_preview",
+    )
+    progress = {
+        "visible_seconds": 2.0,
+        "remaining_seconds": 3.0,
+        "progress": 0.4,
+        "eligible": False,
+    }
+    env_updates = {
+        "SAI_NO_COLOR": "1" if args.no_color else None,
+        "SAI_NO_HYPERLINKS": "1" if args.no_hyperlinks else None,
+    }
+    old_env = {key: os.environ.get(key) for key in env_updates}
+    try:
+        for key, value in env_updates.items():
+            if value is not None:
+                os.environ[key] = value
+        _print_console_safe("SAI CLI banner preview")
+        for width in widths:
+            _print_console_safe(f"\nwidth {width}")
+            for label, card, card_progress in (
+                ("paid", paid, progress),
+                ("example", LOCAL_SPONSORS[0], None),
+            ):
+                line = card.footer(width=width, progress=card_progress)
+                _print_console_safe(f"{label}: {line}")
+                _print_console_safe(f"{label}_visible_columns={visible_length(line)}")
+    finally:
+        for key, value in old_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+    return 0
+
+
+def _print_console_safe(text: str) -> None:
+    print(_console_safe_text(text, getattr(sys.stdout, "encoding", None)))
+
+
+def _console_safe_text(text: str, encoding: str | None) -> str:
+    if not encoding:
+        return text
+    try:
+        text.encode(encoding)
+        return text
+    except LookupError:
+        return text
+    except UnicodeEncodeError:
+        return text.encode(encoding, errors="replace").decode(encoding, errors="replace")
+
+
+def _doctor_check(name: str, status: str, detail: str, **extra: Any) -> dict[str, Any]:
+    check = {"name": name, "status": status, "detail": detail}
+    check.update(extra)
+    return check
+
+
+def _backend_health_check(base_url: str, *, timeout: float) -> dict[str, Any]:
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+
+    from .config import USER_AGENT
+    from .http_client import urlopen
+
+    url = base_url.rstrip("/") + "/healthz"
+    detail_url = _redact_diagnostic_url(url, urllib.parse)
+    request = urllib.request.Request(url, method="GET", headers={"User-Agent": USER_AGENT})
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            status_code = getattr(response, "status", response.getcode())
+            body = response.read(4096)
+    except urllib.error.HTTPError as exc:
+        return _doctor_check("backend", "warn", f"{detail_url} returned HTTP {exc.code}")
+    except (OSError, urllib.error.URLError, TimeoutError, ValueError) as exc:
+        return _doctor_check("backend", "warn", f"{detail_url} unreachable: {type(exc).__name__}")
+    if int(status_code) == 200 and b'"ok"' in body:
+        return _doctor_check("backend", "ok", f"{detail_url} reachable")
+    return _doctor_check("backend", "warn", f"{detail_url} returned unexpected health response")
+
+
+def _redact_diagnostic_url(url: str, urllib_parse) -> str:
+    try:
+        parsed = urllib_parse.urlsplit(url)
+        if parsed.scheme and parsed.hostname:
+            host = parsed.hostname
+            if ":" in host and not host.startswith("["):
+                host = f"[{host}]"
+            if parsed.port is not None:
+                host = f"{host}:{parsed.port}"
+            return urllib_parse.urlunsplit((parsed.scheme, host, parsed.path, "", ""))
+    except ValueError:
+        pass
+    if any(marker in url for marker in ("@", "?", "#")):
+        return "<redacted-backend-url>"
+    return url
+
+
+def _ads_disabled_reasons(config: dict[str, Any]) -> list[str]:
+    from .config import ci_environment, kill_switch_active
+
+    reasons = []
+    if os.environ.get("SAI_DISABLE_SPONSORS", "").lower() in {"1", "true", "yes", "on"}:
+        reasons.append("SAI_DISABLE_SPONSORS is set")
+    if kill_switch_active():
+        reasons.append("kill switch is active")
+    if ci_environment():
+        reasons.append("CI environment")
+    if not config.get("ads_enabled", True):
+        reasons.append("ads_enabled=false")
+    if config.get("frequency") == "off":
+        reasons.append("frequency=off")
+    return reasons
+
+
+def _pywinpty_check() -> dict[str, Any]:
+    if os.name != "nt":
+        return _doctor_check("conpty", "info", "pywinpty not required on this platform")
+    try:
+        import winpty  # noqa: F401
+    except Exception as exc:  # noqa: BLE001 - native imports vary by install
+        return _doctor_check("conpty", "warn", f"pywinpty unavailable: {type(exc).__name__}")
+    return _doctor_check("conpty", "ok", "pywinpty available")
+
+
+def _billing_lock_check() -> dict[str, Any]:
+    try:
+        from .overlay.lock import billing_authority_lock
+
+        lock = billing_authority_lock()
+        acquired = lock.acquire()
+        if acquired:
+            lock.release()
+            return _doctor_check("billing_lock", "ok", "available")
+        return _doctor_check("billing_lock", "warn", "held by another SAI surface")
+    except Exception as exc:  # noqa: BLE001 - doctor should keep diagnosing
+        return _doctor_check("billing_lock", "warn", f"could not inspect: {type(exc).__name__}")
+
+
+def _overall_status(checks: list[dict[str, Any]]) -> str:
+    statuses = {str(check.get("status")) for check in checks}
+    if "error" in statuses:
+        return "error"
+    if "warn" in statuses:
+        return "warn"
+    return "ok"
 
 
 def handle_config(args: argparse.Namespace) -> int:

@@ -12,7 +12,7 @@ import {
   type PlacementTransportOptions,
   type ReadSaiOptions
 } from "./saiCli";
-import { runSaiTerminalCommand, type SaiTerminalCommandOptions } from "./terminals";
+import { runSaiTerminalCommand, WINDOWS_TERMINAL_SEND_DELAY_MS, type SaiTerminalCommandOptions } from "./terminals";
 import { AdEngine, parsePlacement, safeHttpsUrl, SaiAdViewProvider } from "./adBanner";
 import {
   formatWalletStatus,
@@ -30,6 +30,14 @@ export const OPEN_SPONSOR_COMMAND = "sai.openSponsor";
 const ATTENDED_INPUT_WINDOW_MS = 30_000;
 const AD_POLL_INTERVAL_MS = 1_000;
 const LOOPBACK_GATEWAY_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
+
+export function terminalSendDelayMs(platform: NodeJS.Platform = process.platform): number {
+  return platform === "win32" ? WINDOWS_TERMINAL_SEND_DELAY_MS : 0;
+}
+
+export function terminalLaunchCwd(): string | undefined {
+  return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+}
 
 function machineConfigValue<T>(config: vscode.WorkspaceConfiguration, section: string): T | undefined {
   const inspected = config.inspect<T>(section);
@@ -518,7 +526,12 @@ export function activate(context: vscode.ExtensionContext): SaiExtensionControll
     readWalletJson: () => readSaiWalletJson(saiCliOptions())
   }, () => {
     const options = saiCliOptions();
-    return options.command ? { saiCommand: options.command } : {};
+    return {
+      ...(options.command ? { saiCommand: options.command } : {}),
+      launchCwd: terminalLaunchCwd(),
+      platform: process.platform,
+      sendDelayMs: terminalSendDelayMs()
+    };
   });
   controller.activate(context);
   try {

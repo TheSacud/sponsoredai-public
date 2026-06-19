@@ -1,10 +1,12 @@
+import io
 import logging
 import os
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 
-from sai.app_logging import configure_logging, current_log_path, reset_logging_for_tests, tail_log_lines
+from sai.app_logging import ParentCreatingRotatingFileHandler, configure_logging, current_log_path, reset_logging_for_tests, tail_log_lines
 
 
 class LoggingTests(unittest.TestCase):
@@ -54,6 +56,26 @@ class LoggingTests(unittest.TestCase):
             self.assertIn("service=test", text)
             self.assertEqual(tail_log_lines(1), text.rstrip("\n").splitlines()[-1:])
             reset_logging_for_tests()
+
+    def test_file_log_permission_errors_do_not_leak_to_stderr(self):
+        class LockedLogHandler(ParentCreatingRotatingFileHandler):
+            def _open(self):  # type: ignore[override]
+                raise PermissionError("locked")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            logger = logging.getLogger("sai")
+            logger.setLevel(logging.INFO)
+            logger.propagate = False
+            handler = LockedLogHandler(Path(tmp) / "sai.log", delay=True)
+            logger.addHandler(handler)
+            try:
+                stderr = io.StringIO()
+                with redirect_stderr(stderr):
+                    logger.info("this log line is dropped")
+                self.assertEqual(stderr.getvalue(), "")
+            finally:
+                logger.removeHandler(handler)
+                handler.close()
 
     def test_invalid_log_level_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:

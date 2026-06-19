@@ -37,6 +37,11 @@ class ParentCreatingRotatingFileHandler(RotatingFileHandler):
         Path(self.baseFilename).parent.mkdir(parents=True, exist_ok=True)
         return super()._open()
 
+    def handleError(self, record: logging.LogRecord) -> None:  # noqa: N802 - logging API name
+        if isinstance(sys.exc_info()[1], PermissionError):
+            return
+        super().handleError(record)
+
 
 def default_log_path() -> Path:
     return runtime_paths().home / "logs" / "sai.log"

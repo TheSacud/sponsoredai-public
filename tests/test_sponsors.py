@@ -291,6 +291,85 @@ class SponsorTests(unittest.TestCase):
         self.assertIn("+0.012 AI credits", footer)
         self.assertIn("acme.example/sai", footer)
 
+    def test_paid_card_footer_drops_link_before_hiding_progress_or_credit(self):
+        card = SponsorCard(
+            id="plc_1",
+            sponsor="Acme",
+            message="Ship faster agent workflows with hosted preview environments",
+            url="https://acme.example/sai?utm_source=sai",
+            credit_amount=0.012,
+            placement_id="plc_1",
+            campaign_id="cmp_1",
+        )
+        progress = {
+            "visible_seconds": 2.0,
+            "remaining_seconds": 3.0,
+            "progress": 0.4,
+            "eligible": False,
+        }
+
+        footer = card.footer(width=72, progress=progress)
+
+        self.assertLessEqual(visible_length(footer), 72)
+        self.assertIn("Acme", footer)
+        self.assertIn("2/5s", footer)
+        self.assertIn("+0.012 AI credits", footer)
+        self.assertIn(ELLIPSIS, footer)
+        self.assertNotIn("acme.example", footer)
+
+    def test_paid_card_footer_drops_progress_when_tight_before_credit(self):
+        card = SponsorCard(
+            id="plc_1",
+            sponsor="Acme",
+            message="Ship faster agent workflows with hosted preview environments",
+            url="https://acme.example/sai",
+            credit_amount=0.012,
+            placement_id="plc_1",
+            campaign_id="cmp_1",
+        )
+        progress = {"visible_seconds": 2.0, "remaining_seconds": 3.0, "eligible": False}
+
+        footer = card.footer(width=40, progress=progress)
+
+        self.assertLessEqual(visible_length(footer), 40)
+        self.assertIn("Acme", footer)
+        self.assertIn("+0.012 AI credits", footer)
+        self.assertNotIn("2/5s", footer)
+
+    def test_paid_card_footer_caps_qualified_progress_at_reward_target(self):
+        card = SponsorCard(
+            id="plc_1",
+            sponsor="Acme",
+            message="Ship faster",
+            url="https://acme.example/sai",
+            credit_amount=0.012,
+            placement_id="plc_1",
+            campaign_id="cmp_1",
+        )
+        progress = {"visible_seconds": 12.0, "remaining_seconds": 0.0, "eligible": True}
+
+        footer = card.footer(width=100, progress=progress)
+
+        self.assertIn("5/5s", footer)
+        self.assertNotIn("12/12s", footer)
+
+    def test_paid_card_footer_honors_tiny_widths(self):
+        card = SponsorCard(
+            id="plc_1",
+            sponsor="Acme",
+            message="Ship faster agent workflows with hosted preview environments",
+            url="https://acme.example/sai",
+            credit_amount=0.012,
+            placement_id="plc_1",
+            campaign_id="cmp_1",
+        )
+        progress = {"visible_seconds": 12.0, "remaining_seconds": 0.0, "eligible": True}
+
+        for width in (1, 5, 10, 20, 24):
+            with self.subTest(width=width):
+                footer = card.footer(width=width, progress=progress)
+                self.assertLessEqual(visible_length(footer), width)
+
     def test_footer_uses_accent_rail_and_drops_nerd_font_icon(self):
         # The accent-rail design (variant A) replaced the fragile Nerd Font
         # bullhorn; the line now leads with a rail + a dim "sponsored" tag.

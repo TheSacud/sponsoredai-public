@@ -7,7 +7,7 @@ import * as path from "node:path";
 import test from "node:test";
 import type * as ExtensionModule from "../src/extension";
 import { SaiCliError, readSaiWalletJson, type ExecFileRunner } from "../src/saiCli";
-import { quoteTerminalCommand, runSaiTerminalCommand, terminalCommandFor } from "../src/terminals";
+import { quoteTerminalCommand, runSaiTerminalCommand, terminalCommandFor, WINDOWS_TERMINAL_SEND_DELAY_MS } from "../src/terminals";
 import { formatWalletStatus, parseSaiWalletPayload, walletQuickPickItems } from "../src/wallet";
 
 type Disposable = { dispose(): void };
@@ -23,7 +23,12 @@ class FakeTerminal {
   public shown = false;
   public exitStatus = undefined;
 
-  public constructor(public readonly name: string, public readonly cwd?: string) {}
+  public constructor(
+    public readonly name: string,
+    public readonly cwd?: string,
+    public readonly env?: NodeJS.ProcessEnv,
+    public readonly hideFromUser?: boolean
+  ) {}
 
   public show(): void {
     this.shown = true;
@@ -87,6 +92,7 @@ function readPackageManifest() {
         properties: Record<string, { scope?: string }>;
       };
       commands: Array<{ command: string }>;
+      views?: Record<string, Array<{ id: string }>>;
     };
   };
 }
@@ -120,8 +126,8 @@ function createFakeApi() {
     },
     window: {
       terminals,
-      createTerminal(options: { name: string; cwd?: string }): FakeTerminal {
-        const terminal = new FakeTerminal(options.name, options.cwd);
+      createTerminal(options: { name: string; cwd?: string; env?: NodeJS.ProcessEnv; hideFromUser?: boolean }): FakeTerminal {
+        const terminal = new FakeTerminal(options.name, options.cwd, options.env, options.hideFromUser);
         terminals.push(terminal);
         return terminal;
       },
@@ -229,6 +235,17 @@ test("manifest keeps sensitive settings machine-scoped and hides dev preview", (
   const commandIds = manifest.contributes.commands.map((command) => command.command);
   assert.equal(commandIds.includes("sai.previewSponsor"), false);
   assert.equal((manifest.activationEvents ?? []).includes("onCommand:sai.previewSponsor"), false);
+  const activationEvents = manifest.activationEvents ?? [];
+  assert.equal(activationEvents.includes("onStartupFinished"), true);
+  for (const commandId of commandIds) {
+    assert.equal(activationEvents.includes(`onCommand:${commandId}`), false);
+  }
+  const viewIds = Object.values(manifest.contributes.views ?? {})
+    .flat()
+    .map((view) => view.id);
+  for (const viewId of viewIds) {
+    assert.equal(activationEvents.includes(`onView:${viewId}`), false);
+  }
 });
 
 test("plainStatusText strips codicon markup from sponsor names", () => {
@@ -236,10 +253,11 @@ test("plainStatusText strips codicon markup from sponsor names", () => {
 });
 
 test("generates fixed terminal commands and launches Codex terminal", async () => {
-  assert.equal(terminalCommandFor("codex"), "sai codex");
-  assert.equal(terminalCommandFor("claude"), "sai claude");
-  assert.equal(terminalCommandFor("overlay"), "sai overlay both");
-  assert.equal(terminalCommandFor("dashboard"), "sai dashboard");
+  assert.equal(terminalCommandFor("codex", { platform: "linux" }), "sai codex");
+  assert.equal(terminalCommandFor("claude", { platform: "linux" }), "sai claude");
+  assert.equal(terminalCommandFor("overlay", { platform: "linux" }), "sai overlay both");
+  assert.equal(terminalCommandFor("dashboard", { platform: "linux" }), "sai dashboard");
+  assert.equal(terminalCommandFor("codex", { platform: "win32" }), "sai.cmd codex");
   assert.equal(terminalCommandFor("installCli"), "npm install -g @sponsoredai/cli");
   assert.equal(
     terminalCommandFor("overlay", { saiCommand: "/Users/Duarte/SAI Build/sai", platform: "darwin" }),
@@ -253,7 +271,7 @@ test("generates fixed terminal commands and launches Codex terminal", async () =
   const fake = createFakeApi();
   const controller = extension.createExtensionController(fake.api as never, {
     readWalletJson: async () => sampleWalletPayload()
-  });
+  }, () => ({ platform: "linux" }));
   controller.activate(createContext() as never);
 
   const command = fake.registeredCommands.get(extension.COMMANDS.startCodex);
@@ -322,7 +340,7 @@ test("opens a fresh terminal per launch instead of re-sending into a live one", 
     }
   };
 
-  runSaiTerminalCommand(fakeWindow as never, "overlay");
+  runSaiTerminalCommand(fakeWindow as never, "overlay", { platform: "linux" });
 
   // The still-running terminal is left untouched - no command is injected into it.
   assert.deepEqual(stale.sent, []);
@@ -331,6 +349,49 @@ test("opens a fresh terminal per launch instead of re-sending into a live one", 
   assert.equal(created[0].name, "SAI Overlay");
   assert.equal(created[0].shown, true);
   assert.deepEqual(created[0].sent, ["sai overlay both"]);
+});
+
+test("can defer terminal launch text to avoid shell startup races", () => {
+  const fake = createFakeApi();
+  let scheduled: (() => void) | undefined;
+  let delayMs = 0;
+
+  runSaiTerminalCommand(fake.api.window as never, "claude", {
+    platform: "win32",
+    sendDelayMs: WINDOWS_TERMINAL_SEND_DELAY_MS,
+    scheduleSend(callback, delay) {
+      scheduled = callback;
+      delayMs = delay;
+    }
+  });
+
+  assert.equal(extension.terminalSendDelayMs("win32"), WINDOWS_TERMINAL_SEND_DELAY_MS);
+  assert.equal(extension.terminalSendDelayMs("linux"), 0);
+  assert.equal(fake.terminals[0].shown, true);
+  assert.equal(fake.terminals[0].hideFromUser, true);
+  assert.deepEqual(fake.terminals[0].sent, []);
+  assert.equal(delayMs, WINDOWS_TERMINAL_SEND_DELAY_MS);
+  assert.ok(scheduled);
+
+  scheduled();
+  assert.deepEqual(fake.terminals[0].sent, ["sai.cmd claude"]);
+});
+
+test("opens Windows agent terminals outside the Python workspace activation path", () => {
+  const fake = createFakeApi();
+  const workspace = "C:\\Users\\Duarte\\Documents\\Tokenback";
+  const saiCommand = "C:\\Users\\Duarte\\Documents\\Tokenback\\dev\\sai.cmd";
+
+  runSaiTerminalCommand(fake.api.window as never, "codex", {
+    platform: "win32",
+    launchCwd: workspace,
+    saiCommand
+  });
+
+  assert.equal(fake.terminals[0].cwd, os.homedir());
+  assert.equal(fake.terminals[0].hideFromUser, true);
+  assert.deepEqual(fake.terminals[0].env, { SAI_LAUNCH_CWD: workspace });
+  assert.deepEqual(fake.terminals[0].sent, [`${saiCommand} codex`]);
 });
 
 test("parses wallet JSON and surfaces the backend spendable balance as eligible", () => {
@@ -704,7 +765,7 @@ test("showMenu displays actions and dispatches the chosen one", async () => {
   fake.setNextQuickPick({ label: "Start Codex", action: "codex" });
   const controller = extension.createExtensionController(fake.api as never, {
     readWalletJson: async () => sampleWalletPayload()
-  });
+  }, () => ({ platform: "linux" }));
   controller.activate(createContext() as never);
 
   const showMenu = fake.registeredCommands.get(extension.COMMANDS.showMenu);

@@ -28,6 +28,16 @@ WINDOWS_KILL_WAIT_SECONDS = 0.5
 # sponsor card inline once, just after launch, instead of fighting for row 999.
 FULLSCREEN_TUI_TOOLS = {"claude", "codex"}
 
+# Codex' Windows CLI currently exits early under pywinpty on some machines, while
+# the regular VS Code terminal path works. Keep ConPTY for Claude's input box, but
+# launch Codex with passthrough until the pywinpty/Codex interaction is reliable.
+WINDOWS_CONPTY_TUI_TOOLS = {"claude"}
+
+# In Windows passthrough, a Codex sponsor can only be printed before Codex starts,
+# which leaves it stuck above the TUI. Prefer a clean agent screen over scrollback
+# pollution until Codex can safely return to the compositor path.
+WINDOWS_PASSTHROUGH_INLINE_TUI_TOOLS = {"claude"}
+
 
 def _is_windows() -> bool:
     return os.name == "nt"
@@ -68,6 +78,16 @@ def configured_idle_seconds(config: dict) -> float:
     name = config.get("frequency", "normal")
     profile = FREQUENCY_PROFILES.get(name, FREQUENCY_PROFILES["normal"])
     return float(profile["idle_seconds"])
+
+
+def _sponsor_footer(card, session, width: int, now: float | None = None) -> str:
+    progress = None
+    getter = getattr(session, "reward_progress", None)
+    if callable(getter):
+        progress = getter(now) if now is not None else getter()
+    if isinstance(progress, dict):
+        return card.footer(width=width, progress=progress)
+    return card.footer(width=width)
 
 
 class CommandRunner:
@@ -166,7 +186,7 @@ class CommandRunner:
             # On Windows a full-screen agent TUI clobbers an overlay, so pin the
             # ad via a ConPTY compositor. Other tools / non-interactive runs keep
             # the passthrough path. If pywinpty is missing, degrade gracefully.
-            if terminal and tool in FULLSCREEN_TUI_TOOLS:
+            if terminal and tool in WINDOWS_CONPTY_TUI_TOOLS:
                 if _winpty_available():
                     self._run_path = "windows_conpty"
                     return self._run_windows_pty(command, tool)
@@ -190,15 +210,18 @@ class CommandRunner:
         # erase a pinned overlay, so for those tools surface the sponsor inline at
         # launch instead. The credit/qualification path is unchanged: the card is
         # the same SponsorSession card, just printed once rather than overlaid.
-        inline_tool = terminal and tool in FULLSCREEN_TUI_TOOLS
+        inline_tools = WINDOWS_PASSTHROUGH_INLINE_TUI_TOOLS if _is_windows() else FULLSCREEN_TUI_TOOLS
+        inline_tool = terminal and tool in inline_tools
+        shown_card = None
         with StatusRenderer(enabled=terminal) as status:
             if inline_tool:
                 # Surface the sponsor BEFORE the agent paints its UI. A one-shot
                 # line printed after the TUI has taken over the screen is wiped by
                 # its first repaint, so fetch and print here, then launch.
                 session = self._sponsor_session(tool)
+                now = time.monotonic()
                 card = session.maybe_card(
-                    time.monotonic(),
+                    now,
                     idle_for=idle_seconds,
                     terminal_is_interactive=terminal,
                 )
@@ -231,8 +254,11 @@ class CommandRunner:
                             terminal_is_interactive=terminal,
                         )
                         if card:
-                            status.show(card.footer(width=status.width))
+                            shown_card = card
+                            status.show(_sponsor_footer(card, session, status.width, now))
                             idle_anchor = now
+                        elif shown_card is not None and session is not None:
+                            status.show(_sponsor_footer(shown_card, session, status.width, now))
                     time.sleep(0.2)
             except KeyboardInterrupt:
                 interrupted = True
@@ -259,6 +285,7 @@ class CommandRunner:
             StreamRewriter,
             clamp_line,
             clear_row,
+            clear_screen,
             paint_row,
             park_cursor,
             release_region,
@@ -280,6 +307,7 @@ class CommandRunner:
         pinned = tool in FULLSCREEN_TUI_TOOLS
         rw = StreamRewriter() if pinned else None
         pin = {"card": None, "rows": 0, "cols": 0, "last_paint": 0.0}
+        shown_card = None
 
         def term_size() -> tuple[int, int]:
             try:
@@ -295,7 +323,7 @@ class CommandRunner:
             if not force and now - pin["last_paint"] < 0.25:
                 return
             cols = pin["cols"]  # re-fit to the live width so resize never wraps
-            line = clamp_line(pin["card"].footer(width=max(1, cols - 1)), cols)
+            line = clamp_line(_sponsor_footer(pin["card"], session, max(1, cols - 1), now), cols)
             os.write(sys.stdout.fileno(), paint_row(pin["rows"], line))
             pin["last_paint"] = now
 
@@ -335,6 +363,7 @@ class CommandRunner:
                     # as a side effect, so parking must come after it or the
                     # child starts at the top and overdraws on its first frame.
                     fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows - 1, cols, 0, 0))
+                    os.write(sys.stdout.fileno(), clear_screen())
                     os.write(sys.stdout.fileno(), reserve_region(rows - 1))
                     os.write(sys.stdout.fileno(), park_cursor(rows - 1))
                 process = subprocess.Popen(
@@ -367,6 +396,7 @@ class CommandRunner:
             interrupted = False
 
             def consume_child(data: bytes, when: float) -> None:
+                nonlocal shown_card
                 # Billing window for the current card ends when output resumes.
                 if session is not None:
                     session.mark_cards_hidden(when)
@@ -377,6 +407,7 @@ class CommandRunner:
                         paint(force=True)
                 else:
                     status.clear()
+                    shown_card = None
                     os.write(sys.stdout.fileno(), data)
 
             try:
@@ -418,7 +449,10 @@ class CommandRunner:
                             pin["card"] = card
                             paint(force=True)
                         else:
-                            status.show(card.footer(width=status.width))
+                            shown_card = card
+                            status.show(_sponsor_footer(card, session, status.width, now))
+                    elif not pinned and shown_card is not None and session is not None:
+                        status.show(_sponsor_footer(shown_card, session, status.width, now))
                     elif pinned:
                         paint()  # debounced idle re-assert
 
@@ -476,6 +510,7 @@ class CommandRunner:
             StreamRewriter,
             clamp_line,
             clear_row,
+            clear_screen,
             paint_row,
             park_cursor,
             release_region,
@@ -557,7 +592,8 @@ class CommandRunner:
         rw.set_region_bottom(rows - 1)
         lock = threading.Lock()
         st = {"rows": rows, "cols": cols, "last_paint": 0.0,
-              "last_output": start, "alive": True, "card": None, "user_input": False}
+              "last_output": start, "alive": True, "reader_done": False,
+              "card": None, "progress": None, "user_input": False}
 
         def paint(force: bool = False) -> None:
             with lock:
@@ -571,7 +607,7 @@ class CommandRunner:
                 if not force and now - st["last_paint"] < 0.25:
                     return
                 cols = st["cols"]  # re-fit to the live width so resize never wraps
-                line = clamp_line(card.footer(width=max(1, cols - 1)), cols)
+                line = clamp_line(card.footer(width=max(1, cols - 1), progress=st["progress"]), cols)
                 write_out(paint_row(st["rows"], line))
                 st["last_paint"] = now
 
@@ -580,22 +616,30 @@ class CommandRunner:
                 try:
                     data = proc.read(8192)
                 except EOFError:
+                    if proc.isalive():
+                        logger.debug("ConPTY reader reached EOF while child still alive tool=%s", tool)
                     break
-                except Exception:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001
+                    if proc.isalive():
+                        logger.debug("ConPTY reader stopped while child still alive tool=%s error=%s", tool, type(exc).__name__, exc_info=True)
                     break
                 if not data:
                     if not proc.isalive():
                         break
                     continue
                 raw = data.encode("utf-8", "replace") if isinstance(data, str) else data
-                safe = rw.feed(raw)
+                repaint = False
                 with lock:
+                    safe = rw.feed(raw)
                     write_out(safe)
                     st["last_output"] = time.monotonic()
-                if rw.repaint_due:
-                    rw.repaint_due = False
+                    if rw.repaint_due:
+                        rw.repaint_due = False
+                        repaint = True
+                if repaint:
                     paint(force=True)
-            st["alive"] = False
+            with lock:
+                st["reader_done"] = True
 
         def writer() -> None:
             while st["alive"]:
@@ -623,12 +667,13 @@ class CommandRunner:
             with lock:
                 # Reserve FIRST: DECSTBM homes the cursor to (1,1), so park after
                 # it — otherwise the child starts at the top and overdraws frame 1.
+                write_out(clear_screen())
                 write_out(reserve_region(rows - 1))
                 write_out(park_cursor(rows - 1))   # final cursor at H-1, anchors CPR <= H-1
             rt.start()
             wt.start()
             prev_seen = st["last_output"]
-            while proc.isalive() and st["alive"]:
+            while proc.isalive():
                 time.sleep(0.2)
                 now = time.monotonic()
 
@@ -652,6 +697,8 @@ class CommandRunner:
                 if last_output > prev_seen:
                     if session is not None:
                         session.mark_cards_hidden(last_output)
+                    with lock:
+                        st["progress"] = None
                     prev_seen = last_output
 
                 with lock:
@@ -666,12 +713,16 @@ class CommandRunner:
                 card = None if session is None else session.maybe_card(
                     now, idle_for=idle_for, terminal_is_interactive=True
                 )
+                progress = None if session is None else session.reward_progress(now)
                 if card:
                     with lock:
                         st["card"] = card
+                        st["progress"] = progress
                     paint(force=True)
                     logger.info("sponsor card pinned tool=%s sponsor=%s", tool, card.sponsor)
                 else:
+                    with lock:
+                        st["progress"] = progress
                     paint()
         except KeyboardInterrupt:
             interrupted = True

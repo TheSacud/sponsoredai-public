@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 import webbrowser
 from dataclasses import dataclass
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable
@@ -484,7 +484,7 @@ def start_install_link(timeout: float = 6.0) -> dict[str, Any] | None:
         return None
     result = dict(response)
     result["backend_url"] = backend_url
-    result["dashboard_url"] = f"{backend_url}/dashboard"
+    result["dashboard_url"] = f"{backend_url}/dashboard?{urlencode({'code': str(response.get('code') or '')})}"
     logger.info("install link code created expires_in_seconds=%s", result.get("expires_in_seconds") or 0)
     return result
 

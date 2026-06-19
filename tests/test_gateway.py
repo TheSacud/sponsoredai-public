@@ -195,6 +195,7 @@ class GatewayTests(unittest.TestCase):
             result = start_install_link()
 
         self.assertEqual(result["code"], "ABCDEFGH")
+        self.assertEqual(result["dashboard_url"], "https://sponsoredai.dev/dashboard?code=ABCDEFGH")
         self.assertEqual(post.call_args.kwargs["auth_secret"], "issued-link-secret")
 
         # An install that has not rotated yet falls back to the derived secret.

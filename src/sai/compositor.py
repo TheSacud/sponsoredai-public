@@ -170,6 +170,11 @@ def release_region() -> bytes:
     return b"\x1b[r"
 
 
+def clear_screen() -> bytes:
+    """Reset attributes, clear the visible viewport, and home the cursor."""
+    return b"\x1b[0m\x1b[2J\x1b[H"
+
+
 def park_cursor(row: int) -> bytes:
     """Move the cursor to (row, 1) — used before spawn so the child's startup
     CPR anchors its viewport at or above the reserved row."""

@@ -116,6 +116,29 @@ class RunnerTests(unittest.TestCase):
 
         self.assertEqual(order, ["note", "popen"])
 
+    def test_windows_codex_passthrough_does_not_print_inline_sponsor(self):
+        status = self._stub_status()
+        wallet = mock.Mock()
+        wallet.balance.return_value = 0.0
+        runner = CommandRunner({"frequency": "high"}, wallet=wallet)
+        runner._sponsor_session = mock.Mock()
+        proc = mock.Mock()
+        proc.poll.return_value = 0
+        proc.returncode = 0
+
+        with mock.patch("sai.runner._is_windows", return_value=True), \
+                mock.patch("sai.runner.interactive_terminal", return_value=True), \
+                mock.patch("sai.runner.StatusRenderer", return_value=status), \
+                mock.patch("sai.runner.resolve_command", side_effect=list), \
+                mock.patch("sai.runner.subprocess.Popen", return_value=proc):
+            receipt = runner._run_passthrough(["codex"], tool="codex")
+
+        status.note.assert_not_called()
+        status.show.assert_not_called()
+        runner._sponsor_session.assert_not_called()
+        self.assertEqual(receipt.exit_code, 0)
+        self.assertEqual(receipt.qualified_waits, 0)
+
     def test_passthrough_does_not_inline_for_non_tui_tool(self):
         status = self._stub_status()
         wallet = mock.Mock()
@@ -131,7 +154,19 @@ class RunnerTests(unittest.TestCase):
         status.note.assert_not_called()
         runner._sponsor_session.assert_not_called()
 
-    def test_run_routes_windows_tui_tool_to_conpty_compositor(self):
+    def test_run_routes_windows_claude_to_conpty_compositor(self):
+        runner = CommandRunner({"frequency": "normal"})
+        runner._run_windows_pty = mock.Mock(return_value="WPTY")
+        runner._run_passthrough = mock.Mock(return_value="PASS")
+        with mock.patch("sai.runner._is_windows", return_value=True), \
+                mock.patch("sai.runner.interactive_terminal", return_value=True), \
+                mock.patch("sai.runner._winpty_available", return_value=True):
+            result = runner.run(["claude"], tool="claude")
+        self.assertEqual(result, "WPTY")
+        runner._run_windows_pty.assert_called_once()
+        runner._run_passthrough.assert_not_called()
+
+    def test_run_keeps_codex_passthrough_on_windows(self):
         runner = CommandRunner({"frequency": "normal"})
         runner._run_windows_pty = mock.Mock(return_value="WPTY")
         runner._run_passthrough = mock.Mock(return_value="PASS")
@@ -139,9 +174,9 @@ class RunnerTests(unittest.TestCase):
                 mock.patch("sai.runner.interactive_terminal", return_value=True), \
                 mock.patch("sai.runner._winpty_available", return_value=True):
             result = runner.run(["codex"], tool="codex")
-        self.assertEqual(result, "WPTY")
-        runner._run_windows_pty.assert_called_once()
-        runner._run_passthrough.assert_not_called()
+        self.assertEqual(result, "PASS")
+        runner._run_windows_pty.assert_not_called()
+        runner._run_passthrough.assert_called_once()
 
     def test_run_keeps_passthrough_for_non_tui_tool_on_windows(self):
         runner = CommandRunner({"frequency": "normal"})

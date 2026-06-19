@@ -5,6 +5,7 @@ from sai.compositor import (
     StreamRewriter,
     clamp_line,
     clear_row,
+    clear_screen,
     paint_row,
     park_cursor,
     release_region,
@@ -106,6 +107,7 @@ class HelperTests(unittest.TestCase):
         self.assertEqual(release_region(), b"\x1b[r")
 
     def test_park_and_clear(self):
+        self.assertEqual(clear_screen(), b"\x1b[0m\x1b[2J\x1b[H")
         self.assertEqual(park_cursor(49), b"\x1b[49;1H")
         self.assertEqual(clear_row(50), b"\x1b[50;1H\x1b[2K")
 
@@ -162,6 +164,22 @@ class ClampLineTests(unittest.TestCase):
         card = LOCAL_SPONSORS[0]
         for cols in (80, 40, 24, 14):
             out = clamp_line(card.footer(width=max(1, cols - 1)), cols)
+            self.assertLessEqual(self.vis(out), cols - 1, f"cols={cols}")
+
+    def test_progress_card_footer_fits_narrow(self):
+        from sai.sponsors import SponsorCard
+        card = SponsorCard(
+            id="plc_1",
+            sponsor="Acme",
+            message="Ship faster agent workflows with hosted preview environments",
+            url="https://acme.example/sai",
+            credit_amount=0.012,
+            placement_id="plc_1",
+            campaign_id="cmp_1",
+        )
+        progress = {"visible_seconds": 2.0, "remaining_seconds": 3.0, "eligible": False}
+        for cols in (80, 40, 24, 14):
+            out = clamp_line(card.footer(width=max(1, cols - 1), progress=progress), cols)
             self.assertLessEqual(self.vis(out), cols - 1, f"cols={cols}")
 
 

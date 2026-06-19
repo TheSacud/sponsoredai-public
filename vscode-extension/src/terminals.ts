@@ -13,8 +13,13 @@ type TerminalSpec = {
 
 export interface SaiTerminalCommandOptions {
   readonly saiCommand?: string;
+  readonly launchCwd?: string;
   readonly platform?: NodeJS.Platform;
+  readonly sendDelayMs?: number;
+  readonly scheduleSend?: (callback: () => void, delayMs: number) => unknown;
 }
+
+export const WINDOWS_TERMINAL_SEND_DELAY_MS = 1200;
 
 const TERMINAL_SPECS: Record<SaiTerminalAction, TerminalSpec> = {
   codex: {
@@ -61,24 +66,41 @@ export function terminalCommandFor(action: SaiTerminalAction, options: SaiTermin
   if (spec.command) {
     return spec.command;
   }
-  const command = options.saiCommand?.trim() || "sai";
-  return [quoteTerminalCommand(command, options.platform ?? process.platform), ...spec.args].join(" ");
+  const platform = options.platform ?? process.platform;
+  const command = options.saiCommand?.trim() || defaultSaiCommand(platform);
+  return [quoteTerminalCommand(command, platform), ...spec.args].join(" ");
 }
 
 export function terminalNameFor(action: SaiTerminalAction): string {
   return TERMINAL_SPECS[action].name;
 }
 
-export function openSaiTerminal(windowApi: SaiTerminalWindow, action: SaiTerminalAction): SaiTerminalLike {
+export function openSaiTerminal(
+  windowApi: SaiTerminalWindow,
+  action: SaiTerminalAction,
+  options: SaiTerminalCommandOptions = {}
+): SaiTerminalLike {
   const spec = TERMINAL_SPECS[action];
-  const options: vscode.TerminalOptions = spec.cwd ? { name: spec.name, cwd: spec.cwd } : { name: spec.name };
+  const terminalOptions: vscode.TerminalOptions = { name: spec.name };
+  if (spec.cwd) {
+    terminalOptions.cwd = spec.cwd;
+  } else if ((options.platform ?? process.platform) === "win32") {
+    // The Python Environments extension auto-activates workspace venvs in newly
+    // created visible terminals by typing Activate.ps1. Creating hidden and then
+    // immediately showing is enough to skip that hook while keeping normal UX.
+    terminalOptions.hideFromUser = true;
+    if (options.launchCwd) {
+      terminalOptions.cwd = os.homedir();
+      terminalOptions.env = { SAI_LAUNCH_CWD: options.launchCwd };
+    }
+  }
   // Always open a fresh terminal. Reusing a live terminal and re-sending the
   // command injects it into whatever is still running there: a second "Start
   // Overlay" appended its command to a busy prompt and ran the garbled
   // "sai overlay sai overlay both", and "Start Claude" would type "sai claude"
   // into an active Claude session. A clean terminal always runs the command as
   // typed. installCli additionally needs this for its controlled home cwd.
-  return windowApi.createTerminal(options);
+  return windowApi.createTerminal(terminalOptions);
 }
 
 export function runSaiTerminalCommand(
@@ -86,10 +108,24 @@ export function runSaiTerminalCommand(
   action: SaiTerminalAction,
   options: SaiTerminalCommandOptions = {}
 ): SaiTerminalLike {
-  const terminal = openSaiTerminal(windowApi, action);
+  const terminal = openSaiTerminal(windowApi, action, options);
   terminal.show();
-  terminal.sendText(terminalCommandFor(action, options), true);
+  const command = terminalCommandFor(action, options);
+  const delayMs = Math.max(0, options.sendDelayMs ?? 0);
+  if (delayMs > 0) {
+    const schedule = options.scheduleSend ?? ((callback: () => void, ms: number) => setTimeout(callback, ms));
+    schedule(() => terminal.sendText(command, true), delayMs);
+  } else {
+    terminal.sendText(command, true);
+  }
   return terminal;
+}
+
+export function defaultSaiCommand(platform: NodeJS.Platform = process.platform): string {
+  // npm installs a PowerShell shim (`sai.ps1`) and a cmd shim (`sai.cmd`) on
+  // Windows. Prefer the cmd shim when the user has not configured a custom path
+  // so SAI does not depend on the user's PowerShell execution policy.
+  return platform === "win32" ? "sai.cmd" : "sai";
 }
 
 export function quoteTerminalCommand(command: string, platform: NodeJS.Platform = process.platform): string {

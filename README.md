@@ -11,7 +11,7 @@ showed it. Take it as **AI credits or cash**.
 
 [![Website](https://img.shields.io/badge/sponsoredai.dev-1A1A1A?style=for-the-badge&logoColor=white)](https://sponsoredai.dev)
 [![npm](https://img.shields.io/npm/v/%40sponsoredai%2Fcli?style=for-the-badge&logo=npm&label=npm&color=CB3837)](https://www.npmjs.com/package/@sponsoredai/cli)
-[![VS Code](https://img.shields.io/badge/VS%20Code-extension-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](vscode-extension/)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/Sacud.sponsoredai-credits?style=for-the-badge&logo=visualstudiocode&label=VS%20Code%20Marketplace&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=Sacud.sponsoredai-credits)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-EEB200?style=for-the-badge&labelColor=1A1A1A)](LICENSE)
 
 </div>

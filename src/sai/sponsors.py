@@ -10,7 +10,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlparse
 
 from . import __version__
@@ -22,9 +22,13 @@ from .ansi import (
     ELLIPSIS,
     GREEN,
     MIDDOT,
+    OSC8_LINK,
     RAIL,
+    RESET,
+    SGR,
     UNDERLINE,
     style,
+    truncate_visible,
     visible_length,
 )
 from .config import (
@@ -82,7 +86,7 @@ class SponsorCard:
     def is_example(self) -> bool:
         return self.placement_id is None
 
-    def footer(self, width: int | None = None) -> str:
+    def footer(self, width: int | None = None, progress: dict[str, Any] | None = None) -> str:
         # An accent rail marks the sponsored zone; the sponsor name and link
         # carry the brand accent and the earned credit stays green, while the
         # "sponsored" tag, separators and link chrome stay dim. Example cards
@@ -90,9 +94,13 @@ class SponsorCard:
         if self.is_example:
             accent = DIM
             suffix = style("example placement - no paid demand", DIM)
+            progress_label = None
+            progress_style = DIM
         else:
             accent = ACCENT
             suffix = style(f"+{self.credit_amount:.3f} AI credits", GREEN, BOLD)
+            progress_label = _progress_label(progress)
+            progress_style = GREEN if _progress_eligible(progress) else ACCENT
         rail = style(RAIL, accent)
         tag = style("sponsored", DIM)
         name = style(self.sponsor, accent, BOLD)
@@ -101,17 +109,130 @@ class SponsorCard:
         if ARROW:
             link_label += f" {ARROW}"
         link = style(link_label, accent, UNDERLINE)
-        head = f"{rail} {tag} {name} {sep} "
-        tail = f" {sep} {link}  {suffix}"
-        message = self.message
-        if width is not None:
-            # The sponsor name and credit amount are the card's value; when
-            # space runs out, ellipsize the creative text instead.
-            room = width - visible_length(head) - visible_length(tail)
-            if len(message) > room:
-                keep = room - len(ELLIPSIS)
-                message = message[:keep].rstrip() + ELLIPSIS if keep >= 8 else ELLIPSIS
-        return f"{head}{message}{tail}"
+        progress_text = style(progress_label, progress_style, BOLD) if progress_label else None
+        head = f"{rail} {tag} {name}"
+
+        def render(message: str, *, include_link: bool, include_progress: bool) -> str:
+            middle = [message] if message else []
+            if include_link:
+                middle.append(link)
+            if include_progress and progress_text:
+                middle.append(progress_text)
+            body = f" {sep} ".join(middle)
+            return f"{head} {sep} {body}  {suffix}" if body else f"{head}  {suffix}"
+
+        full = render(self.message, include_link=True, include_progress=True)
+        if width is not None and width <= 0:
+            return ""
+        if width is None or visible_length(full) <= width:
+            return full
+
+        fitted = _fit_footer_message(
+            self.message,
+            width,
+            lambda message: render(message, include_link=True, include_progress=True),
+            min_visible=12,
+        )
+        if fitted is not None:
+            return render(fitted, include_link=True, include_progress=True)
+
+        # Drop lower-value chrome before trimming the creative. The sponsor and
+        # earned credit are the business-critical parts of the card.
+        without_link = render(self.message, include_link=False, include_progress=True)
+        if visible_length(without_link) <= width:
+            return without_link
+
+        fitted = _fit_footer_message(
+            self.message,
+            width,
+            lambda message: render(message, include_link=False, include_progress=True),
+        )
+        if fitted is not None:
+            return render(fitted, include_link=False, include_progress=True)
+
+        if progress_text:
+            without_progress = render(self.message, include_link=False, include_progress=False)
+            if visible_length(without_progress) <= width:
+                return without_progress
+            fitted = _fit_footer_message(
+                self.message,
+                width,
+                lambda message: render(message, include_link=False, include_progress=False),
+            )
+            if fitted is not None:
+                return render(fitted, include_link=False, include_progress=False)
+
+        return _clamp_footer(render("", include_link=False, include_progress=False), width)
+
+
+def _progress_eligible(progress: dict[str, Any] | None) -> bool:
+    if not progress:
+        return False
+    if progress.get("eligible"):
+        return True
+    try:
+        remaining = float(progress.get("remaining_seconds") or 0.0)
+        amount = float(progress.get("progress") or 0.0)
+    except (TypeError, ValueError):
+        return False
+    return remaining <= 0.0 or amount >= 1.0
+
+
+def _progress_label(progress: dict[str, Any] | None) -> str | None:
+    if not progress:
+        return None
+    try:
+        visible = max(0.0, float(progress.get("visible_seconds") or 0.0))
+    except (TypeError, ValueError):
+        return None
+    total = max(1, int(round(QUALIFIED_VISIBLE_SECONDS)))
+    shown = total if _progress_eligible(progress) else min(total, int(visible))
+    return f"{shown}/{total}s"
+
+
+def _clamp_footer(text: str, width: int) -> str:
+    if width <= 0:
+        return ""
+    if visible_length(text) <= width:
+        return text
+    safe = OSC8_LINK.sub("", text)
+    keep = width - visible_length(ELLIPSIS)
+    fitted = truncate_visible(safe, keep) + ELLIPSIS if keep > 0 else ELLIPSIS[:width]
+    if SGR.search(fitted):
+        fitted += RESET
+    return fitted
+
+
+def _fit_footer_message(
+    text: str,
+    width: int,
+    build: Callable[[str], str],
+    *,
+    min_visible: int = 0,
+) -> str | None:
+    if visible_length(build(text)) <= width:
+        return text
+    required = min(max(0, min_visible), len(text))
+    if visible_length(build("")) <= width:
+        if not text:
+            return ""
+        if visible_length(build(ELLIPSIS)) > width:
+            return "" if required == 0 else None
+    else:
+        return None
+
+    best = ELLIPSIS
+    lo, hi = 0, len(text)
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        keep = text[:mid].rstrip()
+        candidate = f"{keep}{ELLIPSIS}" if keep else ELLIPSIS
+        if visible_length(build(candidate)) <= width:
+            best = candidate
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return best if visible_length(best) >= required else None
 
 
 def display_url(url: str) -> str:
