@@ -442,6 +442,11 @@ def _register_backend_parser(sub) -> None:
     backend_market = backend_sub.add_parser("market", help="Print the public campaign marketplace")
     backend_market.add_argument("--db", type=Path, default=default_backend_db_path())
     backend_market.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    backend_summary = backend_sub.add_parser(
+        "summary", help="Print operator metrics (users, sponsors, installs, spend)"
+    )
+    backend_summary.add_argument("--db", type=Path, default=default_backend_db_path())
+    backend_summary.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     backend_migrate = backend_sub.add_parser("migrate", help="Initialize or migrate the backend database")
     backend_migrate.add_argument("--db", type=Path, default=default_backend_db_path())
     backend_backup = backend_sub.add_parser("backup", help="Create a consistent SQLite backup")
@@ -1389,6 +1394,40 @@ def handle_backend(args: argparse.Namespace) -> int:
                 f"{row['bid_per_1000_qp']:>9.2f}  {row['developer_payout']:>6.3f}  {row['delivered']:>9}  "
                 f"{row['spend']:>6.3f}  {row['status']}"
             )
+        return 0
+    if args.backend_command == "summary":
+        store = BackendStore(args.db)
+        full = store.admin_summary()
+        # Sanitised, aggregate-only view: the full admin_summary carries PII
+        # (user emails in pending_payouts, sponsor names in campaigns/
+        # transactions). The lead-finder skill only needs app *size*, so we
+        # never emit identities or local paths here.
+        payload = {
+            "generated_at": full.get("generated_at"),
+            "windows": full.get("windows"),
+            "metrics": full.get("metrics", {}),
+            "users_by_role": full.get("users_by_role", []),
+            "campaigns_by_status": full.get("campaigns_by_status", []),
+            "installation_mix": full.get("installation_mix", []),
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            return 0
+        m = payload["metrics"]
+        print("SAI operator summary")
+        print(f"  generated_at         {payload['generated_at']}")
+        print(f"  users_total          {m.get('users_total', 0)}")
+        print(f"  sponsor_users        {m.get('sponsor_users_total', 0)}")
+        print(f"  sponsors_total       {m.get('sponsors_total', 0)}")
+        print(f"  installations_total  {m.get('installations_total', 0)}")
+        print(f"  active_installs_7d    {m.get('active_installations_7d', 0)}")
+        print(f"  new_installs_7d       {m.get('new_installations_7d', 0)}")
+        print(f"  live_paid_campaigns  {m.get('live_paid_campaigns', 0)}")
+        print(f"  campaigns_in_review  {m.get('campaigns_in_review', 0)}")
+        print(f"  sponsor_spend        {m.get('sponsor_spend', 0)}")
+        print(f"  developer_earned     {m.get('developer_earned', 0)}")
+        print(f"  first_user_at        {m.get('first_user_at')}")
+        print(f"  latest_user_at       {m.get('latest_user_at')}")
         return 0
     if args.backend_command == "migrate":
         BackendStore(args.db)

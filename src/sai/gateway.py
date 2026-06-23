@@ -24,6 +24,7 @@ from .app_logging import configure_logging, log_destination_label
 from .config import USER_AGENT, load_config, save_config, set_frequency, set_kill_switch
 from .credits import sync_local_wallet
 from .dashboard import DASHBOARD_HTML, overview_payload
+from .http_client import urlopen as http_urlopen
 from .metrics import QP_EVENT, VSCODE_WAIT_SURFACE
 from .sponsors import (
     INSTALL_AUTH_SCHEME,
@@ -404,7 +405,7 @@ def _post_backend_json(
         request.add_header("Authorization", f"{INSTALL_AUTH_SCHEME} {auth_secret}")
     started = time.monotonic()
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with http_urlopen(request, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8"))
     except (OSError, ValueError) as exc:
         logger.debug(

@@ -596,7 +596,7 @@ class GatewayTests(unittest.TestCase):
 
 
 class BackendRequestHeaderTests(unittest.TestCase):
-    def test_post_backend_json_sends_sai_user_agent(self):
+    def test_post_backend_json_uses_shared_http_client_and_sends_sai_user_agent(self):
         from sai.config import USER_AGENT
         from sai.gateway import _post_backend_json
 
@@ -614,13 +614,15 @@ class BackendRequestHeaderTests(unittest.TestCase):
 
         def fake_urlopen(request, timeout=None):
             captured["request"] = request
+            captured["timeout"] = timeout
             return FakeResponse()
 
-        with mock.patch("sai.gateway.urllib.request.urlopen", side_effect=fake_urlopen):
+        with mock.patch("sai.gateway.http_urlopen", side_effect=fake_urlopen) as urlopen:
             _post_backend_json("https://backend.test/v1/x", {"a": 1}, timeout=1.0)
 
+        urlopen.assert_called_once()
+        self.assertEqual(captured["timeout"], 1.0)
         self.assertEqual(captured["request"].get_header("User-agent"), USER_AGENT)
-
 
 if __name__ == "__main__":
     unittest.main()
