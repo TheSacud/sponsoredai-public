@@ -290,33 +290,33 @@ export function renderAdHtml(placement: SponsorPlacement | undefined): string {
   const foot = "</body></html>";
 
   if (!placement) {
-    return head + "<div class=\"empty\">No sponsor right now. An ad appears here while Claude or Codex is thinking.</div>" + foot;
+    return head + "<div class=\"empty\" data-testid=\"sai-ad-empty\">No sponsor right now. An ad appears here while Claude or Codex is thinking.</div>" + foot;
   }
 
   const credit =
     typeof placement.credit_amount === "number" && placement.credit_amount > 0
-      ? `<div class="credit">+${placement.credit_amount.toFixed(3)} credits when this wait qualifies</div>`
+      ? `<div class="credit" data-testid="sai-ad-credit">+${placement.credit_amount.toFixed(3)} credits when this wait qualifies</div>`
       : "";
   // command: URI keeps the click inside the extension (records the paid click
   // and opens the verified redirect) instead of letting the webview navigate.
   const cta = safeHttpsUrl(placement.click_url)
-    ? "<a class=\"cta\" href=\"command:sai.openSponsor\">Visit sponsor &rarr;</a>"
+    ? "<a class=\"cta\" data-testid=\"sai-ad-cta\" href=\"command:sai.openSponsor\">Visit sponsor &rarr;</a>"
     : "";
   const iconHtml = icon
-    ? `<img class="brandIcon" src="${escapeHtml(icon.src)}" alt="">`
+    ? `<img class="brandIcon" data-testid="sai-ad-brand-icon" src="${escapeHtml(icon.src)}" alt="">`
     : "";
 
   return (
     head
-    + "<div class=\"card\">"
+    + "<div class=\"card\" data-testid=\"sai-ad-card\">"
     + "<div class=\"brandRow\">"
     + iconHtml
     + "<div class=\"brandText\">"
-    + "<div class=\"tag\">Sponsored</div>"
-    + `<div class="sponsor">${escapeHtml(placement.sponsor)}</div>`
+    + "<div class=\"tag\" data-testid=\"sai-ad-label\">Sponsored</div>"
+    + `<div class="sponsor" data-testid="sai-ad-sponsor">${escapeHtml(placement.sponsor)}</div>`
     + "</div>"
     + "</div>"
-    + `<div class="msg">${escapeHtml(placement.message)}</div>`
+    + `<div class="msg" data-testid="sai-ad-message">${escapeHtml(placement.message)}</div>`
     + credit
     + cta
     + "</div>"
@@ -324,14 +324,18 @@ export function renderAdHtml(placement: SponsorPlacement | undefined): string {
   );
 }
 
+type CommandUriPolicy = NonNullable<vscode.WebviewOptions["enableCommandUris"]>;
+
 export class SaiAdViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "sai.adBanner";
   private view?: vscode.WebviewView;
   private placement?: SponsorPlacement;
 
+  public constructor(private readonly commandUris: CommandUriPolicy = false) {}
+
   public resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
-    view.webview.options = { enableScripts: false, enableCommandUris: true };
+    view.webview.options = { enableScripts: false, enableCommandUris: this.commandUris };
     view.webview.html = renderAdHtml(this.placement);
     view.onDidDispose(() => {
       if (this.view === view) {

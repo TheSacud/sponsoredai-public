@@ -69,7 +69,7 @@
               <div class="field">
                 <label for="spBid">Bid per 1,000 qualified placements — <span class="num" id="spBidOut">$30.00</span></label>
                 <input id="spBid" type="range" min="1" max="120" step="1" value="30">
-                <span class="hint">Highest bid serves first. Developer earns <b class="num" id="spDevCard">+0.018</b> / card · <b class="num" id="spDevClick">+0.90</b> / eligible click.</span>
+                <span class="hint">Higher bids win a bigger share of the rotation. Developer earns <b class="num" id="spDevCard">+0.018</b> / card · <b class="num" id="spDevClick">+0.90</b> / eligible click.</span>
               </div>
               <div class="field">
                 <label for="spBudget">Budget</label>
@@ -133,14 +133,14 @@
   <!-- order book -->
   <section class="band darker sec" id="book">
     <div class="wrap">
-      <div class="sec-h"><span class="eyebrow">The market is public</span><h2>Live order book.</h2><p>Every campaign, ranked by bid. Outbid the top to take #1, or queue behind it.</p></div>
+      <div class="sec-h"><span class="eyebrow">The market is public</span><h2>Live order book.</h2><p>Every campaign, ranked by bid. The top bids share the slot, the highest most often — bid up to win more of it.</p></div>
       <div class="panel">
         <div class="panel-h"><h3>Bid market</h3><span class="flag">launch pricing</span></div>
         <table>
           <thead><tr><th>#</th><th>Campaign</th><th>Bid / 1k</th><th>Dev / card</th><th>Status</th></tr></thead>
           <tbody><tr><td>1</td><td><b>Your campaign</b> (preview)</td><td class="num" id="bookBid">$30.00</td><td class="g num" id="bookDev">+0.018</td><td><span class="pill pending">draft</span></td></tr></tbody>
         </table>
-        <div class="panel-b" style="text-align:center;color:var(--ink-soft);font-size:13px"><b style="color:var(--ink)">0 funded campaigns live</b> — the book is empty and cards pay zero until a sponsor funds it. Fund yours above to claim #1.</div>
+        <div class="panel-b" style="text-align:center;color:var(--ink-soft);font-size:13px"><b style="color:var(--ink)">0 funded campaigns live</b> — the book is empty and cards pay zero until a sponsor funds it. Fund yours above to lead the rotation.</div>
       </div>
     </div>
   </section>

@@ -132,10 +132,12 @@ jobs:
           # All platforms are now onedir: the executable lives inside the
           # packaged directory next to its _internal/ runtime.
           if [ "${{ matrix.platform }}" = "win32" ]; then
-            release/sai-${{ matrix.platform }}-${{ matrix.arch }}/sai.exe --version
+            BIN="release/sai-${{ matrix.platform }}-${{ matrix.arch }}/sai.exe"
           else
-            release/sai-${{ matrix.platform }}-${{ matrix.arch }}/sai --version
+            BIN="release/sai-${{ matrix.platform }}-${{ matrix.arch }}/sai"
           fi
+          "$BIN" --version
+          python scripts/smoke_client_binary.py --binary "$BIN"
       - uses: actions/upload-artifact@v7
         with:
           name: sai-${{ matrix.platform }}-${{ matrix.arch }}

@@ -98,6 +98,71 @@ test("renderAdHtml only loads trusted brand icons and gates the CTA on click_url
   assert.match(ad.renderAdHtml(undefined), /An ad appears here/);
 });
 
+test("SaiAdViewProvider drives a stable webview banner journey", () => {
+  const allowedCommandUris = ["sai.openSponsor"];
+  const provider = new ad.SaiAdViewProvider(allowedCommandUris);
+  let disposeHandler: (() => void) | undefined;
+  let revealPreserveFocus: boolean | undefined;
+  const view = {
+    visible: true,
+    webview: {
+      options: {},
+      html: ""
+    },
+    onDidDispose(callback: () => void) {
+      disposeHandler = callback;
+      return { dispose: () => undefined };
+    },
+    show(preserveFocus?: boolean) {
+      revealPreserveFocus = preserveFocus;
+    }
+  };
+
+  provider.resolveWebviewView(view as never);
+
+  assert.deepEqual(view.webview.options, { enableScripts: false, enableCommandUris: allowedCommandUris });
+  assert.match(view.webview.html, /data-testid="sai-ad-empty"/);
+  assert.equal(provider.isVisible(), true);
+
+  const card = ad.parsePlacement(placement({
+    brand_icon_url: "https://sponsoredai.dev/c/icon/c1"
+  }));
+  assert.ok(card);
+
+  provider.showCard(card);
+  assert.equal(provider.current, card);
+  assert.match(view.webview.html, /href="command:sai\.openSponsor"/);
+  for (const testId of [
+    "sai-ad-card",
+    "sai-ad-label",
+    "sai-ad-sponsor",
+    "sai-ad-message",
+    "sai-ad-credit",
+    "sai-ad-cta",
+    "sai-ad-brand-icon"
+  ]) {
+    assert.match(view.webview.html, new RegExp(`data-testid="${testId}"`));
+  }
+
+  provider.reveal();
+  assert.equal(revealPreserveFocus, true);
+
+  provider.clearCard();
+  assert.equal(provider.current, undefined);
+  assert.match(view.webview.html, /data-testid="sai-ad-empty"/);
+
+  provider.showCard(card);
+  disposeHandler?.();
+  assert.equal(provider.isVisible(), false);
+
+  const recreated = {
+    ...view,
+    webview: { options: {}, html: "" }
+  };
+  provider.resolveWebviewView(recreated as never);
+  assert.match(recreated.webview.html, /data-testid="sai-ad-card"/);
+});
+
 test("safeHttpsUrl only allows SAI https click redirects", () => {
   assert.equal(ad.safeHttpsUrl("https://sponsoredai.dev/c/plc_1/clt_1"), "https://sponsoredai.dev/c/plc_1/clt_1");
   assert.equal(ad.safeHttpsUrl("https://www.sponsoredai.dev/c/plc_1/clt_1"), "https://www.sponsoredai.dev/c/plc_1/clt_1");

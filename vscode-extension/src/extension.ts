@@ -8,12 +8,15 @@ import {
   recordSaiPlacementEvent,
   SaiCliError,
   saiPlacementDiagnosticsSnapshot,
+  type GatewayStatus,
   type GatewayStatusOptions,
+  type PlacementEventRequest,
+  type PlacementRequest,
   type PlacementTransportOptions,
   type ReadSaiOptions
 } from "./saiCli";
 import { runSaiTerminalCommand, WINDOWS_TERMINAL_SEND_DELAY_MS, type SaiTerminalCommandOptions } from "./terminals";
-import { AdEngine, parsePlacement, safeHttpsUrl, SaiAdViewProvider } from "./adBanner";
+import { AdEngine, parsePlacement, safeHttpsUrl, SaiAdViewProvider, type SponsorPlacement } from "./adBanner";
 import {
   formatWalletStatus,
   parseSaiWalletPayload,
@@ -91,6 +94,10 @@ export const COMMANDS = {
 } as const;
 
 type VscodeApi = Pick<typeof vscode, "StatusBarAlignment" | "commands" | "window">;
+type AdBannerVscodeApi = Pick<
+  typeof vscode,
+  "TextEditorSelectionChangeKind" | "Uri" | "commands" | "env" | "window"
+>;
 
 export interface SaiCliReader {
   readWalletJson(): Promise<unknown>;
@@ -108,6 +115,32 @@ const DEFAULT_CLI: SaiCliReader = {
 
 type SaiTerminalOptionsProvider = () => SaiTerminalCommandOptions;
 type PlacementTool = "codex" | "claude";
+
+interface AdBannerRuntime {
+  nowMs(): number;
+  setInterval(callback: () => void, ms: number): unknown;
+  clearInterval(handle: unknown): void;
+  readGatewayStatus(options: GatewayStatusOptions): Promise<GatewayStatus | undefined>;
+  fetchPlacement(request: PlacementRequest, options: PlacementTransportOptions): Promise<unknown>;
+  recordPlacementEvent(
+    placement: SponsorPlacement,
+    request: PlacementEventRequest,
+    options: PlacementTransportOptions
+  ): Promise<unknown>;
+  gatewayStatusOptions(): GatewayStatusOptions;
+  placementOptions(): PlacementTransportOptions;
+}
+
+const DEFAULT_AD_BANNER_RUNTIME: AdBannerRuntime = {
+  nowMs: () => Date.now(),
+  setInterval: (callback, ms) => setInterval(callback, ms),
+  clearInterval: (handle) => clearInterval(handle as ReturnType<typeof setInterval>),
+  readGatewayStatus,
+  fetchPlacement: fetchSaiPlacement,
+  recordPlacementEvent: recordSaiPlacementEvent,
+  gatewayStatusOptions,
+  placementOptions: saiPlacementOptions
+};
 
 export class SaiExtensionController {
   private statusBarItem?: vscode.StatusBarItem;
@@ -421,13 +454,18 @@ export function createExtensionController(
 // Wire the sidebar sponsor banner: a webview that shows a placement while the
 // agent is waiting on the model (detected via the gateway's /v1/status), holds
 // it long enough to qualify, reports the billable event, and refreshes the
-// wallet. Uses the real vscode APIs directly (the controller above is the
-// unit-tested, dependency-injected core); kept defensive so a missing API or a
-// failing poll never throws into activation.
-function setupAdBanner(context: vscode.ExtensionContext, controller: SaiExtensionController): void {
-  const provider = new SaiAdViewProvider();
+// wallet. The production path uses the real VS Code APIs and local SAI
+// transports; tests inject a fake clock, poller, and API so the activation-level
+// banner journey is covered without launching an Extension Development Host.
+export function setupAdBanner(
+  context: vscode.ExtensionContext,
+  controller: SaiExtensionController,
+  api: AdBannerVscodeApi = vscode,
+  runtime: AdBannerRuntime = DEFAULT_AD_BANNER_RUNTIME
+): void {
+  const provider = new SaiAdViewProvider([OPEN_SPONSOR_COMMAND]);
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(SaiAdViewProvider.viewType, provider)
+    api.window.registerWebviewViewProvider(SaiAdViewProvider.viewType, provider)
   );
 
   let lastInputMs = 0;
@@ -435,9 +473,9 @@ function setupAdBanner(context: vscode.ExtensionContext, controller: SaiExtensio
     // Returning focus to VS Code is a user presence signal for the local wait
     // surface. Qualification still requires the view to remain visible for the
     // backend's five-second hold.
-    vscode.window.onDidChangeWindowState((state) => {
+    api.window.onDidChangeWindowState((state) => {
       if (state.focused) {
-        lastInputMs = Date.now();
+        lastInputMs = runtime.nowMs();
       }
     }),
     // Only genuine keyboard/mouse cursor activity counts as presence. Programmatic
@@ -445,20 +483,27 @@ function setupAdBanner(context: vscode.ExtensionContext, controller: SaiExtensio
     // extension cannot fire synthetic events to fake attendance, and an agent
     // editing files while you are away never keeps the wait "attended". Document
     // edits are deliberately NOT a presence signal for the same reason.
-    vscode.window.onDidChangeTextEditorSelection((event) => {
+    api.window.onDidChangeTextEditorSelection((event) => {
       if (
-        event.kind === vscode.TextEditorSelectionChangeKind.Keyboard
-        || event.kind === vscode.TextEditorSelectionChangeKind.Mouse
+        event.kind === api.TextEditorSelectionChangeKind.Keyboard
+        || event.kind === api.TextEditorSelectionChangeKind.Mouse
       ) {
-        lastInputMs = Date.now();
+        lastInputMs = runtime.nowMs();
       }
     })
   );
 
   const engine = new AdEngine({
-    fetchPlacement: async (attended) => parsePlacement(await fetchSaiPlacement({ tool: controller.currentPlacementTool(), attended }, saiPlacementOptions())),
+    fetchPlacement: async (attended) => parsePlacement(await runtime.fetchPlacement(
+      { tool: controller.currentPlacementTool(), attended },
+      runtime.placementOptions()
+    )),
     recordQualified: async (placement, visibleSeconds, attended) => {
-      await recordSaiPlacementEvent(placement, { event: "qualified_5s", visibleSeconds, attended }, saiPlacementOptions());
+      await runtime.recordPlacementEvent(
+        placement,
+        { event: "qualified_5s", visibleSeconds, attended },
+        runtime.placementOptions()
+      );
     },
     showCard: (placement) => provider.showCard(placement),
     clearCard: () => provider.clearCard(),
@@ -476,18 +521,18 @@ function setupAdBanner(context: vscode.ExtensionContext, controller: SaiExtensio
   });
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(OPEN_SPONSOR_COMMAND, async () => {
+    api.commands.registerCommand(OPEN_SPONSOR_COMMAND, async () => {
       const target = safeHttpsUrl(provider.current?.click_url);
       if (!target) {
         return;
       }
       // The /c/ redirect records the paid click server-side, then forwards to
       // the sponsor. Only ever open the backend-issued https redirect.
-      await vscode.env.openExternal(vscode.Uri.parse(target));
+      await api.env.openExternal(api.Uri.parse(target));
     })
   );
 
-  const focused = (): boolean => vscode.window.state.focused;
+  const focused = (): boolean => api.window.state.focused;
   let ticking = false;
   const tick = async (): Promise<void> => {
     if (ticking || !focused()) {
@@ -495,16 +540,16 @@ function setupAdBanner(context: vscode.ExtensionContext, controller: SaiExtensio
     }
     ticking = true;
     try {
-      const status = await readGatewayStatus(gatewayStatusOptions());
+      const status = await runtime.readGatewayStatus(runtime.gatewayStatusOptions());
       if (!status) {
         return;
       }
-      const attended = focused() && Date.now() - lastInputMs < ATTENDED_INPUT_WINDOW_MS;
+      const attended = focused() && runtime.nowMs() - lastInputMs < ATTENDED_INPUT_WINDOW_MS;
       await engine.update({
         activeRequests: status.activeRequests,
         attended,
         viewVisible: provider.isVisible(),
-        nowMs: Date.now()
+        nowMs: runtime.nowMs()
       });
     } catch {
       // A poll failure (gateway down, transient CLI error) is non-fatal.
@@ -513,10 +558,10 @@ function setupAdBanner(context: vscode.ExtensionContext, controller: SaiExtensio
     }
   };
 
-  const timer = setInterval(() => {
+  const timer = runtime.setInterval(() => {
     void tick();
   }, AD_POLL_INTERVAL_MS);
-  context.subscriptions.push({ dispose: () => clearInterval(timer) });
+  context.subscriptions.push({ dispose: () => runtime.clearInterval(timer) });
 }
 
 export function activate(context: vscode.ExtensionContext): SaiExtensionController {

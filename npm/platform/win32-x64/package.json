@@ -1,6 +1,6 @@
 {
   "name": "@sponsoredai/cli-win32-x64",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Windows x64 binary for @sponsoredai/cli.",
   "license": "AGPL-3.0-or-later",
   "homepage": "https://sponsoredai.dev",

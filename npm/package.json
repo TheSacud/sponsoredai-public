@@ -1,6 +1,6 @@
 {
   "name": "@sponsoredai/cli",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Local-first CLI and overlay for sponsored AI credits and cash-out while Claude Code and Codex wait.",
   "keywords": [
     "claude-code",
@@ -32,9 +32,9 @@
     "README.md"
   ],
   "optionalDependencies": {
-    "@sponsoredai/cli-darwin-arm64": "0.2.9",
-    "@sponsoredai/cli-linux-x64": "0.2.9",
-    "@sponsoredai/cli-win32-x64": "0.2.9"
+    "@sponsoredai/cli-darwin-arm64": "0.2.10",
+    "@sponsoredai/cli-linux-x64": "0.2.10",
+    "@sponsoredai/cli-win32-x64": "0.2.10"
   },
   "os": [
     "darwin",

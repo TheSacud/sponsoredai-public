@@ -175,6 +175,12 @@ function createContext() {
   return { subscriptions: [] as Disposable[] };
 }
 
+async function flushAsync(): Promise<void> {
+  for (let i = 0; i < 8; i += 1) {
+    await Promise.resolve();
+  }
+}
+
 function sampleWalletPayload(now = "2026-06-16T10:00:00.000Z") {
   return {
     balance: 3.42,
@@ -728,6 +734,170 @@ test("a sponsor occupies the status bar during a wait and the wallet is restored
   controller.clearSponsorStatus();
   assert.equal(bar.text, "SAI: 2.500 credits eligible");
   assert.equal(bar.command, extension.COMMANDS.showMenu);
+});
+
+test("setupAdBanner drives a full VS Code banner poll journey", async () => {
+  const fake = createFakeApi();
+  const context = createContext();
+  const controller = extension.createExtensionController(fake.api as never, {
+    readWalletJson: async () => sampleWalletPayload()
+  });
+  controller.activate(context as never);
+  await controller.refreshWalletStatus();
+
+  let nowMs = 60_000;
+  let activeRequests = 1;
+  let poll: (() => void) | undefined;
+  let intervalCleared = false;
+  let revealPreserveFocus: boolean | undefined;
+  const openedExternal: string[] = [];
+  const selectionHandlers: Array<(event: { kind?: number }) => void> = [];
+  const windowStateHandlers: Array<(state: { focused: boolean }) => void> = [];
+  const fetchCalls: Array<{ request: unknown; options: unknown }> = [];
+  const eventCalls: Array<{ placement: unknown; request: { visibleSeconds?: number }; options: unknown }> = [];
+  let webviewProvider: { resolveWebviewView(view: unknown): void } | undefined;
+
+  const setupApi = {
+    ...fake.api,
+    TextEditorSelectionChangeKind: { Keyboard: 1, Mouse: 2, Command: 3 },
+    Uri: {
+      parse(value: string): { toString(): string } {
+        return { toString: () => value };
+      }
+    },
+    env: {
+      async openExternal(uri: { toString(): string }): Promise<boolean> {
+        openedExternal.push(uri.toString());
+        return true;
+      }
+    },
+    window: {
+      ...fake.api.window,
+      state: { focused: true },
+      registerWebviewViewProvider(viewType: string, provider: unknown): Disposable {
+        assert.equal(viewType, "sai.adBanner");
+        webviewProvider = provider as { resolveWebviewView(view: unknown): void };
+        return { dispose: () => undefined };
+      },
+      onDidChangeWindowState(callback: (state: { focused: boolean }) => void): Disposable {
+        windowStateHandlers.push(callback);
+        return { dispose: () => undefined };
+      },
+      onDidChangeTextEditorSelection(callback: (event: { kind?: number }) => void): Disposable {
+        selectionHandlers.push(callback);
+        return { dispose: () => undefined };
+      }
+    }
+  };
+  const runtime = {
+    nowMs: () => nowMs,
+    setInterval(callback: () => void, ms: number): number {
+      assert.equal(ms, 1000);
+      poll = callback;
+      return 7;
+    },
+    clearInterval(handle: unknown): void {
+      assert.equal(handle, 7);
+      intervalCleared = true;
+    },
+    readGatewayStatus: async (options: unknown) => {
+      assert.deepEqual(options, { host: "127.0.0.1", port: 8787 });
+      return { activeRequests };
+    },
+    fetchPlacement: async (request: unknown, options: unknown) => {
+      fetchCalls.push({ request, options });
+      return {
+        placement: {
+          placement_id: "plc_1",
+          signature: "sig_1",
+          sponsor: "Acme $(zap) Tools",
+          message: "Ship faster",
+          url: "https://acme.example",
+          click_url: "https://sponsoredai.dev/c/plc_1/clt_1",
+          credit_amount: 0.02
+        }
+      };
+    },
+    recordPlacementEvent: async (
+      placement: unknown,
+      request: { visibleSeconds?: number },
+      options: unknown
+    ) => {
+      eventCalls.push({ placement, request, options });
+      return { ok: true };
+    },
+    gatewayStatusOptions: () => ({ host: "127.0.0.1", port: 8787 }),
+    placementOptions: () => ({ gateway: { host: "127.0.0.1", port: 8787 } })
+  };
+
+  extension.setupAdBanner(context as never, controller, setupApi as never, runtime as never);
+  assert.ok(webviewProvider);
+  assert.ok(poll);
+  assert.equal(selectionHandlers.length, 1);
+  assert.equal(windowStateHandlers.length, 1);
+
+  const view = {
+    visible: true,
+    webview: {
+      options: {},
+      html: ""
+    },
+    onDidDispose(): Disposable {
+      return { dispose: () => undefined };
+    },
+    show(preserveFocus?: boolean): void {
+      revealPreserveFocus = preserveFocus;
+    }
+  };
+  webviewProvider.resolveWebviewView(view);
+  const commandUris = (view.webview.options as { enableCommandUris?: string[] }).enableCommandUris;
+  assert.deepEqual(commandUris, [extension.OPEN_SPONSOR_COMMAND]);
+  assert.match(view.webview.html, /data-testid="sai-ad-empty"/);
+
+  poll();
+  await flushAsync();
+  assert.equal(fetchCalls.length, 0);
+
+  selectionHandlers[0]({ kind: setupApi.TextEditorSelectionChangeKind.Command });
+  poll();
+  await flushAsync();
+  assert.equal(fetchCalls.length, 0);
+
+  selectionHandlers[0]({ kind: setupApi.TextEditorSelectionChangeKind.Keyboard });
+  poll();
+  await flushAsync();
+  assert.deepEqual(fetchCalls[0], {
+    request: { tool: "codex", attended: true },
+    options: { gateway: { host: "127.0.0.1", port: 8787 } }
+  });
+  assert.equal(revealPreserveFocus, true);
+  assert.match(view.webview.html, /data-testid="sai-ad-card"/);
+  assert.match(view.webview.html, /Acme \$\(zap\) Tools/);
+  assert.equal(fake.statusBarItems[0].text, "$(megaphone) Acme ( zap) Tools");
+  assert.equal(fake.statusBarItems[0].command, extension.OPEN_SPONSOR_COMMAND);
+
+  const openSponsor = fake.registeredCommands.get(extension.OPEN_SPONSOR_COMMAND);
+  assert.ok(openSponsor);
+  await openSponsor();
+  assert.deepEqual(openedExternal, ["https://sponsoredai.dev/c/plc_1/clt_1"]);
+
+  nowMs += 5_300;
+  poll();
+  await flushAsync();
+  assert.equal(eventCalls.length, 1);
+  assert.equal(eventCalls[0].request.visibleSeconds !== undefined && eventCalls[0].request.visibleSeconds > 5, true);
+
+  activeRequests = 0;
+  nowMs += 1_000;
+  poll();
+  await flushAsync();
+  assert.match(view.webview.html, /data-testid="sai-ad-empty"/);
+  assert.equal(fake.statusBarItems[0].command, extension.COMMANDS.showMenu);
+
+  for (const subscription of context.subscriptions) {
+    subscription.dispose();
+  }
+  assert.equal(intervalCleared, true);
 });
 
 test("a stale wallet refresh does not overwrite a newer result", async () => {
