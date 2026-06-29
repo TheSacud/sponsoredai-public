@@ -77,7 +77,9 @@ class ClientBinarySmokeTests(unittest.TestCase):
         self.assertIn("client binary smoke OK", result.stdout)
 
     def test_relative_binary_path_is_resolved_before_execution(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        # Keep the temp dir on ROOT's drive: os.path.relpath can't express a
+        # path across drives on Windows (CI checks out on D: but %TEMP% is C:).
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             binary = self.fake_binary(Path(tmp), "good")
             relative = Path(os.path.relpath(binary, ROOT))
             result = self.run_smoke(relative)
