@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7
+
+- Add local diagnostics for activation setup time and SAI command latency.
+- Add a package smoke gate for compiling, testing, packaging, and validating VSIX contents.
+- Add an extension-specific version contract check for Marketplace identity, changelog coverage, and release smoke wiring.
+
 ## 0.0.6
 
 - Scope the sponsor banner's command URIs to the single `sai.openSponsor` redirect command instead of enabling all command URIs in the webview.

@@ -101,6 +101,7 @@ type AdBannerVscodeApi = Pick<
 
 export interface SaiCliReader {
   readWalletJson(): Promise<unknown>;
+  readVersion?(): Promise<string>;
 }
 
 type MenuAction = "codex" | "claude" | "overlay" | "wallet" | "dashboard" | "installCli" | "diagnostics";
@@ -110,11 +111,74 @@ interface MenuItem extends vscode.QuickPickItem {
 }
 
 const DEFAULT_CLI: SaiCliReader = {
-  readWalletJson: readSaiWalletJson
+  readWalletJson: readSaiWalletJson,
+  readVersion: readSaiVersion
 };
 
 type SaiTerminalOptionsProvider = () => SaiTerminalCommandOptions;
 type PlacementTool = "codex" | "claude";
+type CommandCallback = (...args: unknown[]) => unknown;
+
+export interface SaiExtensionRuntime {
+  nowMs(): number;
+}
+
+export interface SaiCommandPerformance {
+  readonly command: string;
+  readonly count: number;
+  readonly lastDurationMs: number;
+  readonly maxDurationMs: number;
+  readonly lastCompletedAtMs: number;
+}
+
+export interface SaiExtensionPerformanceSnapshot {
+  readonly activationSetupDurationMs?: number;
+  readonly commandCount: number;
+  readonly lastCommand?: SaiCommandPerformance;
+  readonly slowestCommand?: SaiCommandPerformance;
+}
+
+const DEFAULT_EXTENSION_RUNTIME: SaiExtensionRuntime = {
+  nowMs: () => Date.now()
+};
+
+function elapsedDurationMs(startMs: number, endMs: number): number {
+  const duration = endMs - startMs;
+  if (!Number.isFinite(duration) || duration < 0) {
+    return 0;
+  }
+  return Math.round(duration * 10) / 10;
+}
+
+export function formatDurationMs(durationMs: number | undefined): string {
+  if (durationMs === undefined) {
+    return "not measured";
+  }
+  const value = Number.isInteger(durationMs) ? durationMs.toFixed(0) : durationMs.toFixed(1);
+  return `${value} ms`;
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (
+    (typeof value === "object" || typeof value === "function")
+    && value !== null
+    && typeof (value as { then?: unknown }).then === "function"
+  );
+}
+
+function copyCommandPerformance(value: SaiCommandPerformance | undefined): SaiCommandPerformance | undefined {
+  return value ? { ...value } : undefined;
+}
+
+function formatCommandPerformance(
+  value: SaiCommandPerformance | undefined,
+  durationMs: number | undefined = value?.lastDurationMs
+): string {
+  if (!value) {
+    return "none";
+  }
+  return `${value.command}: ${formatDurationMs(durationMs)} (${value.count} run${value.count === 1 ? "" : "s"})`;
+}
 
 interface AdBannerRuntime {
   nowMs(): number;
@@ -156,14 +220,19 @@ export class SaiExtensionController {
   // shows once per new version per session instead of on every wallet refresh.
   private notifiedUpdateVersion?: string;
   private placementTool: PlacementTool = DEFAULT_PLACEMENT_TOOL;
+  private activationSetupDurationMs?: number;
+  private readonly commandPerformance = new Map<string, SaiCommandPerformance>();
+  private lastCommandPerformance?: SaiCommandPerformance;
 
   public constructor(
     private readonly api: VscodeApi,
     private readonly cli: SaiCliReader = DEFAULT_CLI,
-    private readonly terminalOptions: SaiTerminalOptionsProvider = () => ({})
+    private readonly terminalOptions: SaiTerminalOptionsProvider = () => ({}),
+    private readonly runtime: SaiExtensionRuntime = DEFAULT_EXTENSION_RUNTIME
   ) {}
 
   public activate(context: vscode.ExtensionContext): void {
+    const startedAtMs = this.runtime.nowMs();
     this.statusBarItem = this.api.window.createStatusBarItem(this.api.StatusBarAlignment.Left, 100);
     this.statusBarItem.command = COMMANDS.showMenu;
     this.statusBarItem.text = "SAI: checking...";
@@ -186,6 +255,7 @@ export class SaiExtensionController {
     this.registerCommand(context, COMMANDS.diagnostics, () => this.showDiagnostics());
 
     void this.refreshWalletStatus();
+    this.activationSetupDurationMs = elapsedDurationMs(startedAtMs, this.runtime.nowMs());
   }
 
   public async refreshWalletStatus(): Promise<WalletSnapshot | undefined> {
@@ -216,9 +286,24 @@ export class SaiExtensionController {
   private registerCommand(
     context: vscode.ExtensionContext,
     command: string,
-    callback: (...args: unknown[]) => unknown
+    callback: CommandCallback
   ): void {
-    context.subscriptions.push(this.api.commands.registerCommand(command, callback));
+    context.subscriptions.push(this.api.commands.registerCommand(command, (...args: unknown[]) => {
+      const startedAtMs = this.runtime.nowMs();
+      try {
+        const result = callback(...args);
+        if (isPromiseLike(result)) {
+          return Promise.resolve(result).finally(() => {
+            this.recordCommandPerformance(command, startedAtMs);
+          });
+        }
+        this.recordCommandPerformance(command, startedAtMs);
+        return result;
+      } catch (error) {
+        this.recordCommandPerformance(command, startedAtMs);
+        throw error;
+      }
+    }));
   }
 
   private async showMenu(): Promise<void> {
@@ -272,9 +357,10 @@ export class SaiExtensionController {
 
   private async showDiagnostics(): Promise<void> {
     const diagnostics = saiPlacementDiagnosticsSnapshot();
+    const performance = this.performanceSnapshot();
     let version = "unavailable";
     try {
-      version = await readSaiVersion(saiCliOptions());
+      version = await (this.cli.readVersion ? this.cli.readVersion() : readSaiVersion(saiCliOptions()));
     } catch (error) {
       version = error instanceof SaiCliError ? error.reason : "unavailable";
     }
@@ -289,7 +375,14 @@ export class SaiExtensionController {
         { label: `Gateway placement endpoint: ${endpointAvailable}` },
         { label: `Placement CLI fallback used: ${fallbackUsed}` },
         { label: `Last gateway placement error: ${diagnostics.lastGatewayPlacementError ?? "none"}` },
-        { label: `Last CLI placement error: ${diagnostics.lastCliPlacementError ?? "none"}` }
+        { label: `Last CLI placement error: ${diagnostics.lastCliPlacementError ?? "none"}` },
+        { label: `Activation setup: ${formatDurationMs(performance.activationSetupDurationMs)}` },
+        { label: `Measured SAI commands: ${performance.commandCount}` },
+        { label: `Last command latency: ${formatCommandPerformance(performance.lastCommand)}` },
+        { label: `Slowest command latency: ${formatCommandPerformance(
+          performance.slowestCommand,
+          performance.slowestCommand?.maxDurationMs
+        )}` }
       ],
       {
         title: "SAI Diagnostics",
@@ -354,6 +447,23 @@ export class SaiExtensionController {
 
   public currentPlacementTool(): PlacementTool {
     return this.placementTool;
+  }
+
+  public performanceSnapshot(): SaiExtensionPerformanceSnapshot {
+    let slowest: SaiCommandPerformance | undefined;
+    let commandCount = 0;
+    for (const value of this.commandPerformance.values()) {
+      commandCount += value.count;
+      if (!slowest || value.maxDurationMs > slowest.maxDurationMs) {
+        slowest = value;
+      }
+    }
+    return {
+      activationSetupDurationMs: this.activationSetupDurationMs,
+      commandCount,
+      lastCommand: copyCommandPerformance(this.lastCommandPerformance),
+      slowestCommand: copyCommandPerformance(slowest)
+    };
   }
 
   private runSaiTerminal(action: "codex" | "claude" | "overlay" | "dashboard"): void {
@@ -441,14 +551,30 @@ export class SaiExtensionController {
     // Unknown error: keep the tooltip generic so nothing sensitive leaks.
     this.setWalletStatus("SAI: refresh failed", "SAI wallet refresh failed. Try refreshing.");
   }
+
+  private recordCommandPerformance(command: string, startedAtMs: number): void {
+    const completedAtMs = this.runtime.nowMs();
+    const durationMs = elapsedDurationMs(startedAtMs, completedAtMs);
+    const previous = this.commandPerformance.get(command);
+    const next = {
+      command,
+      count: (previous?.count ?? 0) + 1,
+      lastDurationMs: durationMs,
+      maxDurationMs: Math.max(previous?.maxDurationMs ?? 0, durationMs),
+      lastCompletedAtMs: completedAtMs
+    };
+    this.commandPerformance.set(command, next);
+    this.lastCommandPerformance = next;
+  }
 }
 
 export function createExtensionController(
   api: VscodeApi = vscode,
   cli: SaiCliReader = DEFAULT_CLI,
-  terminalOptions: SaiTerminalOptionsProvider = () => ({})
+  terminalOptions: SaiTerminalOptionsProvider = () => ({}),
+  runtime: SaiExtensionRuntime = DEFAULT_EXTENSION_RUNTIME
 ): SaiExtensionController {
-  return new SaiExtensionController(api, cli, terminalOptions);
+  return new SaiExtensionController(api, cli, terminalOptions, runtime);
 }
 
 // Wire the sidebar sponsor banner: a webview that shows a placement while the
@@ -568,7 +694,8 @@ export function activate(context: vscode.ExtensionContext): SaiExtensionControll
   // Honor sai.cliPath for the wallet read too, so development against the source
   // CLI (or a non-standard install) drives the whole surface, not just the ads.
   const controller = createExtensionController(vscode, {
-    readWalletJson: () => readSaiWalletJson(saiCliOptions())
+    readWalletJson: () => readSaiWalletJson(saiCliOptions()),
+    readVersion: () => readSaiVersion(saiCliOptions())
   }, () => {
     const options = saiCliOptions();
     return {

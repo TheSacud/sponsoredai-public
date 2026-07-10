@@ -8,6 +8,7 @@ from sai.runner import (
     POSIX_INTERRUPT_GRACE_SECONDS,
     WINDOWS_INTERRUPT_GRACE_SECONDS,
     WINDOWS_KILL_WAIT_SECONDS,
+    _settle_ready_sponsor,
     normalize_exit_code,
     terminate_process,
     resolve_command,
@@ -53,6 +54,54 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(receipt.qualified_waits, 1)
         self.assertEqual(receipt.balance, 2.5)
         self.assertEqual(receipt.session_id, "sess_test")
+
+    def test_settled_receipt_preserves_prior_eager_earnings_on_final_interrupt(self):
+        class InterruptingSession:
+            id = "sess_test"
+            qualified_waits = 1
+            earned = 0.25
+
+            def settle(self):
+                raise KeyboardInterrupt
+
+        wallet = mock.Mock()
+        wallet.balance.return_value = 2.5
+        runner = CommandRunner({"frequency": "normal"}, wallet=wallet)
+
+        with mock.patch("sai.runner.time.monotonic", return_value=12.0):
+            receipt = runner._settled_receipt(10.0, InterruptingSession(), 0)
+
+        self.assertEqual(receipt.exit_code, 130)
+        self.assertEqual(receipt.credits_earned, 0.25)
+        self.assertEqual(receipt.qualified_waits, 1)
+
+    def test_settle_ready_sponsor_settles_when_progress_is_eligible(self):
+        session = mock.Mock()
+        session.reward_progress.return_value = {
+            "visible_seconds": 5.2,
+            "remaining_seconds": 0.0,
+            "progress": 1.0,
+            "eligible": True,
+        }
+
+        _settle_ready_sponsor(session, 12.5)
+
+        session.reward_progress.assert_called_once_with(12.5)
+        session.settle.assert_called_once_with(12.5)
+
+    def test_settle_ready_sponsor_ignores_ineligible_progress(self):
+        session = mock.Mock()
+        session.reward_progress.return_value = {
+            "visible_seconds": 2.0,
+            "remaining_seconds": 3.0,
+            "progress": 0.4,
+            "eligible": False,
+        }
+
+        _settle_ready_sponsor(session, 12.5)
+
+        session.reward_progress.assert_called_once_with(12.5)
+        session.settle.assert_not_called()
 
     def _stub_status(self):
         status = mock.Mock()

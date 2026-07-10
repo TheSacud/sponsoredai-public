@@ -2,7 +2,7 @@
   "name": "sponsoredai-credits",
   "displayName": "SAI Credits by Sacud",
   "description": "Earn sponsored AI credits or cash-out eligible balance while Claude Code and Codex wait.",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "publisher": "Sacud",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -136,7 +136,10 @@
     "compile": "tsc -p ./",
     "lint": "tsc -p ./ --noEmit",
     "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
-    "package": "vsce package --no-dependencies"
+    "version:check": "node scripts/checkVersion.js",
+    "package": "vsce package --no-dependencies",
+    "package:check": "node scripts/checkPackage.js --require-vsix",
+    "package:smoke": "npm run version:check && npm test && npm run package && npm run package:check"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",

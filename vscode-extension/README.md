@@ -69,8 +69,9 @@ SAI itself is designed to measure wait time, not your work. See the [SAI trust b
 npm install
 npm run compile
 npm run lint
+npm run version:check
 npm test
-npx vsce package
+npm run package:smoke
 ```
 
 The generated VSIX can be installed locally with VS Code's "Install from VSIX..." command.

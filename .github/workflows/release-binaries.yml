@@ -154,12 +154,9 @@ jobs:
       - name: Install extension dependencies
         working-directory: vscode-extension
         run: npm install
-      - name: Test extension
+      - name: Test/package extension
         working-directory: vscode-extension
-        run: npm test
-      - name: Package VSIX
-        working-directory: vscode-extension
-        run: npm run package
+        run: npm run package:smoke
       - name: Publish to VS Code Marketplace when configured
         # Publish only from the public repo (the build/test/package steps above
         # still run as CI in both repos); see publish-npm for the rationale.

@@ -87,6 +87,7 @@ function readPackageManifest() {
     displayName: string;
     version: string;
     activationEvents?: string[];
+    scripts: Record<string, string>;
     contributes: {
       configuration: {
         properties: Record<string, { scope?: string }>;
@@ -225,6 +226,116 @@ test("registers SAI commands on activation", () => {
   }
 });
 
+test("records activation setup and synchronous command latency locally", async () => {
+  const fake = createFakeApi();
+  const ticks = [1000, 1008, 1050, 1063];
+  let now = ticks[0];
+  const controller = extension.createExtensionController(
+    fake.api as never,
+    {
+      readWalletJson: () => new Promise(() => undefined)
+    },
+    () => ({ platform: "linux" }),
+    {
+      nowMs: () => {
+        const next = ticks.shift();
+        if (next !== undefined) {
+          now = next;
+        }
+        return now;
+      }
+    }
+  );
+
+  controller.activate(createContext() as never);
+  assert.equal(controller.performanceSnapshot().activationSetupDurationMs, 8);
+  assert.equal(controller.performanceSnapshot().commandCount, 0);
+
+  const command = fake.registeredCommands.get(extension.COMMANDS.startCodex);
+  assert.ok(command);
+  await command();
+
+  const snapshot = controller.performanceSnapshot();
+  assert.equal(snapshot.commandCount, 1);
+  assert.deepEqual(snapshot.lastCommand, {
+    command: extension.COMMANDS.startCodex,
+    count: 1,
+    lastDurationMs: 13,
+    maxDurationMs: 13,
+    lastCompletedAtMs: 1063
+  });
+  assert.equal(snapshot.slowestCommand?.command, extension.COMMANDS.startCodex);
+  assert.equal(extension.formatDurationMs(snapshot.lastCommand?.lastDurationMs), "13 ms");
+});
+
+test("records async command latency and surfaces it in diagnostics", async () => {
+  const fake = createFakeApi();
+  const ticks = [10, 11, 20, 50, 100, 102];
+  let now = ticks[0];
+  let readCount = 0;
+  let resolveWallet: ((value: unknown) => void) | undefined;
+  const controller = extension.createExtensionController(
+    fake.api as never,
+    {
+      readWalletJson: () => {
+        readCount += 1;
+        if (readCount === 2) {
+          return new Promise((resolve) => {
+            resolveWallet = resolve;
+          });
+        }
+        return Promise.resolve(sampleWalletPayload());
+      },
+      readVersion: async () => "sai 0.0.6"
+    },
+    () => ({ platform: "linux" }),
+    {
+      nowMs: () => {
+        const next = ticks.shift();
+        if (next !== undefined) {
+          now = next;
+        }
+        return now;
+      }
+    }
+  );
+
+  controller.activate(createContext() as never);
+
+  const walletCommand = fake.registeredCommands.get(extension.COMMANDS.wallet);
+  assert.ok(walletCommand);
+  const walletResult = walletCommand();
+  assert.equal(controller.performanceSnapshot().commandCount, 0);
+
+  resolveWallet?.(sampleWalletPayload());
+  await walletResult;
+
+  const walletSnapshot = controller.performanceSnapshot();
+  assert.equal(walletSnapshot.commandCount, 1);
+  assert.deepEqual(walletSnapshot.lastCommand, {
+    command: extension.COMMANDS.wallet,
+    count: 1,
+    lastDurationMs: 30,
+    maxDurationMs: 30,
+    lastCompletedAtMs: 50
+  });
+
+  const diagnostics = fake.registeredCommands.get(extension.COMMANDS.diagnostics);
+  assert.ok(diagnostics);
+  await diagnostics();
+
+  const labels = (fake.calls.quickPickItems as Array<{ label: string }>).map((item) => item.label);
+  assert.equal(labels.includes("sai --version: sai 0.0.6"), true);
+  assert.equal(labels.includes("Activation setup: 1 ms"), true);
+  assert.equal(labels.includes("Measured SAI commands: 1"), true);
+  assert.equal(labels.includes(`Last command latency: ${extension.COMMANDS.wallet}: 30 ms (1 run)`), true);
+  assert.equal(labels.includes(`Slowest command latency: ${extension.COMMANDS.wallet}: 30 ms (1 run)`), true);
+
+  const finalSnapshot = controller.performanceSnapshot();
+  assert.equal(finalSnapshot.commandCount, 2);
+  assert.equal(finalSnapshot.lastCommand?.command, extension.COMMANDS.diagnostics);
+});
+
 test("manifest keeps sensitive settings machine-scoped and hides dev preview", () => {
   const manifest = readPackageManifest();
   const properties = manifest.contributes.configuration.properties;
@@ -251,6 +362,34 @@ test("manifest keeps sensitive settings machine-scoped and hides dev preview", (
     .map((view) => view.id);
   for (const viewId of viewIds) {
     assert.equal(activationEvents.includes(`onView:${viewId}`), false);
+  }
+});
+
+test("manifest keeps package smoke checks wired into the extension release path", () => {
+  const manifest = readPackageManifest();
+  assert.equal(manifest.scripts.package, "vsce package --no-dependencies");
+  assert.equal(manifest.scripts["version:check"], "node scripts/checkVersion.js");
+  assert.equal(manifest.scripts["package:check"], "node scripts/checkPackage.js --require-vsix");
+  assert.match(manifest.scripts["package:smoke"], /npm run version:check/);
+  assert.match(manifest.scripts["package:smoke"], /npm test/);
+  assert.match(manifest.scripts["package:smoke"], /npm run package/);
+  assert.match(manifest.scripts["package:smoke"], /npm run package:check/);
+
+  const vscodeignore = fs.readFileSync(path.join(__dirname, "..", "..", ".vscodeignore"), "utf8")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  for (const pattern of [
+    "src/**",
+    "test/**",
+    "out/test/**",
+    "scripts/**",
+    "node_modules/**",
+    "package-lock.json",
+    "*.vsix",
+    "DEV_TESTING.md"
+  ]) {
+    assert.equal(vscodeignore.includes(pattern), true, `.vscodeignore should include ${pattern}`);
   }
 });
 

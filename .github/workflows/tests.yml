@@ -58,6 +58,6 @@ jobs:
       - name: Install dependencies
         working-directory: vscode-extension
         run: npm install
-      - name: Run tests
+      - name: Run package smoke
         working-directory: vscode-extension
-        run: npm test
+        run: npm run package:smoke

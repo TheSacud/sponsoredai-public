@@ -10,6 +10,7 @@ from sai.config import USER_AGENT, load_config
 from sai.sponsors import (
     AFK_ROTATION_LIMIT,
     LOCAL_SPONSORS,
+    QUALIFICATION_TIMING_RETRY_SECONDS,
     RemotePlacementClient,
     SponsorCard,
     SponsorSession,
@@ -502,6 +503,196 @@ class SponsorTests(unittest.TestCase):
             self.assertEqual(client.events[1][1]["event"], "qualified_5s")
             self.assertEqual(client.events[1][1]["visible_seconds"], 6.0)
             self.assertEqual(wallet.balance(), 0.01)
+
+    def test_remote_session_settlement_is_cumulative_and_idempotent(self):
+        class FakePlacementClient:
+            def __init__(self):
+                self.events = []
+
+            def next_placement(self, tool, config, terminal_is_interactive, surface=None):
+                return SponsorCard(
+                    id="plc_test",
+                    sponsor="Remote Sponsor",
+                    message="Remote creative",
+                    url="https://sponsor.example",
+                    credit_amount=0.01,
+                    placement_id="plc_test",
+                    campaign_id="cmp_test",
+                )
+
+            def record_event(self, placement_id, payload):
+                self.events.append((placement_id, payload))
+                if payload["event"] == "qualified_5s":
+                    return {"accepted": True, "billable": True}
+                return {"accepted": True, "billable": False}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            wallet = Wallet(Path(tmp) / "wallet.json")
+            client = FakePlacementClient()
+            session = SponsorSession(
+                tool="codex",
+                config={"frequency": "high", "ads_enabled": True},
+                wallet=wallet,
+                placement_client=client,
+            )
+
+            env = clear_ci_env()
+            env["SAI_HOME"] = tmp
+            with patch.dict(os.environ, env, clear=False):
+                self.assertIsNotNone(session.maybe_card(now=10.0, idle_for=6.0, terminal_is_interactive=True))
+
+            self.assertEqual(session.settle(now=16.0), 0.01)
+            self.assertEqual(session.settle(now=20.0), 0.01)
+            self.assertEqual(session.qualified_waits, 1)
+            self.assertEqual(wallet.balance(), 0.01)
+            qualified_events = [event for _placement, event in client.events if event["event"] == "qualified_5s"]
+            self.assertEqual(len(qualified_events), 1)
+
+    def test_remote_session_retries_qualification_when_backend_is_unreachable(self):
+        class FlakyPlacementClient:
+            def __init__(self):
+                self.events = []
+
+            def next_placement(self, tool, config, terminal_is_interactive, surface=None):
+                return SponsorCard(
+                    id="plc_test",
+                    sponsor="Remote Sponsor",
+                    message="Remote creative",
+                    url="https://sponsor.example",
+                    credit_amount=0.01,
+                    placement_id="plc_test",
+                    campaign_id="cmp_test",
+                )
+
+            def record_event(self, placement_id, payload):
+                self.events.append((placement_id, payload))
+                if payload["event"] != "qualified_5s":
+                    return {"accepted": True, "billable": False}
+                attempts = sum(1 for _placement, event in self.events if event["event"] == "qualified_5s")
+                if attempts == 1:
+                    return None
+                return {"accepted": True, "billable": True}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            wallet = Wallet(Path(tmp) / "wallet.json")
+            client = FlakyPlacementClient()
+            session = SponsorSession(
+                tool="codex",
+                config={"frequency": "high", "ads_enabled": True},
+                wallet=wallet,
+                placement_client=client,
+            )
+
+            env = clear_ci_env()
+            env["SAI_HOME"] = tmp
+            with patch.dict(os.environ, env, clear=False):
+                self.assertIsNotNone(session.maybe_card(now=10.0, idle_for=6.0, terminal_is_interactive=True))
+
+            self.assertEqual(session.settle(now=16.0), 0.0)
+            self.assertEqual(session.settle(now=20.0), 0.0)
+            self.assertEqual(session.settle(now=27.0), 0.01)
+            self.assertEqual(session.qualified_waits, 1)
+            self.assertEqual(wallet.balance(), 0.01)
+            qualified_events = [event for _placement, event in client.events if event["event"] == "qualified_5s"]
+            self.assertEqual(len(qualified_events), 2)
+
+    def test_remote_session_visible_clock_starts_after_rendered_transport(self):
+        class SlowRenderedPlacementClient:
+            def __init__(self):
+                self.events = []
+
+            def next_placement(self, tool, config, terminal_is_interactive, surface=None):
+                return SponsorCard(
+                    id="plc_test",
+                    sponsor="Remote Sponsor",
+                    message="Remote creative",
+                    url="https://sponsor.example",
+                    credit_amount=0.01,
+                    placement_id="plc_test",
+                    campaign_id="cmp_test",
+                )
+
+            def record_event(self, placement_id, payload):
+                self.events.append((placement_id, payload))
+                if payload["event"] == "qualified_5s":
+                    return {"accepted": True, "billable": True}
+                return {"accepted": True, "billable": False}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            wallet = Wallet(Path(tmp) / "wallet.json")
+            client = SlowRenderedPlacementClient()
+            session = SponsorSession(
+                tool="codex",
+                config={"frequency": "high", "ads_enabled": True},
+                wallet=wallet,
+                placement_client=client,
+            )
+
+            env = clear_ci_env()
+            env["SAI_HOME"] = tmp
+            with patch.dict(os.environ, env, clear=False), \
+                    patch("sai.sponsors.time.monotonic", side_effect=[100.0, 100.4]):
+                self.assertIsNotNone(session.maybe_card(now=10.0, idle_for=6.0, terminal_is_interactive=True))
+
+            self.assertAlmostEqual(session.cards[0].shown_at, 10.4)
+            self.assertEqual(session.settle(now=15.2), 0.0)
+            self.assertEqual(session.settle(now=15.5), 0.01)
+            qualified_events = [event for _placement, event in client.events if event["event"] == "qualified_5s"]
+            self.assertEqual(len(qualified_events), 1)
+            self.assertEqual(qualified_events[0]["visible_seconds"], 5.1)
+
+    def test_remote_session_retries_server_visible_timing_rejection(self):
+        class TimingPlacementClient:
+            def __init__(self):
+                self.events = []
+
+            def next_placement(self, tool, config, terminal_is_interactive, surface=None):
+                return SponsorCard(
+                    id="plc_test",
+                    sponsor="Remote Sponsor",
+                    message="Remote creative",
+                    url="https://sponsor.example",
+                    credit_amount=0.01,
+                    placement_id="plc_test",
+                    campaign_id="cmp_test",
+                )
+
+            def record_event(self, placement_id, payload):
+                self.events.append((placement_id, payload))
+                if payload["event"] != "qualified_5s":
+                    return {"accepted": True, "billable": False}
+                attempts = sum(1 for _placement, event in self.events if event["event"] == "qualified_5s")
+                if attempts == 1:
+                    return {
+                        "accepted": False,
+                        "billable": False,
+                        "invalid_reason": "server_visible_under_5s",
+                    }
+                return {"accepted": True, "billable": True}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            wallet = Wallet(Path(tmp) / "wallet.json")
+            client = TimingPlacementClient()
+            session = SponsorSession(
+                tool="codex",
+                config={"frequency": "high", "ads_enabled": True},
+                wallet=wallet,
+                placement_client=client,
+            )
+
+            env = clear_ci_env()
+            env["SAI_HOME"] = tmp
+            with patch.dict(os.environ, env, clear=False):
+                self.assertIsNotNone(session.maybe_card(now=10.0, idle_for=6.0, terminal_is_interactive=True))
+
+            with patch("sai.sponsors.time.sleep") as sleep:
+                self.assertEqual(session.settle(now=16.0), 0.01)
+
+            sleep.assert_called_once_with(QUALIFICATION_TIMING_RETRY_SECONDS)
+            self.assertEqual(session.qualified_waits, 1)
+            self.assertEqual(wallet.balance(), 0.01)
+            qualified_events = [event for _placement, event in client.events if event["event"] == "qualified_5s"]
+            self.assertEqual(len(qualified_events), 2)
 
     def test_remote_session_reports_reward_progress_for_active_real_card(self):
         class FakePlacementClient:

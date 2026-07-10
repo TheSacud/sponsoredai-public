@@ -154,7 +154,7 @@ class SessionDriver:
         if card is not None:
             self._card = card
             self._window.set_card(card)
-        self._update_reward_progress(now)
+        progress = self._update_reward_progress(now)
 
         if self._card is None:
             # Attended but no creative available (e.g. no placement / disabled).
@@ -187,7 +187,8 @@ class SessionDriver:
         # the billing window even though we stay attended. Guarded by
         # _displaying so the first show (when the window isn't visible yet in the
         # just-sampled state) doesn't immediately freeze the new card.
-        if self._displaying and not (state.overlay_visible and state.same_monitor):
+        integrity_failed = self._displaying and not (state.overlay_visible and state.same_monitor)
+        if integrity_failed:
             logger.warning(
                 "overlay integrity failed card=%s overlay_visible=%s same_monitor=%s",
                 self._card_id(),
@@ -199,6 +200,8 @@ class SessionDriver:
         self._displaying = True
         self._last_hidden_reason = None
         self._emit_status(_STATUS_SHOWING)
+        if not integrity_failed and state.overlay_visible and state.same_monitor:
+            self._settle_ready_progress(progress, now)
         if not was_displaying:
             logger.info("overlay visible card=%s anchor=%s dpi=%s", self._card_id(), self._anchor, dpi)
         return state
@@ -216,12 +219,17 @@ class SessionDriver:
         except Exception:  # noqa: BLE001 - the overlay must outlive a bad status sink
             logger.debug("overlay status sink failed", exc_info=True)
 
-    def _update_reward_progress(self, now: float) -> None:
+    def _update_reward_progress(self, now: float):
         progress = None
         getter = getattr(self._session, "reward_progress", None)
         if callable(getter):
             progress = getter(now)
         self._set_reward_progress(progress)
+        return progress
+
+    def _settle_ready_progress(self, progress, now: float) -> None:
+        if isinstance(progress, dict) and progress.get("eligible"):
+            self._session.settle(now)
 
     def _set_reward_progress(self, progress) -> None:
         setter = getattr(self._surface, "set_reward_progress", None)

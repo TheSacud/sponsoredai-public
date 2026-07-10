@@ -90,6 +90,15 @@ def _sponsor_footer(card, session, width: int, now: float | None = None) -> str:
     return card.footer(width=width)
 
 
+def _settle_ready_sponsor(session, now: float) -> None:
+    getter = getattr(session, "reward_progress", None)
+    if not callable(getter):
+        return
+    progress = getter(now)
+    if isinstance(progress, dict) and progress.get("eligible"):
+        session.settle(now)
+
+
 class CommandRunner:
     def __init__(self, config: dict, wallet: object | None = None) -> None:
         self.config = config
@@ -259,6 +268,8 @@ class CommandRunner:
                             idle_anchor = now
                         elif shown_card is not None and session is not None:
                             status.show(_sponsor_footer(shown_card, session, status.width, now))
+                    if session is not None:
+                        _settle_ready_sponsor(session, now)
                     time.sleep(0.2)
             except KeyboardInterrupt:
                 interrupted = True
@@ -455,6 +466,8 @@ class CommandRunner:
                         status.show(_sponsor_footer(shown_card, session, status.width, now))
                     elif pinned:
                         paint()  # debounced idle re-assert
+                    if session is not None:
+                        _settle_ready_sponsor(session, now)
 
                 # Drain whatever the child wrote between the last poll and exit.
                 while True:
@@ -724,6 +737,8 @@ class CommandRunner:
                     with lock:
                         st["progress"] = progress
                     paint()
+                if session is not None:
+                    _settle_ready_sponsor(session, now)
         except KeyboardInterrupt:
             interrupted = True
         finally:
@@ -765,7 +780,7 @@ class CommandRunner:
         try:
             earned = session.settle()
         except KeyboardInterrupt:
-            earned = 0.0
+            earned = float(getattr(session, "earned", 0.0) or 0.0)
             exit_code = 130
         return RunReceipt(
             exit_code=exit_code,

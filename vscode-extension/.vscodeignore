@@ -2,6 +2,7 @@ src/**
 test/**
 out/test/**
 tsconfig.json
+scripts/**
 *.vsix
 out/**/*.map
 node_modules/**

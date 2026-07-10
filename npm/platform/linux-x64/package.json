@@ -1,6 +1,6 @@
 {
   "name": "@sponsoredai/cli-linux-x64",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "Linux x64 binary for @sponsoredai/cli.",
   "license": "AGPL-3.0-or-later",
   "homepage": "https://sponsoredai.dev",

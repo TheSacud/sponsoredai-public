@@ -169,6 +169,38 @@ class SessionDriverTests(unittest.TestCase):
         self.assertEqual(session.progress_calls, [10.0])
         self.assertEqual(driver._surface.reward_progresses[-1], session.progress)
 
+    def test_eligible_reward_progress_settles_immediately(self):
+        driver, monitor, window, session = build(vstate(overlay=True, same=True, idle=30.0), cards=["CARD"])
+        session.progress = {
+            "visible_seconds": 5.2,
+            "remaining_seconds": 0.0,
+            "progress": 1.0,
+            "eligible": True,
+        }
+
+        driver.tick()
+
+        self.assertEqual(session.progress_calls, [10.0])
+        self.assertEqual(driver._surface.reward_progresses[-1], session.progress)
+        self.assertEqual(session.settles, 1)
+
+    def test_eligible_reward_progress_does_not_settle_when_integrity_fails(self):
+        driver, monitor, window, session = build(vstate(overlay=True, same=True), cards=["CARD"])
+        driver.tick()
+        session.progress = {
+            "visible_seconds": 5.2,
+            "remaining_seconds": 0.0,
+            "progress": 1.0,
+            "eligible": True,
+        }
+        monitor.state = vstate(overlay=False, same=False, idle=30.0)
+
+        driver.tick()
+
+        self.assertEqual(session.settles, 0)
+        self.assertIn(10.0, session.hidden_at)
+        self.assertIsNone(driver._surface.reward_progresses[-1])
+
     def test_hide_clears_reward_progress(self):
         driver, monitor, window, session = build(vstate(fg=False))
         driver._surface.set_reward_progress({"remaining_seconds": 3.0})

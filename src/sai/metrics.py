@@ -40,6 +40,9 @@ CAMPAIGN_QUEUED = "QUEUED"
 CAMPAIGN_LIMITED = "LIMITED"
 CAMPAIGN_DONE = "DONE"
 CAMPAIGN_PAUSED = "PAUSED"
+# Operator soft-delete: hidden from the admin queue and inventory metrics but
+# kept in the DB because placements/ledger rows may reference the campaign.
+CAMPAIGN_ARCHIVED = "ARCHIVED"
 
 CAMPAIGN_STATUSES = {
     CAMPAIGN_REVIEW,
@@ -48,6 +51,7 @@ CAMPAIGN_STATUSES = {
     CAMPAIGN_LIMITED,
     CAMPAIGN_DONE,
     CAMPAIGN_PAUSED,
+    CAMPAIGN_ARCHIVED,
 }
 
 

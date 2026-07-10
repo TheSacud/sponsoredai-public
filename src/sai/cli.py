@@ -452,6 +452,18 @@ def _register_backend_parser(sub) -> None:
     backend_backup = backend_sub.add_parser("backup", help="Create a consistent SQLite backup")
     backend_backup.add_argument("--db", type=Path, default=default_backend_db_path())
     backend_backup.add_argument("--output", type=Path, required=True, help="Backup file or destination directory")
+    backend_block = backend_sub.add_parser(
+        "block-install",
+        help="Block an abusive install: refuse new placements/billing and revoke its unconsumed earnings",
+    )
+    backend_block.add_argument("install_id_hash", help="64-hex install_id_hash to block")
+    backend_block.add_argument("--reason", default="abuse", help="Reason recorded on the block and revocations")
+    backend_block.add_argument("--db", type=Path, default=default_backend_db_path())
+    backend_unblock = backend_sub.add_parser(
+        "unblock-install", help="Lift a block on an install (revoked earnings are not restored)"
+    )
+    backend_unblock.add_argument("install_id_hash", help="64-hex install_id_hash to unblock")
+    backend_unblock.add_argument("--db", type=Path, default=default_backend_db_path())
     backend_sub.add_parser("contract", help="Print the QP metric contract")
 
 
@@ -1437,6 +1449,20 @@ def handle_backend(args: argparse.Namespace) -> int:
         store = BackendStore(args.db)
         backup_path = store.backup(args.output)
         print(f"Backed up backend database to {backup_path}")
+        return 0
+    if args.backend_command in {"block-install", "unblock-install"}:
+        from .backend import BackendError
+
+        store = BackendStore(args.db)
+        try:
+            if args.backend_command == "block-install":
+                result = store.block_installation(args.install_id_hash, args.reason)
+            else:
+                result = store.unblock_installation(args.install_id_hash)
+        except BackendError as exc:
+            print(f"sai: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     if args.backend_command == "contract":
         print(json.dumps(metric_contract(), indent=2, sort_keys=True))

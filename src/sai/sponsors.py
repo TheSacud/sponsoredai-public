@@ -56,6 +56,9 @@ logger = logging.getLogger(__name__)
 
 
 NO_PLACEMENT_RETRY_SECONDS = 10.0
+QUALIFICATION_TIMING_RETRY_SECONDS = 0.5
+RETRYABLE_QP_INVALID_REASONS = {"server_visible_under_5s"}
+MIN_RENDER_TRANSPORT_ELAPSED_SECONDS = 0.001
 
 # Carousel AFK guard. A pinned card keeps cycling to the next placement every
 # rotate_seconds while the terminal stays idle, so a walked-away session would
@@ -289,6 +292,7 @@ class ShownCard:
     shown_at: float
     visible_until: float | None = None
     settled: bool = False
+    next_qualification_retry_at: float = 0.0
 
     def visible_seconds(self, now: float) -> float:
         end = self.visible_until if self.visible_until is not None else now
@@ -625,12 +629,18 @@ class SponsorSession:
             return None
 
         self._next_card_retry_at = 0.0
-        self.mark_cards_hidden(now)
+        shown_at = now
+        if card.placement_id and self.placement_client is not None:
+            render_started = time.monotonic()
+            self._record_remote_event(card, event, RENDERED_EVENT, visible_seconds=0.0)
+            render_elapsed = max(0.0, time.monotonic() - render_started)
+            if render_elapsed >= MIN_RENDER_TRANSPORT_ELAPSED_SECONDS:
+                shown_at = now + render_elapsed
+        self.mark_cards_hidden(shown_at)
         self.events.append(event)
-        self.cards.append(ShownCard(card=card, event=event, shown_at=now))
-        self._last_card_at = now
+        self.cards.append(ShownCard(card=card, event=event, shown_at=shown_at))
+        self._last_card_at = shown_at
         self._cards_since_input += 1
-        self._record_remote_event(card, event, RENDERED_EVENT, visible_seconds=0.0)
         return card
 
     def note_user_input(self) -> None:
@@ -676,14 +686,19 @@ class SponsorSession:
         for shown in self.cards:
             if shown.settled:
                 continue
+            if settle_at < shown.next_qualification_retry_at:
+                continue
             visible_seconds = shown.visible_seconds(settle_at)
             if visible_seconds < QUALIFIED_VISIBLE_SECONDS:
                 continue
             qualification = self._qualification_result(shown, visible_seconds)
-            if qualification is None:
-                shown.settled = True
+            retry_after = _qualification_retry_after(qualification)
+            if qualification is None or retry_after is not None:
+                shown.next_qualification_retry_at = settle_at + (retry_after or NO_PLACEMENT_RETRY_SECONDS)
                 continue
             shown.settled = True
+            if not qualification.get("billable"):
+                continue
             self.qualified_waits += 1
             confirmed_credit = _float_or_none(qualification.get("earned"))
             credit_amount = shown.card.credit_amount if confirmed_credit is None else confirmed_credit
@@ -700,7 +715,7 @@ class SponsorSession:
             )
             if entry:
                 earned += entry.amount
-        self.earned = round(earned, 6)
+        self.earned = round(self.earned + earned, 6)
         return self.earned
 
     def _next_card(self, terminal_is_interactive: bool) -> SponsorCard | None:
@@ -720,6 +735,29 @@ class SponsorSession:
         response = self._record_remote_event(shown.card, shown.event, QP_EVENT, visible_seconds=visible_seconds)
         if response and response.get("billable"):
             return response
+        retry_after = _qualification_retry_after(response)
+        if retry_after is not None:
+            logger.info(
+                "sponsor settle timing retry tool=%s surface=%s session=%s placement=%s visible_seconds=%.3f reason=%s retry_after=%.3f",
+                self.tool,
+                self.surface,
+                self.id,
+                shown.card.placement_id[:16] if shown.card.placement_id else "-",
+                visible_seconds,
+                response.get("invalid_reason"),
+                retry_after,
+            )
+            time.sleep(retry_after)
+            response = self._record_remote_event(
+                shown.card,
+                shown.event,
+                QP_EVENT,
+                visible_seconds=visible_seconds,
+            )
+            if response and response.get("billable"):
+                return response
+            if _qualification_retry_after(response) is not None:
+                return response
         logger.warning(
             "sponsor settle not billable tool=%s surface=%s session=%s placement=%s visible_seconds=%.3f reason=%s",
             self.tool,
@@ -729,7 +767,7 @@ class SponsorSession:
             visible_seconds,
             (response or {}).get("invalid_reason") or "remote_unreachable",
         )
-        return None
+        return response
 
     def _record_remote_event(
         self,
@@ -758,6 +796,14 @@ def _float_or_none(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _qualification_retry_after(response: dict[str, Any] | None) -> float | None:
+    if not isinstance(response, dict):
+        return None
+    if str(response.get("invalid_reason") or "") in RETRYABLE_QP_INVALID_REASONS:
+        return QUALIFICATION_TIMING_RETRY_SECONDS
+    return None
 
 
 def _optional_str(value: Any) -> str | None:
