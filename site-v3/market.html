@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>Sponsor Market &mdash; SAI</title>
+<title>Sponsor Market - SAI</title>
 <meta name="description" content="The SAI sponsor market is public: live funded campaigns, the top bid per 1,000 qualified placements, the developer split, and the full order book.">
 <link rel="canonical" href="https://sponsoredai.dev/market">
 <meta name="robots" content="index,follow,max-image-preview:large">
@@ -13,206 +13,120 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://sponsoredai.dev/market">
 <meta property="og:image" content="https://sponsoredai.dev/social-card-v2.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
-<style>
-  :root{
-    --paper:#f3efe5;
-    --card:#fbf8f1;
-    --ink:#1b1812;
-    --ink-soft:#6b6453;
-    --rule:#d8d1bd;
-    --rule-soft:rgba(27,24,18,.09);
-    --accent:#ffd83d;
-    --earn:#1d7a44;
-    --spend:#bf3a2b;
-    --term:#16140f;
-    --term-ink:#efe9d6;
-    --term-soft:#9a937d;
-    --amber:#d7af5f;
-    --mono:ui-monospace,"Cascadia Code","Cascadia Mono","JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
-    --serif:"Iowan Old Style",Charter,"Bitstream Charter",Georgia,Cambria,serif;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth;scrollbar-gutter:stable}
-  body{font:15px/1.65 var(--mono);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden;overflow-x:clip}
-  body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(rgba(27,24,18,.05) 1px,transparent 1px);background-size:26px 26px}
-  ::selection{background:var(--accent);color:var(--ink)}
-  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-  a{color:inherit}
-  code{font-family:var(--mono);font-size:.95em}
-  .wrap{max-width:1100px;margin:0 auto;padding:0 28px}
-  .label{display:inline-block;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
-  .muted{color:var(--ink-soft)}
-  .num{font-variant-numeric:tabular-nums}
-  .hl{box-shadow:inset 0 -.18em 0 0 var(--accent)}
-
-  header.top{position:sticky;top:0;z-index:40;background:var(--paper);border-bottom:1px solid var(--ink)}
-  .bar{max-width:1100px;margin:0 auto;padding:13px 28px;display:flex;align-items:center;gap:14px}
-  .logo{background:var(--ink);color:var(--accent);padding:3px 9px;font-weight:700;letter-spacing:.1em;font-size:14px;text-decoration:none}
-  .wordmark{font-size:10px;letter-spacing:.26em;color:var(--ink-soft);text-transform:uppercase}
-  nav.links{margin-left:auto;display:flex;align-items:center;gap:18px;font-size:12px}
-  nav.links a{text-decoration:none;color:var(--ink-soft)}
-  nav.links a:hover{color:var(--ink);box-shadow:inset 0 -2px 0 0 var(--accent)}
-  .btn{display:inline-block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;border:1.5px solid var(--ink);background:transparent;padding:6px 13px;cursor:pointer;text-decoration:none;font-weight:700}
-  .btn.yellow{background:var(--accent);border-color:var(--ink);color:var(--ink)}
-  .btn:hover,.btn.yellow:hover{background:var(--ink);color:var(--accent)}
-
-  .hero{padding:56px 0 26px;border-bottom:2px solid var(--ink);display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:34px;align-items:end}
-  .hero-copy{min-width:0}
-  h1{font-family:var(--serif);font-size:clamp(34px,5vw,58px);line-height:1.06;letter-spacing:-.015em;margin-top:14px}
-  .dek{margin-top:18px;max-width:64ch;color:var(--ink-soft);font-size:15px}
-  .dek b{color:var(--ink)}
-
-  section.block{padding:40px 0 0}
-  .sec-head{display:flex;align-items:baseline;gap:16px;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:24px}
-  .sec-head h2{font-family:var(--serif);font-size:clamp(22px,3vw,30px);font-weight:700;letter-spacing:-.01em;min-width:0}
-  .sec-head .note{margin-left:auto;font-size:11px;color:var(--ink-soft)}
-
-  .mkt-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
-  .mkt-stat{border:1px solid var(--ink);background:var(--card);padding:14px 16px 12px}
-  .mkt-stat b{display:block;margin-top:8px;font-size:clamp(22px,2.6vw,30px);line-height:1.1;font-variant-numeric:tabular-nums}
-  .mkt-stat.earn b{color:var(--earn)}
-  .pill{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.12em;padding:1px 7px;border:1px solid currentColor;text-transform:uppercase;color:var(--ink-soft)}
-  .pill.live{color:var(--earn);background:rgba(29,122,68,.08)}
-  .pill.limited,.pill.exhausted,.pill.paused,.pill.done{color:var(--spend);background:rgba(191,58,43,.07)}
-  .rem{display:inline-flex;align-items:center;gap:8px}
-  .rembar{width:52px;height:7px;border:1px solid var(--ink);background:var(--paper)}
-  .rembar i{display:block;height:100%;background:var(--earn)}
-
-  .market-board{margin-top:16px;border:1px solid var(--ink);background:var(--card);padding:18px;overflow-x:auto}
-  .market-board .market-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
-  .market-board table{width:100%;border-collapse:collapse;font-size:12px}
-  .market-board th,.market-board td{text-align:left;padding:9px 8px;border-bottom:1px dashed var(--rule);vertical-align:top}
-  .market-board th{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);white-space:nowrap}
-  .market-board td:last-child,.market-board th:last-child{text-align:right}
-  .market-empty{font-size:12px;color:var(--ink-soft);padding-top:2px}
-  .cap-flag{font-size:10px;letter-spacing:.14em;border:1.5px solid var(--earn);color:var(--earn);padding:1px 7px;transform:rotate(-1.6deg);display:none}
-  .cap-flag.on{display:inline-block}
-  .cap-flag.off{border-color:var(--spend);color:var(--spend)}
-
-  .market-chart{border:1px solid var(--ink);background:var(--card);padding:16px 18px 12px;margin-top:16px}
-  .market-chart figcaption{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:11px;color:var(--ink-soft)}
-  .market-chart .mc-title{font-size:10px;letter-spacing:.16em;text-transform:uppercase}
-  .market-chart .mc-now{margin-left:auto;font-weight:700;color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums}
-  .market-chart .mc-now small{font-size:11px;font-weight:400;color:var(--ink-soft)}
-  .mc-legend{display:inline-flex;align-items:center;gap:6px}
-  .mc-legend i{display:inline-block;width:16px;height:0;border-top:2px solid var(--amber)}
-  .mc-legend.dev i{border-top-style:dashed;border-top-color:var(--earn)}
-  .market-chart svg{width:100%;height:auto;display:block}
-  .mc-grid{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 4}
-  .mc-axis-label{fill:var(--ink-soft);font-size:9px;font-family:var(--mono)}
-  .mc-dev{fill:none;stroke:var(--earn);stroke-width:1.5;stroke-dasharray:4 3;opacity:.65;stroke-linejoin:round}
-  .mc-bid{fill:none;stroke:var(--amber);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
-  .mc-dot{fill:var(--amber);stroke:var(--ink);stroke-width:1.5}
-  .mc-empty{font-size:12.5px;color:var(--ink-soft);text-align:center;padding:22px 8px 14px}
-  .mc-empty b{color:var(--ink)}
-
-  .cta{margin-top:40px;border:1.5px solid var(--ink);background:var(--accent);padding:24px 26px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;box-shadow:5px 5px 0 0 rgba(27,24,18,.16)}
-  .hero .cta{margin-top:0;align-self:end;display:block}
-  .cta div{min-width:0}
-  .cta h3{font-family:var(--serif);font-size:22px}
-  .cta p{font-size:13px;color:rgba(27,24,18,.72);margin-top:4px}
-  .cta .btn{margin-left:auto;border-color:var(--ink);background:var(--ink);color:var(--accent)}
-  .hero .cta .btn{margin-top:18px;margin-left:0}
-  .cta .btn:hover{background:transparent;color:var(--ink)}
-
-  footer.end{margin-top:46px;border-top:1px solid var(--ink)}
-  footer.end .wrap{padding-top:22px;padding-bottom:48px;display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;font-size:11px;color:var(--ink-soft)}
-  footer.end a{color:var(--ink-soft)}
-  footer.end a:hover{color:var(--ink)}
-  footer.end .right{margin-left:auto}
-
-  @media (max-width:860px){.hero{grid-template-columns:1fr;align-items:start}.mkt-stats{grid-template-columns:repeat(2,1fr)}.cta .btn{margin-left:0}}
-  @media (max-width:560px){
-    .wrap,.bar{padding-left:18px;padding-right:18px}
-    .wordmark{display:none}
-    .bar{gap:10px;flex-wrap:wrap}
-    nav.links{gap:10px;margin-left:0}
-    .hero{padding-top:42px;gap:22px}
-    .mkt-stats{grid-template-columns:1fr 1fr;gap:10px}
-    .mkt-stat b{font-size:20px}
-    footer.end .right{margin-left:0}
-  }
-  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-</style>
-<link rel="stylesheet" href="sai-v3.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sai-core-v4.css">
 </head>
-<body>
+<body class="mk-body">
 
 <header class="top">
   <div class="bar">
-    <a class="logo" href="/">SAI</a>
-    <span class="wordmark">Sponsored AI Credits</span>
+    <a class="brand" href="/"><span class="mark">S</span>SAI <small>Sponsored AI Credits</small></a>
     <nav class="links" aria-label="Pages">
-      <a href="/">Home</a>
-      <a href="/trust">Trust</a>
-      <a href="/privacy">Privacy</a>
+      <a class="nl" href="/">Home</a>
+      <a class="nl" href="/trust">Trust</a>
       <a class="btn yellow" href="/sponsor">Become a sponsor</a>
     </nav>
   </div>
 </header>
 
 <main>
-  <div class="wrap">
-    <section class="hero">
-      <div class="hero-copy">
-        <span class="label">Market</span>
-        <h1>The market is <span class="hl">public</span>.</h1>
-        <p class="dek">Sponsors bid for qualified coding-agent wait states. Here is the live book: how many campaigns are funded, the top bid per 1,000 placements, the developer split, and every campaign ranked by bid. <b>No funded campaign live means cards pay zero</b> &mdash; the ledger only credits what a sponsor already paid for.</p>
-      </div>
-      <div class="cta">
+  <section class="band">
+    <div class="wrap">
+      <div class="mk-hero">
         <div>
+          <span class="eyebrow">Market</span>
+          <h1>The market is <span class="hl">public</span>.</h1>
+          <p class="mk-dek">Sponsors bid for qualified coding-agent wait states. Here is the live book: how many campaigns are funded, the top bid per 1,000 placements, the developer split, and every campaign ranked by bid. <b>No funded campaign live means cards pay zero</b>: the ledger only credits what a sponsor already paid for.</p>
+        </div>
+        <div class="mk-buy">
           <h3>Buy the wait</h3>
           <p>Create a campaign, pay with Stripe Checkout, and fund credits for qualified placements after review.</p>
+          <a class="btn dark" href="/sponsor">Become a sponsor &rarr;</a>
         </div>
-        <a class="btn" href="/sponsor">Become a sponsor &rarr;</a>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="block" id="market">
-      <div class="sec-head">
+  <section class="band darker sec app mk-market" id="market">
+    <div class="wrap">
+      <div class="mk-book-head">
         <h2>Live order book</h2>
-        <span class="note num" id="marketUpdated">loading /v1/market</span>
+        <span class="note num" id="marketUpdated">live from /v1/market</span>
       </div>
-      <div class="mkt-stats">
-        <div class="mkt-stat"><span class="label">funded campaigns live</span><b class="num" id="mktLive">0</b></div>
-        <div class="mkt-stat"><span class="label">top bid / 1,000 cards</span><b class="num" id="mktBid">$30.00</b></div>
-        <div class="mkt-stat earn"><span class="label">developer / card</span><b class="num" id="mktCard">+0.018</b></div>
-        <div class="mkt-stat earn"><span class="label">developer / click</span><b class="num" id="mktClick">+0.90</b></div>
+
+      <div class="kpis mk-kpis">
+        <div class="kpi"><div class="k">funded campaigns live</div><div class="v num" id="mktLive">1</div></div>
+        <div class="kpi"><div class="k">top bid / 1,000 QP</div><div class="v num" id="mktBid">$30.00</div></div>
+        <div class="kpi"><div class="k">developer / card</div><div class="v num g" id="mktCard">+0.018</div></div>
+        <div class="kpi"><div class="k">developer / click</div><div class="v num g" id="mktClick">+0.90</div></div>
       </div>
-      <figure class="market-chart" id="marketChart">
+
+      <figure class="mk-chart" id="marketChart">
         <figcaption>
-          <span class="mc-title">price &middot; top bid / 1,000 QP</span>
-          <span class="mc-legend bid"><i></i> top bid</span>
-          <span class="mc-legend dev"><i></i> dev share &times;0.6</span>
-          <span class="mc-now" id="mcNow">$0.00 <small>/ 1k QP</small></span>
+          <span class="mk-ct-title">price &middot; top bid / 1,000 QP</span>
+          <span class="mk-leg"><i></i> top bid</span>
+          <span class="mk-leg dev"><i></i> dev share &times;0.6</span>
+          <span class="mk-now" id="mcNow">$30.00 <small>/ 1k QP</small></span>
         </figcaption>
-        <svg id="mcSvg" viewBox="0 0 720 220" role="img" aria-label="Top bid per 1,000 qualified placements over time"></svg>
-        <p class="mc-empty" id="mcEmpty">Price history begins when the first sponsor funds the book &mdash; currently <b>$0.00 / 1,000 QP</b>, no live demand.</p>
+        <svg id="mcSvg" viewBox="0 0 720 200" role="img" aria-label="Top bid per 1,000 qualified placements over time">
+          <line x1="12" y1="170" x2="654" y2="170" stroke="#d8d1bd" stroke-width="1" stroke-dasharray="2 4"></line>
+          <line x1="12" y1="118" x2="654" y2="118" stroke="#d8d1bd" stroke-width="1" stroke-dasharray="2 4"></line>
+          <line x1="12" y1="66" x2="654" y2="66" stroke="#d8d1bd" stroke-width="1" stroke-dasharray="2 4"></line>
+          <line x1="12" y1="14" x2="654" y2="14" stroke="#d8d1bd" stroke-width="1" stroke-dasharray="2 4"></line>
+          <text x="662" y="173" fill="#5d5747" font-size="9" font-family="ui-monospace,Menlo,monospace">$0.00</text>
+          <text x="662" y="121" fill="#5d5747" font-size="9" font-family="ui-monospace,Menlo,monospace">$11.50</text>
+          <text x="662" y="69" fill="#5d5747" font-size="9" font-family="ui-monospace,Menlo,monospace">$23.00</text>
+          <text x="662" y="17" fill="#5d5747" font-size="9" font-family="ui-monospace,Menlo,monospace">$34.50</text>
+          <polyline fill="none" stroke="#1d7a44" stroke-width="1.5" stroke-dasharray="4 3" opacity=".65" points="12,140 120,140 120,122 300,122 300,105 470,105 470,96 654,96"></polyline>
+          <polyline fill="none" stroke="#d7af5f" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="12,120 120,120 120,90 300,90 300,62 470,62 470,47 654,47"></polyline>
+          <circle cx="654" cy="47" r="3.5" fill="#d7af5f" stroke="#1b1812" stroke-width="1.5"></circle>
+          <text x="12" y="192" fill="#5d5747" font-size="9" font-family="ui-monospace,Menlo,monospace">09:00</text>
+          <text x="654" y="192" fill="#5d5747" font-size="9" font-family="ui-monospace,Menlo,monospace" text-anchor="end">11:00</text>
+        </svg>
+        <p class="mk-chart-empty" id="mcEmpty" style="display:none">Price history begins when the first sponsor funds the book. Currently <b>$0.00 / 1,000 QP</b>, no live demand.</p>
       </figure>
-      <div class="market-board">
-        <div class="market-head">
-          <span class="label">Order book &mdash; every campaign, ranked by bid</span>
-          <span class="cap-flag on off" id="mktFlag">PROJECTED</span>
+
+      <div class="panel mk-book">
+        <div class="panel-h">
+          <h3>Order book · every campaign, ranked by bid</h3>
+          <span class="pill live" id="mktFlag">live</span>
         </div>
         <table aria-label="Current sponsor market">
-          <thead><tr><th>Campaign</th><th>Status</th><th>Bid / 1k cards</th><th>Dev / card</th><th>Dev / click</th><th>Inventory left</th></tr></thead>
-          <tbody id="marketRows"></tbody>
+          <thead><tr><th>Campaign</th><th>Status</th><th>Bid / 1k</th><th>Dev / card</th><th>Dev / click</th><th>Inventory left</th></tr></thead>
+          <tbody id="marketRows">
+            <tr>
+              <td><b>Sponsored AI</b></td>
+              <td><span class="pill live">live</span></td>
+              <td class="num">$30.00</td>
+              <td class="g num">+0.018</td>
+              <td class="g num">+0.90</td>
+              <td><span class="mk-inv"><span class="meter"><i style="width:99%"></i></span><span class="mk-ct">996/1,000</span></span></td>
+            </tr>
+            <tr>
+              <td>Your campaign?</td>
+              <td><span class="pill open">open</span></td>
+              <td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>
+            </tr>
+          </tbody>
         </table>
-        <p class="market-empty" id="marketEmpty" hidden><b>Live right now: 0 funded campaigns &mdash; cards pay nothing until a sponsor funds the book.</b> Launch inventory is open at launch pricing &mdash; <a href="/sponsor">be the first sponsor &rarr;</a></p>
+        <div class="empty" id="marketFoot"><span id="marketEmpty" hidden><b>Live right now: 0 funded campaigns. Cards pay nothing until a sponsor funds the book.</b> </span>Launch inventory is open at launch pricing · <a href="/sponsor">fund a campaign &rarr;</a></div>
       </div>
-    </section>
-  </div>
+    </div>
+  </section>
 </main>
 
-<footer class="end">
+<footer>
   <div class="wrap">
     <span>SAI &middot; backend-authoritative sponsored earnings</span>
     <a href="/trust">Trust Boundary</a>
     <a href="/privacy">Privacy Policy</a>
     <a href="/terms">Terms of Service</a>
-    <span class="right"><a href="/">Back to home</a></span>
+    <a class="r" href="/">Back to home</a>
   </div>
 </footer>
 
@@ -227,6 +141,7 @@
 
   function num(value){ var n = Number(value); return Number.isFinite(n) ? n : null; }
   function fmtUsd(v){ return "$" + (Number(v) || 0).toFixed(2); }
+  function fmtInt(v){ return (Number(v) || 0).toLocaleString("en-US"); }
   function fmtClock(ms){ var d = new Date(ms); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
   function fetchJson(url){
     return fetch(url, { cache: "no-store" }).then(function(r){
@@ -234,11 +149,16 @@
       return r.json();
     });
   }
+  function pillClass(status){
+    var s = String(status || "").toLowerCase().replace(/\s+/g, "_");
+    var known = ["live","available","ok","armed","pending","review","watch","draft","not_connected","checkout_created","queued","flagged","paused","spent","paid","open"];
+    return "pill " + (known.indexOf(s) >= 0 ? s : "spent");
+  }
   function setFlag(text, off){
     var flag = $("mktFlag");
     if (!flag) return;
     flag.textContent = text;
-    flag.classList.toggle("off", Boolean(off));
+    flag.className = "pill " + (off ? "watch" : "live");
   }
 
   function renderRows(rows, loaded){
@@ -254,38 +174,54 @@
       topBid = liveRows.reduce(function(best, row){ var bid = num(row.bid_per_1000_qp) || 0; return bid > best ? bid : best; }, 0);
     }
     $("mktBid").textContent = "$" + topBid.toFixed(2);
+    function cell(text, cls){ var td = document.createElement("td"); if (cls) td.className = cls; td.textContent = text; return td; }
     visible.forEach(function(row){
       var tr = document.createElement("tr");
-      function cell(text, cls){ var td = document.createElement("td"); if (cls) td.className = cls; td.textContent = text; return td; }
-      var campaign = cell(String(row.campaign || "Sponsor"));
+      var campaign = document.createElement("td");
+      var nm = document.createElement("b");
+      nm.textContent = String(row.campaign || "Sponsor");
+      campaign.appendChild(nm);
       var statusText = String(row.status || "UNKNOWN");
       var status = document.createElement("td");
       var pill = document.createElement("span");
-      pill.className = "pill " + statusText.toLowerCase();
+      pill.className = pillClass(statusText);
       pill.textContent = statusText;
       status.appendChild(pill);
       var bid = cell("$" + (num(row.bid_per_1000_qp) || 0).toFixed(2), "num");
-      var payout = cell("+" + (num(row.developer_payout) || 0).toFixed(3), "num");
+      var payout = cell("+" + (num(row.developer_payout) || 0).toFixed(3), "g num");
       var clickPayout = num(row.developer_click_payout);
       if (clickPayout === null) clickPayout = (num(row.developer_payout) || 0) * 50;
-      var click = cell("+" + clickPayout.toFixed(2), "num");
+      var click = cell("+" + clickPayout.toFixed(2), "g num");
       var left = num(row.remaining_impressions) || 0;
       var total = num(row.total_impressions) || 0;
       var remaining = document.createElement("td");
-      remaining.className = "num";
-      var rem = document.createElement("span");
-      rem.className = "rem";
-      var bar = document.createElement("span");
-      bar.className = "rembar";
+      var inv = document.createElement("span");
+      inv.className = "mk-inv";
+      var meter = document.createElement("span");
+      meter.className = "meter";
       var fill = document.createElement("i");
       fill.style.width = (total > 0 ? Math.max(0, Math.min(100, left / total * 100)) : 0) + "%";
-      bar.appendChild(fill);
-      rem.appendChild(bar);
-      rem.appendChild(document.createTextNode(left + "/" + total));
-      remaining.appendChild(rem);
+      meter.appendChild(fill);
+      inv.appendChild(meter);
+      var ct = document.createElement("span");
+      ct.className = "mk-ct";
+      ct.textContent = fmtInt(left) + "/" + fmtInt(total);
+      inv.appendChild(ct);
+      remaining.appendChild(inv);
       tr.append(campaign, status, bid, payout, click, remaining);
       tbody.appendChild(tr);
     });
+    // standing invite row from the design: "Your campaign?"
+    var invite = document.createElement("tr");
+    invite.appendChild(cell("Your campaign?"));
+    var st = document.createElement("td");
+    var op = document.createElement("span");
+    op.className = "pill open";
+    op.textContent = "open";
+    st.appendChild(op);
+    invite.appendChild(st);
+    for (var i = 0; i < 4; i++) invite.appendChild(cell("—"));
+    tbody.appendChild(invite);
   }
 
   function applyPayout(payout){
@@ -334,31 +270,42 @@
       if (last && last.bid > 0){
         empty.textContent = "Live top bid is " + fmtUsd(last.bid) + " / 1,000 QP. Collecting history for the chart.";
       } else {
-        empty.innerHTML = 'Price history begins when the first sponsor funds the book &mdash; currently <b>$0.00 / 1,000 QP</b>, no live demand.';
+        empty.innerHTML = 'Price history begins when the first sponsor funds the book. Currently <b>$0.00 / 1,000 QP</b>, no live demand.';
       }
       return;
     }
     svg.style.display = "";
     empty.style.display = "none";
-    var W = 720, H = 220, padL = 12, padR = 66, padT = 16, padB = 26;
+    var W = 720, H = 200, padL = 12, padR = 66, padT = 14, padB = 30;
     var plotW = W - padL - padR, plotH = H - padT - padB;
     var t0 = pts[0].t, t1 = pts[pts.length - 1].t, span = Math.max(1, t1 - t0);
     var yMax = maxBid * 1.15;
+    var MONO = "ui-monospace,Menlo,monospace";
     function X(t){ return padL + (t - t0) / span * plotW; }
     function Y(v){ return padT + plotH - (v / yMax) * plotH; }
     var grid = "", ylab = "";
     for (var i = 0; i <= 3; i++){
-      var gy = padT + plotH - (i / 3) * plotH;
-      grid += '<line class="mc-grid" x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (padL + plotW) + '" y2="' + gy.toFixed(1) + '"/>';
-      ylab += '<text class="mc-axis-label" x="' + (padL + plotW + 6) + '" y="' + (gy + 3).toFixed(1) + '">' + fmtUsd(yMax * (i / 3)) + '</text>';
+      var gy = (padT + plotH - (i / 3) * plotH).toFixed(1);
+      grid += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (padL + plotW) + '" y2="' + gy + '" stroke="#d8d1bd" stroke-width="1" stroke-dasharray="2 4"/>';
+      ylab += '<text x="' + (padL + plotW + 8) + '" y="' + (Number(gy) + 3).toFixed(1) + '" fill="#5d5747" font-size="9" font-family="' + MONO + '">' + fmtUsd(yMax * (i / 3)) + '</text>';
     }
-    var xlab = '<text class="mc-axis-label" x="' + padL + '" y="' + (H - 8) + '">' + fmtClock(t0) + '</text>'
-             + '<text class="mc-axis-label" x="' + (padL + plotW) + '" y="' + (H - 8) + '" text-anchor="end">' + fmtClock(t1) + '</text>';
-    function poly(scale){ return pts.map(function(p){ return X(p.t).toFixed(1) + "," + Y(p.bid * scale).toFixed(1); }).join(" "); }
-    var devLine = '<polyline class="mc-dev" points="' + poly(0.6) + '"/>';
-    var bidLine = '<polyline class="mc-bid" points="' + poly(1) + '"/>';
-    var dot = '<circle class="mc-dot" cx="' + X(t1).toFixed(1) + '" cy="' + Y(last.bid).toFixed(1) + '" r="3.5"/>';
-    svg.innerHTML = grid + devLine + bidLine + dot + ylab + xlab;
+    var xlab = '<text x="' + padL + '" y="' + (H - 8) + '" fill="#5d5747" font-size="9" font-family="' + MONO + '">' + fmtClock(t0) + '</text>'
+             + '<text x="' + (padL + plotW) + '" y="' + (H - 8) + '" fill="#5d5747" font-size="9" font-family="' + MONO + '" text-anchor="end">' + fmtClock(t1) + '</text>';
+    // stepped line: hold each price flat until the next sample, per the design
+    function poly(scale){
+      var out = [], prevY = null;
+      pts.forEach(function(p){
+        var x = X(p.t).toFixed(1), y = Y(p.bid * scale).toFixed(1);
+        if (prevY !== null && prevY !== y) out.push(x + "," + prevY);
+        out.push(x + "," + y);
+        prevY = y;
+      });
+      return out.join(" ");
+    }
+    var devLine = '<polyline fill="none" stroke="#1d7a44" stroke-width="1.5" stroke-dasharray="4 3" opacity=".65" points="' + poly(0.6) + '"/>';
+    var bidLine = '<polyline fill="none" stroke="#d7af5f" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="' + poly(1) + '"/>';
+    var dot = '<circle cx="' + X(t1).toFixed(1) + '" cy="' + Y(last.bid).toFixed(1) + '" r="3.5" fill="#d7af5f" stroke="#1b1812" stroke-width="1.5"/>';
+    svg.innerHTML = grid + ylab + devLine + bidLine + dot + xlab;
   }
   function appendPoint(bid){
     priceSeries.push({ t: Date.now(), bid: Number(bid) || 0 });

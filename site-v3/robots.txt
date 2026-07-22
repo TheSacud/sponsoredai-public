@@ -13,6 +13,5 @@ Disallow: /me
 Disallow: /v1/
 Disallow: /c/
 Disallow: /_internal/
-Disallow: /promo
 
 Sitemap: https://sponsoredai.dev/sitemap.xml

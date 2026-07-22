@@ -504,6 +504,81 @@ class SponsorTests(unittest.TestCase):
             self.assertEqual(client.events[1][1]["visible_seconds"], 6.0)
             self.assertEqual(wallet.balance(), 0.01)
 
+    def test_remote_session_retries_lost_render_acknowledgement(self):
+        class FlakyRenderPlacementClient:
+            def __init__(self):
+                self.events = []
+
+            def next_placement(self, tool, config, terminal_is_interactive, surface=None):
+                return SponsorCard(
+                    id="plc_test",
+                    sponsor="Remote Sponsor",
+                    message="Remote creative",
+                    url="https://sponsor.example",
+                    credit_amount=0.01,
+                    placement_id="plc_test",
+                    campaign_id="cmp_test",
+                )
+
+            def record_event(self, placement_id, payload):
+                self.events.append((placement_id, payload))
+                rendered = [event for _placement, event in self.events if event["event"] == "rendered"]
+                if payload["event"] == "rendered" and len(rendered) == 1:
+                    return None
+                return {"accepted": True, "billable": payload["event"] == "qualified_5s"}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            client = FlakyRenderPlacementClient()
+            session = SponsorSession(
+                tool="codex",
+                config={"frequency": "high", "ads_enabled": True},
+                wallet=Wallet(Path(tmp) / "wallet.json"),
+                placement_client=client,
+            )
+
+            with patch.dict(os.environ, {**clear_ci_env(), "SAI_HOME": tmp}, clear=False):
+                card = session.maybe_card(now=10.0, idle_for=6.0, terminal_is_interactive=True)
+
+            self.assertIsNotNone(card)
+            rendered = [event for _placement, event in client.events if event["event"] == "rendered"]
+            self.assertEqual(len(rendered), 2)
+
+    def test_remote_session_suppresses_card_when_render_is_unconfirmed(self):
+        class FailedRenderPlacementClient:
+            def __init__(self):
+                self.events = []
+
+            def next_placement(self, tool, config, terminal_is_interactive, surface=None):
+                return SponsorCard(
+                    id="plc_test",
+                    sponsor="Remote Sponsor",
+                    message="Remote creative",
+                    url="https://sponsor.example",
+                    credit_amount=0.01,
+                    placement_id="plc_test",
+                    campaign_id="cmp_test",
+                )
+
+            def record_event(self, placement_id, payload):
+                self.events.append((placement_id, payload))
+                return None
+
+        with tempfile.TemporaryDirectory() as tmp:
+            client = FailedRenderPlacementClient()
+            session = SponsorSession(
+                tool="codex",
+                config={"frequency": "high", "ads_enabled": True},
+                wallet=Wallet(Path(tmp) / "wallet.json"),
+                placement_client=client,
+            )
+
+            with patch.dict(os.environ, {**clear_ci_env(), "SAI_HOME": tmp}, clear=False):
+                card = session.maybe_card(now=10.0, idle_for=6.0, terminal_is_interactive=True)
+
+            self.assertIsNone(card)
+            self.assertEqual(session.cards, [])
+            self.assertEqual(len(client.events), 2)
+
     def test_remote_session_settlement_is_cumulative_and_idempotent(self):
         class FakePlacementClient:
             def __init__(self):

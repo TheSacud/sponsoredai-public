@@ -27,11 +27,10 @@ REPO = Path(__file__).resolve().parent.parent
 DEFAULT_SITE_DIR = REPO / "site-v3"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8798
-DEFAULT_CHECK_PATHS = ("/", "/market", "/trust", "/privacy", "/terms", "/demo")
-ALIASES = {
-    "/demo": Path("_internal/demo.html"),
-    "/promo": Path("_internal/promo.html"),
-}
+DEFAULT_CHECK_PATHS = ("/", "/market", "/trust", "/privacy", "/terms")
+# Clean-route aliases for pages living outside the site root (none right now;
+# /demo and /promo were retired with the v4 redesign).
+ALIASES: dict[str, Path] = {}
 
 
 @dataclass(frozen=True)

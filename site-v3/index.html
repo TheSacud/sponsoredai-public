@@ -4,17 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>SAI — Get paid while your agent thinks</title>
-<meta name="description" content="SAI turns coding-agent wait states into income. One quiet sponsor card during real Claude Code & Codex waits — keep 60% as AI credits or cash-out. Local-first CLI + desktop overlay; your code never leaves your machine.">
+<title>SAI - Get paid while your agent thinks</title>
+<meta name="description" content="SAI turns coding-agent wait states into income. One quiet sponsor card during real Claude Code & Codex waits. Keep 60% as AI credits or cash-out. Local-first CLI + desktop overlay; your code never leaves your machine.">
 <link rel="canonical" href="https://sponsoredai.dev/">
 <meta name="robots" content="index,follow,max-image-preview:large">
-<meta property="og:title" content="SAI — Get paid while your agent thinks">
+<meta property="og:title" content="SAI - Get paid while your agent thinks">
 <meta property="og:description" content="One quiet sponsor card during real agent waits. Keep 60% as credits or cash-out. Terminal CLI + desktop overlay, local-first.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://sponsoredai.dev/">
 <meta property="og:image" content="https://sponsoredai.dev/social-card-v2.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
+<link rel="apple-touch-icon" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sai-core-v4.css?v=20260718-1">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -61,244 +66,16 @@
   ]
 }
 </script>
-<style>
-  :root{
-    --paper:#f3efe5;--paper-2:#ece4d2;--card:#fbf8f1;--ink:#1b1812;--ink-soft:#5d5747;
-    --rule:#d8d1bd;--rule-soft:rgba(27,24,18,.10);--accent:#ffd83d;--accent-deep:#e9c21f;
-    --earn:#1d7a44;--earn-bright:#23925a;--term:#16140f;--term-ink:#efe9d6;--term-soft:#9a937d;
-    --coral:#d97757;--blue:#6f8dff;
-    --mono:ui-monospace,"Cascadia Code","JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
-    --sans:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    --maxw:1180px;--ease:cubic-bezier(.2,.8,.2,1);
-    --sh:5px 5px 0 0 rgba(27,24,18,.16);--sh-lg:8px 8px 0 0 rgba(27,24,18,.16);
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth;scrollbar-gutter:stable}
-  body{font:15px/1.6 var(--sans);background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:clip}
-  a{color:inherit;text-decoration:none}
-  img,svg{display:block}
-  ::selection{background:var(--accent);color:var(--ink)}
-  :focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:2px}
-  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 26px}
-  .mono{font-family:var(--mono)}
-  .num{font-variant-numeric:tabular-nums}
-  .hl{box-shadow:inset 0 -.16em 0 0 var(--accent)}
-  .band{position:relative;background:var(--paper)}
-  .band.darker{background:var(--paper-2);border-top:2px solid var(--ink);border-bottom:2px solid var(--ink)}
-  .band::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(rgba(27,24,18,.05) 1px,transparent 1px);background-size:24px 24px}
-  .band > .wrap{position:relative;z-index:1}
-  header.top{position:sticky;top:0;z-index:50;background:rgba(243,239,229,.82);-webkit-backdrop-filter:saturate(1.3) blur(10px);backdrop-filter:saturate(1.3) blur(10px);border-bottom:1px solid var(--ink)}
-  .bar{max-width:var(--maxw);margin:0 auto;padding:12px 26px;display:flex;align-items:center;gap:16px}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.01em}
-  .mark{width:30px;height:30px;border-radius:7px;background:var(--ink);color:var(--accent);display:grid;place-items:center;font-family:var(--mono);font-weight:800;font-size:15px}
-  .brand small{font-family:var(--mono);font-weight:500;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-soft)}
-  nav.links{margin-left:auto;display:flex;align-items:center;gap:22px;font-size:13px}
-  nav.links a.nl{color:var(--ink-soft);position:relative;padding:4px 0}
-  nav.links a.nl::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .22s var(--ease)}
-  nav.links a.nl:hover{color:var(--ink)}
-  nav.links a.nl:hover::after{transform:scaleX(1)}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:13px;padding:9px 16px;border-radius:9px;border:1.5px solid var(--ink);cursor:pointer;transition:transform .14s var(--ease),background .14s,color .14s,box-shadow .14s;white-space:nowrap}
-  .btn.ghost{background:transparent;color:var(--ink)}
-  .btn.ghost:hover{background:var(--ink);color:var(--paper);transform:translateY(-1px)}
-  .btn.yellow{background:var(--accent);color:var(--ink);box-shadow:0 5px 0 0 var(--accent-deep)}
-  .btn.yellow:hover{transform:translateY(-2px);box-shadow:0 7px 0 0 var(--accent-deep)}
-  .btn.yellow:active{transform:translateY(2px);box-shadow:0 2px 0 0 var(--accent-deep)}
-  .btn.lg{font-size:15px;padding:14px 22px;border-radius:11px}
-  .bar .btn{padding:8px 13px}
-  @media(max-width:760px){nav.links a.nl{display:none}.brand small{display:none}}
-  .ticker{border-bottom:1px solid var(--ink);background:var(--card);overflow:hidden;white-space:nowrap}
-  .ticker .reel{display:inline-block;padding:6px 0;animation:reel 34s linear infinite;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
-  .ticker b{color:var(--earn);font-weight:700}.ticker span{margin:0 22px}
-  @keyframes reel{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-  .hero{display:grid;grid-template-columns:1.02fr .98fr;gap:50px;align-items:center;padding:64px 0 76px}
-  .hchip{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-soft);border:1px solid var(--ink);border-radius:999px;padding:6px 13px;background:var(--card)}
-  .hchip .live{width:8px;height:8px;border-radius:50%;background:var(--earn);box-shadow:0 0 0 4px rgba(29,122,68,.16);animation:pulse 1.8s infinite}
-  @keyframes pulse{50%{opacity:.35}}
-  h1{font-size:clamp(40px,6vw,72px);line-height:1;letter-spacing:-.035em;font-weight:800;margin:22px 0 0}
-  .lede{margin-top:22px;max-width:46ch;font-size:17px;line-height:1.55;color:var(--ink-soft)}
-  .lede b{color:var(--ink)}
-  .hero-cta{margin-top:28px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
-  .hero-cta .est{font-weight:800}
-  .fine{margin-top:14px;font-family:var(--mono);font-size:11.5px;color:var(--ink-soft)}
-  .chips{margin-top:24px;display:flex;gap:8px;flex-wrap:wrap}
-  .chips .c{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--ink-soft);border:1px solid var(--rule);border-radius:8px;padding:6px 10px;background:var(--card)}
-  .chips .c b{color:var(--ink)}
-  .app{position:relative;border:1.5px solid var(--ink);background:var(--card);box-shadow:var(--sh-lg);overflow:hidden;border-radius:14px}
-  .app-bar{height:44px;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--rule);background:var(--paper);font-size:13px;color:var(--ink-soft)}
-  .app-bar i{width:9px;height:9px;border-radius:50%;background:var(--term-soft);opacity:.5}
-  .app-bar i:first-child{background:var(--coral);opacity:.95}
-  .app-title{margin-left:6px;display:flex;align-items:center;gap:7px;font-weight:700;color:var(--ink)}
-  .hwallet{margin-left:auto;display:flex;align-items:center;gap:7px;border:1px solid var(--rule);background:#fff;border-radius:999px;padding:4px 11px 4px 9px;font-size:11px;color:var(--ink-soft);white-space:nowrap}
-  .hwallet .d{width:7px;height:7px;border-radius:50%;background:var(--earn);box-shadow:0 0 0 3px rgba(29,122,68,.16)}
-  .hwallet b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:800;transition:color .25s}
-  .hwallet.bump b{color:var(--earn)}
-  .app-surface{position:relative;padding:64px 18px 60px;min-height:340px;background:#fffdf6}
-  .cl-thread{display:flex;flex-direction:column;gap:14px}
-  .cl-row{display:flex;gap:12px;opacity:0;transform:translateY(10px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
-  .cl-row.on{opacity:1;transform:none}
-  .cl-av{flex:0 0 30px;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-weight:700;font-size:13px}
-  .cl-av-u{background:#efe7d8;color:var(--ink-soft)}
-  .cl-av-c{background:#fbeee7;box-shadow:0 0 0 1px rgba(217,119,87,.2) inset}
-  .cl-who{font-size:10px;font-weight:800;color:var(--ink-soft);letter-spacing:.16em;text-transform:uppercase;margin-bottom:4px}
-  .cl-bubble{font-size:14px;line-height:1.5;color:var(--ink);max-width:40ch}
-  .cl-bubble code{font-family:var(--mono);font-size:12px;background:#f3ede1;border:1px solid var(--rule);border-radius:5px;padding:0 5px;color:#5a503f}
-  .cl-tool{margin-top:9px;border:1px solid var(--rule);border-radius:10px;background:#fbf7ee;overflow:hidden;max-width:28ch}
-  .cl-tool-hd{display:flex;align-items:center;gap:8px;padding:7px 11px;font-size:11px;color:var(--ink-soft);border-bottom:1px solid var(--rule)}
-  .cl-pill{font-family:var(--mono);font-size:10px;color:var(--coral);background:#fbeee7;border-radius:5px;padding:1px 7px}
-  .cl-tool-bd{padding:7px 11px;font-family:var(--mono);font-size:11px;color:#6c6253}
-  .cl-tool-bd .ok,.cl-tool-bd .add{color:var(--earn)}.cl-tool-bd .del{color:#b8553f}
-  .cl-working{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--coral);font-size:13px;font-weight:600;opacity:0;transition:opacity .4s}
-  .cl-working.on{opacity:1}
-  .cl-working .sp{display:inline-block;animation:spin 3.2s linear infinite}
-  .cl-working .meta{color:#b59b86;font-weight:500;font-size:11px}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .cl-composer{position:absolute;left:18px;right:18px;bottom:14px;display:flex;align-items:center;justify-content:space-between;border:1px solid var(--rule);border-radius:11px;background:#fff;padding:10px 11px 10px 14px;font-size:12px;color:#b3aa99}
-  .cl-send{width:28px;height:28px;border-radius:8px;background:var(--coral);display:grid;place-items:center;color:#fff;font-size:14px}
-  .overlay-card{position:absolute;left:14px;right:14px;top:12px;z-index:3;display:flex;align-items:center;gap:7px;background:rgba(22,20,15,.96);color:#d6d2c4;border:1px solid rgba(255,255,255,.1);border-left:3px solid var(--blue);border-radius:10px;padding:11px 13px;font-family:var(--mono);font-size:12px;box-shadow:0 14px 34px rgba(0,0,0,.22);transform:translateY(-160%);opacity:0;transition:transform .6s var(--ease),opacity .5s,box-shadow .5s}
-  .overlay-card.in{transform:none;opacity:1}
-  .overlay-card.qualified{box-shadow:0 14px 34px rgba(0,0,0,.22),0 0 30px -6px rgba(35,146,90,.7);border-left-color:var(--earn-bright)}
-  .ovl-ic{width:24px;height:24px;border-radius:6px;background:var(--accent);flex:0 0 auto;display:grid;place-items:center;overflow:hidden}
-  .ovl-ic img{width:100%;height:100%;object-fit:cover}
-  .ovl-dim{color:#8b8b92}.ovl-sep{color:#55524c}.ovl-brand{color:var(--blue);font-weight:700}
-  .ovl-msg{color:#d6d2c4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-  .ovl-tail{margin-left:auto;display:flex;align-items:center;gap:9px;flex:0 0 auto}
-  .ovl-pay{color:#5fcf8a;font-weight:700}
-  .hero-ring .arc{stroke:var(--blue);stroke-dasharray:50.27;stroke-dashoffset:50;transition:stroke-dashoffset 2.1s ease,stroke .4s}
-  .hero-ring.fill .arc{stroke-dashoffset:8}
-  .hero-ring.done .arc{stroke:var(--earn-bright);stroke-dashoffset:3}
-  .sec{padding:74px 0}
-  .sec-h{max-width:700px;margin-bottom:36px}
-  .eyebrow{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
-  .eyebrow::before{content:"";width:22px;height:2px;background:var(--accent)}
-  .sec-h h2{font-size:clamp(28px,4vw,44px);line-height:1.04;letter-spacing:-.025em;font-weight:800;margin-top:14px;color:var(--ink)}
-  .sec-h p{margin-top:14px;font-size:16px;color:var(--ink-soft);max-width:60ch}
-  .surfaces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
-  .surf{border:1.5px solid var(--ink);border-radius:14px;background:var(--card);overflow:hidden;box-shadow:var(--sh);transition:transform .18s var(--ease),box-shadow .18s var(--ease)}
-  .surf:hover{transform:translateY(-4px);box-shadow:var(--sh-lg)}
-  .surf-h{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
-  .surf-h .pin{margin-left:auto;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);background:var(--accent);border-radius:999px;padding:2px 9px;font-weight:700}
-  .surf-b{padding:18px}
-  .miniterm{background:var(--term);border-radius:10px;padding:14px 16px;font-family:var(--mono);font-size:13px;line-height:1.8;color:var(--term-ink)}
-  .miniterm .dim{color:var(--term-soft)}.miniterm .coral{color:var(--coral)}.miniterm .ok{color:#7fbf8f}.miniterm .y{color:var(--accent)}
-  .ovl{position:relative;height:150px;border-radius:10px;background:#fff8ec;border:1px solid var(--rule);overflow:hidden;display:grid;place-items:center}
-  .ovl .work{font-family:var(--mono);font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:9px}
-  .ovl-spin{width:18px;height:18px;border-radius:50%;background:conic-gradient(var(--ink) 70%,rgba(27,24,18,.12) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 0);mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 0);animation:spin2 1s linear infinite}
-  @keyframes spin2{to{transform:rotate(360deg)}}
-  .ovl-banner{position:absolute;left:12px;right:12px;top:12px;display:flex;align-items:center;gap:8px;background:rgba(22,20,15,.96);border:1px solid rgba(255,255,255,.1);border-left:3px solid var(--blue);border-radius:9px;padding:9px 12px;font-family:var(--mono);font-size:11.5px;color:#d6d2c4}
-  .ovl-banner .ic{width:22px;height:22px;border-radius:6px;background:var(--accent);flex:0 0 auto;display:grid;place-items:center;overflow:hidden}
-  .ovl-banner .ic img{width:100%;height:100%;object-fit:cover}
-  .ovl-banner .b{color:var(--blue);font-weight:700}
-  .ovl-banner .pay{margin-left:auto;color:#5fcf8a;font-weight:700}
-  .vs-mini{height:150px;border-radius:10px;border:1px solid #303030;background:#1e1e1e;color:#d4d4d4;overflow:hidden;font-family:var(--mono)}
-  .vs-mini-top{height:26px;background:#181818;border-bottom:1px solid #303030;display:flex;align-items:center;gap:6px;padding:0 9px;font-size:10px;color:#a7a7a7}
-  .vs-mini-dot{width:7px;height:7px;border-radius:50%;background:#5f5f5f}.vs-mini-dot.red{background:var(--coral)}.vs-mini-dot.y{background:var(--accent-deep)}.vs-mini-dot.g{background:var(--earn-bright)}
-  .vs-mini-body{display:grid;grid-template-columns:34px 1fr;height:124px}
-  .vs-mini-rail{background:#181818;border-right:1px solid #303030;display:flex;flex-direction:column;align-items:center;padding-top:10px;gap:10px;color:#858585}
-  .vs-mini-mark{width:22px;height:22px;border-radius:5px;background:var(--accent);color:var(--ink);display:grid;place-items:center;font-weight:800}
-  .vs-mini-main{padding:10px 12px}
-  .vs-mini-card{border:1px solid #454545;border-radius:7px;background:#252526;padding:9px 10px;font-family:var(--sans);font-size:11.5px;line-height:1.35}
-  .vs-mini-card .tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:#9d9d9d}
-  .vs-mini-card b{display:block;color:#f2f2f2;margin-top:3px}.vs-mini-card .pay{color:#5fcf8a;font-weight:700;margin-top:5px}
-  .vs-mini-status{margin-top:9px;border-left:3px solid var(--accent);background:#252526;padding:7px 9px;font-size:10.5px;color:#bdbdbd}
-  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
-  .step{position:relative;border:1.5px solid var(--ink);border-radius:13px;background:var(--card);padding:24px 22px;counter-increment:s;box-shadow:var(--sh);transition:transform .16s var(--ease),box-shadow .16s var(--ease)}
-  .step:hover{transform:translateY(-3px);box-shadow:var(--sh-lg)}
-  .step::before{content:"0" counter(s);position:absolute;top:-14px;left:18px;background:var(--accent);border:1.5px solid var(--ink);border-radius:7px;font-family:var(--mono);font-weight:800;font-size:12px;padding:2px 10px}
-  .step h3{font-size:19px;font-weight:800;margin:6px 0 9px;letter-spacing:-.01em}
-  .step p{font-size:13.5px;color:var(--ink-soft)}
-  .step code{font-family:var(--mono);font-size:12px;background:var(--paper);border:1px solid var(--rule);border-radius:5px;padding:1px 6px;color:var(--ink)}
-  .calc{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}
-  .calc-card{border:1.5px solid var(--ink);border-radius:14px;background:var(--card);padding:26px;box-shadow:var(--sh)}
-  .calc-card h3{font-size:18px;font-weight:800;margin-bottom:6px}
-  .calc-card p{font-size:13.5px;color:var(--ink-soft)}
-  .read{font-size:38px;font-weight:800;margin:18px 0 2px;letter-spacing:-.02em}
-  .read small{font-size:14px;font-weight:600;color:var(--ink-soft)}
-  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:30px;background:transparent;cursor:pointer}
-  input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:repeating-linear-gradient(90deg,var(--rule) 0 5px,transparent 5px 10px)}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-8px;border-radius:50%;background:var(--accent);border:2px solid var(--ink)}
-  input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--accent);border:2px solid var(--ink)}
-  .calc-out{border:1.5px solid var(--ink);border-radius:14px;background:var(--term);color:var(--term-ink);padding:26px;display:flex;flex-direction:column;box-shadow:var(--sh)}
-  .calc-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px dashed rgba(239,233,214,.16);font-size:13px;color:var(--term-soft)}
-  .calc-row b{color:var(--term-ink);font-weight:700}.calc-row b.g{color:#7fbf8f}
-  .calc-big{margin-top:auto;padding-top:18px}
-  .calc-big .v{font-size:clamp(34px,4vw,46px);font-weight:800;color:var(--accent);letter-spacing:-.02em}
-  .calc-big .cap{display:block;font-family:var(--mono);font-size:11px;color:var(--term-soft);margin-top:4px}
-  .grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:start}
-  .panel{border:1.5px solid var(--ink);border-radius:14px;background:var(--card);overflow:hidden;box-shadow:var(--sh)}
-  .panel-h{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--rule)}
-  .panel-h h3{font-size:15px;font-weight:800}
-  .panel-h .flag{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--earn);border:1px solid var(--earn);border-radius:999px;padding:2px 9px}
-  .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule)}
-  .stat{background:var(--card);padding:15px 18px}
-  .stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
-  .stat .v{font-size:22px;font-weight:800;margin-top:6px}.stat .v.g{color:var(--earn)}
-  table{width:100%;border-collapse:collapse;font-size:12.5px}
-  th{text-align:left;padding:10px 18px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);border-bottom:1px solid var(--rule)}
-  td{padding:11px 18px;border-bottom:1px solid var(--rule-soft);color:var(--ink-soft)}
-  tr:last-child td{border-bottom:0}
-  td .pill{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:999px}
-  .pill.queued,.pill.open{color:var(--ink-soft);border:1px solid var(--rule)}
-  .pill.live{color:var(--earn);border:1px solid var(--earn);background:rgba(29,122,68,.08)}
-  .pill.paused,.pill.review,.pill.checkout_created{color:#bf3a2b;border:1px solid rgba(191,58,43,.55);background:rgba(191,58,43,.07)}
-  .empty{padding:26px 18px;text-align:center;color:var(--ink-soft);font-size:13px}
-  .empty b{color:var(--ink)}.empty a{color:var(--earn);font-weight:700}
-  .seat{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--rule-soft)}
-  .seat .rank{font-family:var(--mono);font-weight:800;color:var(--ink);width:26px}
-  .seat .who{color:var(--ink-soft)}
-  .seat .who small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:2px}
-  .seat .amt{margin-left:auto;font-weight:700}
-  .seat.you{background:rgba(255,216,61,.14)}.seat.you .who{color:var(--ink)}.seat.you .amt{color:var(--earn)}
-  .priv{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
-  .never{border:1.5px solid var(--ink);border-radius:14px;background:var(--card);padding:8px 22px;box-shadow:var(--sh)}
-  .never li{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--rule-soft);list-style:none;font-size:15px;color:var(--ink)}
-  .never li:last-child{border-bottom:0}
-  .never s{text-decoration-color:var(--coral);text-decoration-thickness:2px}
-  .never .no{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:#bf3a2b;font-weight:700}
-  .schema{border:1.5px solid var(--ink);border-radius:12px;background:var(--term);color:var(--term-ink);padding:18px 20px;font-family:var(--mono);font-size:12px;line-height:1.75;white-space:pre-wrap;overflow-x:auto;box-shadow:var(--sh)}
-  .schema .k{color:var(--accent)}.schema .v{color:#7fbf8f}.schema .b{color:#d9a0e8}
-  .kill{margin-top:16px;border:1.5px dashed #bf3a2b;border-radius:11px;padding:14px 18px;font-size:13px;color:var(--ink)}
-  .kill b{color:#bf3a2b;font-family:var(--mono);font-size:10px;letter-spacing:.16em}
-  .kill code{font-family:var(--mono);background:var(--card);border:1px solid var(--rule);border-radius:5px;padding:1px 6px}
-  .cmds{border:1.5px solid var(--ink);border-radius:12px;background:var(--term);overflow:hidden;max-width:760px;box-shadow:var(--sh)}
-  .cmd{display:flex;align-items:center;gap:12px;padding:13px 18px;font-family:var(--mono);font-size:13.5px}
-  .cmd+.cmd{border-top:1px dashed rgba(239,233,214,.16)}
-  .cmd .ps{color:var(--term-soft)}
-  .cmd code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;color:var(--term-ink)}
-  .cmd .y{color:var(--accent)}.cmd .dim{color:var(--term-soft)}
-  .copy{flex:0 0 auto;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--term-soft);border:1px solid var(--term-soft);border-radius:7px;background:transparent;padding:5px 10px;cursor:pointer}
-  .copy:hover{color:var(--term-ink);border-color:var(--term-ink)}.copy.ok{color:#7fbf8f;border-color:#7fbf8f}
-  .sponsor-wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:30px;align-items:center}
-  .facts{list-style:none;display:grid;gap:10px;margin-top:18px}
-  .facts li{display:flex;gap:11px;font-size:14px;color:var(--ink-soft)}
-  .facts .ck{color:var(--earn);font-weight:800}.facts b{color:var(--ink)}
-  .sponsor-box{border:1.5px solid var(--ink);border-radius:14px;background:var(--accent);box-shadow:var(--sh-lg)}
-  .sponsor-box .panel-h{border-bottom:1px solid rgba(27,24,18,.2)}.sponsor-box .panel-h h3{color:var(--ink)}
-  .final{text-align:center;padding:84px 0}
-  .final h2{font-size:clamp(30px,5vw,56px);line-height:1.02;letter-spacing:-.03em;font-weight:800;max-width:17ch;margin:0 auto;color:var(--ink)}
-  .final p{margin:18px auto 30px;max-width:52ch;color:var(--ink-soft);font-size:16px}
-  .final .hero-cta{justify-content:center}
-  .tear{margin-top:34px;letter-spacing:.6em;color:var(--ink-soft);font-size:11px;user-select:none}
-  footer{border-top:1px solid var(--ink);background:var(--card)}
-  footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center;padding:24px 26px;font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
-  footer a:hover{color:var(--ink)}footer .r{margin-left:auto}
-  .stick{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(20px);z-index:60;display:flex;align-items:center;gap:14px;background:var(--card);border:1.5px solid var(--ink);border-radius:12px;padding:9px 11px 9px 18px;box-shadow:var(--sh);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
-  .stick.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
-  .stick .t{font-size:13px;color:var(--ink-soft)}.stick .t b{color:var(--earn)}
-  .stick .x{border:0;background:transparent;color:var(--ink-soft);font-size:18px;cursor:pointer;padding:0 4px}
-  @media(max-width:920px){.hero{grid-template-columns:1fr;gap:38px;padding:48px 0 52px}.surfaces,.calc,.grid2,.priv,.sponsor-wrap{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
-  @media(max-width:560px){.wrap{padding:0 18px}.bar{padding:12px 18px}.lede{font-size:15.5px}.btn.lg{width:100%}.stat-row{grid-template-columns:1fr}.stick{left:12px;right:12px;transform:translateY(20px)}.stick.show{transform:translateY(0)}.app-surface{padding:60px 14px 56px;min-height:300px}}
-  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-</style>
 </head>
 <body>
 
 <header class="top">
   <div class="bar">
-    <a class="brand" href="#"><span class="mark">S</span>SAI <small>Sponsored AI Credits</small></a>
+    <a class="brand" href="/"><span class="mark">S</span>SAI <small>Sponsored AI Credits</small></a>
     <nav class="links" aria-label="Sections">
       <a class="nl" href="#how">How it works</a>
       <a class="nl" href="#earn">Earnings</a>
-      <a class="nl" href="#market">Market</a>
+      <a class="nl" href="/market">Market</a>
       <a class="nl" href="#privacy">Privacy</a>
       <a class="btn ghost" href="/sponsor">Become a sponsor</a>
       <a class="btn yellow" href="#install">Install</a>
@@ -320,10 +97,10 @@
           <span class="hchip"><span class="live"></span> live · you keep 60%</span>
           <h1>Get paid while your agent <span class="hl">thinks</span>.</h1>
           <p class="lede">SAI turns “Reticulating splines…” into income. One quiet sponsor card shows during a real
-            Claude&nbsp;Code or Codex wait — then <b>60% of the spend lands in your wallet</b>, as AI credits or cash-out.
+            Claude&nbsp;Code or Codex wait, and <b>60% of the spend lands in your wallet</b> as AI credits or cash-out.
             <b>Your code never leaves the machine.</b></p>
           <div class="hero-cta">
-            <a class="btn yellow lg" href="https://marketplace.visualstudio.com/items?itemName=Sacud.sponsoredai-credits">Install for VS&nbsp;Code — earn ≈ <span class="est num" id="heroEst">$32</span>/mo&nbsp;→</a>
+            <a class="btn yellow lg" href="https://marketplace.visualstudio.com/items?itemName=Sacud.sponsoredai-credits">Install for VS&nbsp;Code · earn ≈ <span class="est num" id="heroEst">$32</span>/mo&nbsp;→</a>
             <a class="btn ghost lg" href="/sponsor">Become a sponsor</a>
           </div>
           <p class="fine">no code upload · one command to stop it · <a href="#install" style="color:var(--ink);text-decoration:underline">terminal &amp; desktop overlay too →</a></p>
@@ -389,7 +166,7 @@
       </div>
       <div class="surfaces">
         <div class="surf">
-          <div class="surf-h">▣ VS&nbsp;Code extension — sidebar &amp; status bar <span class="pin">EXTENSION</span></div>
+          <div class="surf-h">▣ VS&nbsp;Code · sidebar &amp; status bar <span class="pin">extension</span></div>
           <div class="surf-b">
             <div class="vs-mini">
               <div class="vs-mini-top"><span class="vs-mini-dot red"></span><span class="vs-mini-dot y"></span><span class="vs-mini-dot g"></span><span>tokenback-workspace</span></div>
@@ -409,7 +186,7 @@
           </div>
         </div>
         <div class="surf">
-          <div class="surf-h">⌘ Terminal — Claude&nbsp;Code &amp; Codex&nbsp;CLI <span class="pin">CLI</span></div>
+          <div class="surf-h">⌘ Terminal · Claude&nbsp;Code &amp; Codex&nbsp;CLI <span class="pin">cli</span></div>
           <div class="surf-b">
             <div class="miniterm">
               <div><span class="dim">$</span> sai claude</div>
@@ -420,12 +197,12 @@
           </div>
         </div>
         <div class="surf">
-          <div class="surf-h">🖥 Desktop overlay — Claude&nbsp;Desktop &amp; Codex&nbsp;app <span class="pin">OVERLAY</span></div>
+          <div class="surf-h">🖥 Overlay · Claude&nbsp;Desktop &amp; Codex&nbsp;app <span class="pin">overlay</span></div>
           <div class="surf-b">
             <div class="ovl">
               <div class="ovl-banner">
                 <span class="ic"><img src="favicon.png" alt=""></span>
-                <span style="color:#8b8b92">sponsored</span>
+                <span class="dim">sponsored</span>
                 <span class="b">Lumen Cache</span>
                 <span class="pay num">+0.018</span>
               </div>
@@ -446,15 +223,15 @@
       <div class="steps">
         <div class="step">
           <h3>Wrap &amp; run</h3>
-          <p>Install the VS&nbsp;Code extension, start with <code>sai claude</code> / <code>sai codex</code>, or run <code>sai overlay both</code>. SAI measures idle &amp; visibility timing only — never prompts, code, or output.</p>
+          <p>Install the VS&nbsp;Code extension, start with <code>sai claude</code> / <code>sai codex</code>, or run <code>sai overlay both</code>. SAI measures idle &amp; visibility timing only: never prompts, code, or output.</p>
         </div>
         <div class="step">
           <h3>Waits become cards</h3>
-          <p>After a real attended wait, SAI shows one sponsor line or one small banner. At most one card every 45&nbsp;seconds — tune it or kill it.</p>
+          <p>After a real attended wait, SAI shows one sponsor line or one small banner. At most one card every 45&nbsp;seconds. Tune it or kill it.</p>
         </div>
         <div class="step">
           <h3>Earnings settle</h3>
-          <p>A card that stays visible ≥5s counts. The backend credits your ledger — <b>60% of net spend</b> — to spend on model calls or cash out via Stripe.</p>
+          <p>A card that stays visible ≥5s counts. The backend credits your ledger with <b>60% of net spend</b>, to spend on model calls or cash out via Stripe.</p>
         </div>
       </div>
     </div>
@@ -465,15 +242,15 @@
       <div class="sec-h">
         <span class="eyebrow">What does waiting pay?</span>
         <h2>Your spinner has a salary now.</h2>
-        <p>Drag your average agent wait per day. Figures use launch pricing — projected, not a guarantee. No funded campaign means cards pay zero.</p>
+        <p>Drag your average agent wait per day. Figures use launch pricing: projected, not a guarantee. No funded campaign means cards pay zero.</p>
       </div>
       <div class="calc">
         <div class="calc-card">
           <h3>Agent idle time</h3>
-          <p>Spinners, test runs, long diffs — the time you’re already watching.</p>
+          <p>Spinners, test runs, long diffs: the time you’re already watching.</p>
           <div class="read"><span class="num" id="calcMin">45</span><small> min / day</small></div>
           <input type="range" id="slider" min="5" max="180" step="5" value="45" aria-label="Minutes of agent waiting per day">
-          <p class="mono" style="font-size:11.5px;color:var(--ink-soft);margin-top:8px">card needs ≥10s quiet · ≥45s apart · only qualified 5s placements pay</p>
+          <p class="mono" style="font-size:11.5px;color:var(--muted);margin-top:8px">card needs ≥10s quiet · ≥45s apart · only qualified 5s placements pay</p>
         </div>
         <div class="calc-out">
           <div class="calc-row">payout / qualified card <b class="g num" id="oCard">+0.018</b></div>
@@ -494,7 +271,7 @@
       <div class="sec-h">
         <span class="eyebrow">The market is public</span>
         <h2>Bid for the most-watched wait on Earth.</h2>
-        <p>Each block buys 1,000 qualified five-second placements. Clicks bill at 50× the rate. The highest bid wins the largest share of the rotation — bid higher to show more often. <b>60% of every dollar</b> settles to the developer whose machine showed the card.</p>
+        <p>Each block buys 1,000 qualified five-second placements. Clicks bill at 50× the rate. <b>60% of every dollar</b> settles to the developer whose machine showed the card.</p>
         <a class="btn yellow" href="/market" style="margin-top:20px">Open the live market →</a>
       </div>
       <div class="grid2">
@@ -507,12 +284,12 @@
           </div>
           <table>
             <thead><tr><th>#</th><th>Campaign</th><th>Bid / 1k</th><th>Status</th></tr></thead>
-            <tbody id="homeMarketRows"><tr><td>1</td><td>Sponsored AI</td><td class="num">$30.00</td><td><span class="pill live">LIVE</span></td></tr></tbody>
+            <tbody id="homeMarketRows"><tr><td>1</td><td><b>Sponsored AI</b></td><td class="num">$30.00</td><td><span class="pill live">live</span></td></tr></tbody>
           </table>
           <div class="empty" id="homeMarketNote"><b>Live funded book:</b> Sponsored AI is bidding $30.00 / 1k with 996 of 1,000 placements remaining. <a href="/market">See the order book →</a></div>
         </div>
         <div class="panel">
-          <div class="panel-h"><h3>Top earners</h3><span class="flag" id="topEarnersFlag">live ledger</span></div>
+          <div class="panel-h"><h3>Top earners</h3><span class="flag live" id="topEarnersFlag">live ledger</span></div>
           <div id="topEarnersRows">
             <div class="seat you"><span class="rank">#1</span><span class="who">Wallet #1<small>17 qualified waits</small></span><span class="amt num">+0.051</span></div>
             <div class="seat"><span class="rank">#2</span><span class="who">Wallet #2<small>2 qualified waits</small></span><span class="amt num">+0.036</span></div>
@@ -551,7 +328,7 @@
   <span class="k">"code_uploaded"</span>: <span class="b">false</span>,
   <span class="k">"prompt_uploaded"</span>: <span class="b">false</span>
 }</pre>
-          <div class="kill"><b>KILL SWITCH</b> — one command hard-stops every sponsor surface: <code>sai config kill-switch on</code></div>
+          <div class="kill"><b>KILL SWITCH</b> · one command hard-stops every sponsor surface: <code>sai config kill-switch on</code></div>
         </div>
       </div>
     </div>
@@ -559,13 +336,13 @@
 
   <section class="band sec" id="install">
     <div class="wrap">
-      <div class="sec-h">
+      <div class="sec-h" style="margin-bottom:24px">
         <span class="eyebrow">Install</span>
         <h2>Add it to VS&nbsp;Code, or the terminal.</h2>
-        <p>Easiest in VS&nbsp;Code — one click from the Marketplace. Prefer the terminal? An npm launcher wraps the agent you already run. No forks, no cloud account, nothing uploaded.</p>
+        <p>Easiest in VS&nbsp;Code: one click from the Marketplace. Prefer the terminal? An npm launcher wraps the agent you already run. No forks, no cloud account, nothing uploaded.</p>
         <a class="btn yellow lg" href="https://marketplace.visualstudio.com/items?itemName=Sacud.sponsoredai-credits" style="margin-top:18px">Install from the VS&nbsp;Code Marketplace →</a>
       </div>
-      <p class="mono" style="font-size:11px;color:var(--ink-soft);margin:0 0 12px">or wrap the terminal CLI:</p>
+      <p class="mono" style="font-size:11px;color:var(--muted);margin:0 0 12px">or wrap the terminal CLI:</p>
       <div class="cmds">
         <div class="cmd"><span class="ps">$</span><code>npm install <span class="y">-g @sponsoredai/cli</span></code><button class="copy" data-cmd="npm install -g @sponsoredai/cli">copy</button></div>
         <div class="cmd"><span class="ps">$</span><code>sai <span class="y">claude</span> <span class="dim"># Claude Code in your terminal</span></code><button class="copy" data-cmd="sai claude">copy</button></div>
@@ -581,20 +358,20 @@
           <div class="sec-h" style="margin-bottom:0">
             <span class="eyebrow">For sponsors</span>
             <h2>Buy qualified developer attention.</h2>
-            <p>Reach developers during real coding-agent waits — counted only when the placement is visible and attended, never in CI.</p>
+            <p>Reach developers during real coding-agent waits, counted only when the placement is visible and attended, never in CI.</p>
           </div>
           <ul class="facts">
             <li><span class="ck">✓</span><span><b>Qualified only.</b> Renders after a real wait in an interactive terminal or attended overlay.</span></li>
-            <li><span class="ck">✓</span><span><b>Frequency-capped.</b> ≥45s apart with per-campaign &amp; per-install caps — inventory stays scarce.</span></li>
+            <li><span class="ck">✓</span><span><b>Frequency-capped.</b> ≥45s apart with per-campaign &amp; per-install caps. Inventory stays scarce.</span></li>
             <li><span class="ck">✓</span><span><b>Clicks are premium.</b> Eligible click-throughs bill at 50× the placement rate.</span></li>
-            <li><span class="ck">✓</span><span><b>Privacy-bounded.</b> Reporting follows the event schema — no prompts, code, or output.</span></li>
+            <li><span class="ck">✓</span><span><b>Privacy-bounded.</b> Reporting follows the event schema: no prompts, code, or output.</span></li>
           </ul>
         </div>
         <div class="sponsor-box">
           <div class="panel-h"><h3>Launch program · 2026</h3></div>
           <div style="padding:22px">
             <p style="color:var(--ink);font-size:14px;margin-bottom:16px">Create a campaign, pay with Stripe Checkout, and fund credits for qualified placements after review.</p>
-            <a class="btn lg" href="/sponsor" style="width:100%;background:var(--ink);color:var(--accent);box-shadow:none">Create a campaign →</a>
+            <a class="btn lg" href="/sponsor" style="width:100%;background:var(--ink);color:var(--yellow);box-shadow:none">Create a campaign →</a>
             <p class="mono" style="font-size:11px;color:rgba(27,24,18,.7);margin-top:12px">public bids · 60% to developers · 40% platform</p>
           </div>
         </div>
@@ -606,7 +383,7 @@
     <div class="wrap">
       <div class="final">
         <h2>The wait was always inventory.<br>Now it <span class="hl">pays you</span>.</h2>
-        <p>Install SAI, run the agent you already use, and let qualified waits fund model credits or cash-out — 60% to you.</p>
+        <p>Install SAI, run the agent you already use, and let qualified waits fund model credits or cash-out. 60% to you.</p>
         <div class="hero-cta">
           <a class="btn yellow lg" href="#install">Install SAI →</a>
           <a class="btn ghost lg" href="/sponsor">Become a sponsor</a>
@@ -663,8 +440,7 @@
 	  function flag(id,text,live){
 	    var el=$(id); if(!el) return;
 	    el.textContent=text;
-	    el.style.color=live?"var(--earn)":"var(--ink-soft)";
-	    el.style.borderColor=live?"var(--earn)":"var(--rule)";
+	    el.classList.toggle("live",!!live);
 	  }
 	  function statusPill(statusText){
 	    var pill=document.createElement("span");
@@ -691,7 +467,7 @@
 	      var tr=document.createElement("tr");
 	      function td(text,cls){var cell=document.createElement("td"); if(cls) cell.className=cls; cell.textContent=text; return cell}
 	      tr.appendChild(td(String(row.rank||idx+1)));
-	      tr.appendChild(td(String(row.campaign||"Sponsor")));
+	      var name=document.createElement("td"); var b=document.createElement("b"); b.textContent=String(row.campaign||"Sponsor"); name.appendChild(b); tr.appendChild(name);
 	      tr.appendChild(td(fmtMoney(num(row.bid_per_1000_qp)||0),"num"));
 	      var st=document.createElement("td"); st.appendChild(statusPill(row.status)); tr.appendChild(st);
 	      tbody.appendChild(tr);
@@ -710,7 +486,7 @@
 	    }else{
 	      var empty=document.createElement("b"); empty.textContent="0 funded campaigns live";
 	      note.appendChild(empty);
-	      note.appendChild(document.createTextNode(" — cards pay zero until a sponsor funds the book. "));
+	      note.appendChild(document.createTextNode(". Cards pay zero until a sponsor funds the book. "));
 	    }
 	    var a=document.createElement("a"); a.href="/market"; a.textContent="See the order book →"; note.appendChild(a);
 	  }

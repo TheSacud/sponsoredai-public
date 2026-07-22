@@ -4,10 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>Admin — SAI</title>
+<title>Admin - SAI</title>
 <meta name="robots" content="noindex">
 <link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
-<link rel="stylesheet" href="sai-core-v3.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sai-core-v4.css">
 </head>
 <body>
 
@@ -18,18 +21,18 @@
       <a class="nl" href="#campaigns">Campaigns</a>
       <a class="nl" href="#payouts">Payouts</a>
       <a class="nl" href="#fraud">Review</a>
-      <span class="userchip"><span class="av">D</span> <b>Duarte</b></span>
+      <span class="userchip"><b>Duarte</b><span class="av">D</span></span>
     </nav>
   </div>
 </header>
 
 <main>
   <section class="band">
-    <div class="wrap page-head">
-      <div class="sec-h" style="margin-bottom:20px">
+    <div class="wrap page-head" style="padding-bottom:40px">
+      <div class="sec-h" style="margin-bottom:24px">
         <span class="eyebrow">Admin · operations</span>
         <h1>Overview.</h1>
-        <p>Backend-authoritative ledger, sponsor spend and payout review. <span class="note">Sample data for layout — wire to <code>/v1/admin</code> in prod.</span></p>
+        <p>Backend-authoritative ledger, sponsor spend and payout review. <span class="note">Sample data preview · the live console is at <a href="/admin" style="text-decoration:underline">/admin</a>.</span></p>
       </div>
       <div class="kpis">
         <div class="kpi"><div class="k">sponsors</div><div class="v num">7</div><div class="sub">+2 this week</div></div>
@@ -42,41 +45,41 @@
     </div>
   </section>
 
-  <section class="band darker sec" id="campaigns">
+  <section class="band darker sec app" id="campaigns">
     <div class="wrap stack">
       <div class="panel">
-        <div class="panel-h"><h3>Campaigns</h3><span class="flag live">3 live</span></div>
+        <div class="panel-h"><h3>Campaigns</h3><span class="pill live right">3 live</span></div>
         <table>
           <thead><tr><th>Campaign</th><th>Sponsor</th><th>Bid / 1k</th><th>Delivered</th><th>Spend</th><th>Status</th></tr></thead>
           <tbody>
-            <tr><td><span class="nm">Q3 launch</span></td><td>Lumen Cache</td><td class="num">$30.00</td><td><span class="row" style="gap:8px"><span class="bar" style="width:80px"><i style="width:78%"></i></span><span class="num">7.8k/10k</span></span></td><td class="num">$1,240</td><td><span class="pill live">live</span></td></tr>
-            <tr><td><span class="nm">Slow-test fix</span></td><td>TraceKit</td><td class="num">$24.00</td><td><span class="row" style="gap:8px"><span class="bar" style="width:80px"><i style="width:41%"></i></span><span class="num">4.1k/10k</span></span></td><td class="num">$880</td><td><span class="pill live">live</span></td></tr>
-            <tr><td><span class="nm">Ship to prod</span></td><td>Postframe</td><td class="num">$18.00</td><td><span class="row" style="gap:8px"><span class="bar" style="width:80px"><i style="width:62%"></i></span><span class="num">6.2k/10k</span></span></td><td class="num">$612</td><td><span class="pill live">live</span></td></tr>
-            <tr><td><span class="nm">Beta teaser</span></td><td>Vector Rooms</td><td class="num">$15.00</td><td><span class="row" style="gap:8px"><span class="bar" style="width:80px"><i style="width:12%"></i></span><span class="num">1.2k/10k</span></span></td><td class="num">$180</td><td><span class="pill paused">paused</span></td></tr>
+            <tr><td><span class="nm">Q3 launch</span></td><td>Lumen Cache</td><td class="num">$30.00</td><td><span class="row" style="gap:8px;flex-wrap:nowrap"><span class="meter" style="width:80px"><i style="width:78%"></i></span><span class="mono num" style="font-size:11.5px">7.8k/10k</span></span></td><td class="num">$1,240</td><td><span class="pill live">live</span></td></tr>
+            <tr><td><span class="nm">Slow-test fix</span></td><td>TraceKit</td><td class="num">$24.00</td><td><span class="row" style="gap:8px;flex-wrap:nowrap"><span class="meter" style="width:80px"><i style="width:41%"></i></span><span class="mono num" style="font-size:11.5px">4.1k/10k</span></span></td><td class="num">$880</td><td><span class="pill live">live</span></td></tr>
+            <tr><td><span class="nm">Ship to prod</span></td><td>Postframe</td><td class="num">$18.00</td><td><span class="row" style="gap:8px;flex-wrap:nowrap"><span class="meter" style="width:80px"><i style="width:62%"></i></span><span class="mono num" style="font-size:11.5px">6.2k/10k</span></span></td><td class="num">$612</td><td><span class="pill live">live</span></td></tr>
+            <tr><td><span class="nm">Beta teaser</span></td><td>Vector Rooms</td><td class="num">$15.00</td><td><span class="row" style="gap:8px;flex-wrap:nowrap"><span class="meter" style="width:80px"><i style="width:12%"></i></span><span class="mono num" style="font-size:11.5px">1.2k/10k</span></span></td><td class="num">$180</td><td><span class="pill paused">paused</span></td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="grid2">
         <div class="panel" id="payouts">
-          <div class="panel-h"><h3>Payout / cash-out queue</h3><span class="flag">4 in review</span></div>
+          <div class="panel-h"><h3>Payout / cash-out queue</h3><span class="adm-chip-amber right">4 in review</span></div>
           <table>
             <thead><tr><th>Developer</th><th>Amount</th><th>Method</th><th>Status</th><th></th></tr></thead>
             <tbody>
-              <tr><td class="mono">dev_8f21…a4</td><td class="num">$120.40</td><td>Stripe Connect</td><td><span class="pill review">review</span></td><td class="right"><button class="btn yellow" style="padding:5px 11px">Approve</button></td></tr>
-              <tr><td class="mono">dev_4c0e…91</td><td class="num">$64.00</td><td>Stripe Connect</td><td><span class="pill review">review</span></td><td class="right"><button class="btn yellow" style="padding:5px 11px">Approve</button></td></tr>
-              <tr><td class="mono">dev_2a77…0d</td><td class="num">$318.20</td><td>Stripe Connect</td><td><span class="pill flagged">flagged</span></td><td class="right"><button class="btn ghost" style="padding:5px 11px">Hold</button></td></tr>
-              <tr><td class="mono">dev_91bb…7e</td><td class="num">$42.00</td><td>credits only</td><td><span class="pill paid">paid</span></td><td class="right muted">—</td></tr>
+              <tr><td class="mono" style="font-size:12px">dev_8f21…a4</td><td><b class="num">$120.40</b></td><td>Stripe Connect</td><td><span class="pill review">review</span></td><td style="text-align:right"><button class="btn yellow adm-btn-sm" type="button">Approve</button></td></tr>
+              <tr><td class="mono" style="font-size:12px">dev_4c0e…91</td><td><b class="num">$64.00</b></td><td>Stripe Connect</td><td><span class="pill review">review</span></td><td style="text-align:right"><button class="btn yellow adm-btn-sm" type="button">Approve</button></td></tr>
+              <tr><td class="mono" style="font-size:12px">dev_2a77…0d</td><td><b class="num">$318.20</b></td><td>Stripe Connect</td><td><span class="pill flagged">flagged</span></td><td style="text-align:right"><button class="btn ghost adm-btn-sm" type="button">Hold</button></td></tr>
+              <tr><td class="mono" style="font-size:12px">dev_91bb…7e</td><td><b class="num">$42.00</b></td><td>credits only</td><td><span class="pill paid">paid</span></td><td style="text-align:right" class="muted">—</td></tr>
             </tbody>
           </table>
         </div>
 
         <div class="panel" id="fraud">
-          <div class="panel-h"><h3>Anti-abuse signals</h3><span class="flag">live</span></div>
-          <div class="panel-b stack" style="gap:14px">
-            <div class="row"><span class="pill flagged">flagged</span><span>Install <code class="mono">i_2a77</code> — qualified rate 3.1× cohort median</span></div>
-            <div class="row"><span class="pill review">watch</span><span>Campaign <b>Beta teaser</b> — CTR 9× baseline, click billing held</span></div>
-            <div class="row"><span class="pill live">ok</span><span>Headless / CI placements blocked: <b class="num">1,204</b> today</span></div>
+          <div class="panel-h"><h3>Anti-abuse signals</h3><span class="pill live right">live</span></div>
+          <div class="panel-b stack" style="gap:14px;font-size:13.5px">
+            <div class="row" style="flex-wrap:nowrap"><span class="pill flagged">flagged</span><span>Install <code class="mono" style="font-size:12px">i_2a77</code>: qualified rate 3.1× cohort median</span></div>
+            <div class="row" style="flex-wrap:nowrap"><span class="pill watch">watch</span><span>Campaign <b>Beta teaser</b>: CTR 9× baseline, click billing held</span></div>
+            <div class="row" style="flex-wrap:nowrap"><span class="pill ok">ok</span><span>Headless / CI placements blocked: <b class="num">1,204</b> today</span></div>
             <div class="note">Thresholds and rules stay server-side; this view is read-only.</div>
           </div>
         </div>

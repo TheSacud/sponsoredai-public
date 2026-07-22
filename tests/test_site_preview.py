@@ -30,7 +30,7 @@ class SitePreviewTests(unittest.TestCase):
         (root / "index.html").write_text("<h1>Home</h1>", encoding="utf-8")
         (root / "market.html").write_text("<h1>Market</h1>", encoding="utf-8")
         (root / "trust.html").write_text("<h1>Trust</h1>", encoding="utf-8")
-        (root / "_internal" / "demo.html").write_text("<h1>Demo</h1>", encoding="utf-8")
+        (root / "_internal" / "internal-note.html").write_text("<h1>Internal</h1>", encoding="utf-8")
         (root / "sai.css").write_text("body { color: black; }", encoding="utf-8")
 
     def fetch(self, base_url: str, route: str) -> str:
@@ -49,13 +49,24 @@ class SitePreviewTests(unittest.TestCase):
                 base_url = self.preview.server_url(server)
                 self.assertIn("Home", self.fetch(base_url, "/"))
                 self.assertIn("Market", self.fetch(base_url, "/market"))
-                self.assertIn("Demo", self.fetch(base_url, "/demo"))
+                self.assertIn("Trust", self.fetch(base_url, "/trust"))
                 self.assertIn("color: black", self.fetch(base_url, "/sai.css"))
                 self.assertIn("Home", self.fetch(base_url, "/unknown-route"))
             finally:
                 server.shutdown()
                 thread.join(timeout=2)
                 server.server_close()
+
+    def test_homepage_command_chips_are_atomic_and_use_fresh_styles(self):
+        homepage = (ROOT / "site-v3" / "index.html").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "site-v3" / "sai-core-v4.css").read_text(encoding="utf-8")
+
+        self.assertIn('href="sai-core-v4.css?v=20260718-1"', homepage)
+        self.assertIn(".step code{display:inline-block", stylesheet)
+        self.assertIn(
+            ".step code,.kill code,.doc-prose code,.cl-bubble code{white-space:nowrap}",
+            stylesheet,
+        )
 
     def test_path_traversal_does_not_escape_site_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -94,7 +105,7 @@ class SitePreviewTests(unittest.TestCase):
                     "--check-path",
                     "/market",
                     "--check-path",
-                    "/demo",
+                    "/trust",
                 ],
                 cwd=ROOT,
                 stdout=subprocess.PIPE,

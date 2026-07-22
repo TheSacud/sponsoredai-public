@@ -59,6 +59,7 @@ NO_PLACEMENT_RETRY_SECONDS = 10.0
 QUALIFICATION_TIMING_RETRY_SECONDS = 0.5
 RETRYABLE_QP_INVALID_REASONS = {"server_visible_under_5s"}
 MIN_RENDER_TRANSPORT_ELAPSED_SECONDS = 0.001
+RENDER_EVENT_ATTEMPTS = 2
 
 # Carousel AFK guard. A pinned card keeps cycling to the next placement every
 # rotate_seconds while the terminal stays idle, so a walked-away session would
@@ -632,8 +633,14 @@ class SponsorSession:
         shown_at = now
         if card.placement_id and self.placement_client is not None:
             render_started = time.monotonic()
-            self._record_remote_event(card, event, RENDERED_EVENT, visible_seconds=0.0)
+            rendered = _record_rendered_event(self.placement_client, card, event, self.id)
             render_elapsed = max(0.0, time.monotonic() - render_started)
+            if not rendered:
+                # A paid card without a server-confirmed render can never pass
+                # the qualification sequence check. Do not show an unearnable
+                # card; let the normal placement retry cadence try again.
+                self._next_card_retry_at = now + NO_PLACEMENT_RETRY_SECONDS
+                return None
             if render_elapsed >= MIN_RENDER_TRANSPORT_ELAPSED_SECONDS:
                 shown_at = now + render_elapsed
         self.mark_cards_hidden(shown_at)
@@ -806,6 +813,33 @@ def _qualification_retry_after(response: dict[str, Any] | None) -> float | None:
     return None
 
 
+def _record_rendered_event(
+    client: RemotePlacementClient,
+    card: SponsorCard,
+    event: dict[str, Any],
+    session_id: str,
+) -> bool:
+    """Confirm the server observed a render before exposing a paid card.
+
+    One immediate retry covers a lost response after the backend committed the
+    event. The backend treats repeated rendered events idempotently, so this
+    does not create a fraud flag or move the server-side visibility clock.
+    """
+    payload = {
+        **{key: value for key, value in event.items() if key != "event"},
+        "event": RENDERED_EVENT,
+        "visible_seconds": 0.0,
+        "session_id": session_id,
+        "campaign_id": card.campaign_id,
+        "signature": card.signature,
+    }
+    for _attempt in range(RENDER_EVENT_ATTEMPTS):
+        response = client.record_event(str(card.placement_id), payload)
+        if response is not None:
+            return bool(response.get("accepted"))
+    return False
+
+
 def _optional_str(value: Any) -> str | None:
     if value is None:
         return None
@@ -853,19 +887,8 @@ def fetch_placement_card(
         return {"placement": None, "reason": "no_placement"}
     session_id = f"sess_{secrets.token_urlsafe(12)}"
     event = external_event_fields(tool, surface, attended, config)
-    # Best effort: a failed rendered event only means the qualifying event will
-    # be rejected later (missing_rendered) -- never a wrong bill.
-    client.record_event(
-        card.placement_id,
-        {
-            **{key: value for key, value in event.items() if key != "event"},
-            "event": RENDERED_EVENT,
-            "visible_seconds": 0.0,
-            "session_id": session_id,
-            "campaign_id": card.campaign_id,
-            "signature": card.signature,
-        },
-    )
+    if not _record_rendered_event(client, card, event, session_id):
+        return {"placement": None, "reason": "render_unconfirmed"}
     return {
         "placement": {
             "placement_id": card.placement_id,
