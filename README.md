@@ -12,6 +12,7 @@ showed it. Take it as **AI credits or cash**.
 [![Website](https://img.shields.io/badge/sponsoredai.dev-1A1A1A?style=for-the-badge&logoColor=white)](https://sponsoredai.dev)
 [![npm](https://img.shields.io/npm/v/%40sponsoredai%2Fcli?style=for-the-badge&logo=npm&label=npm&color=CB3837)](https://www.npmjs.com/package/@sponsoredai/cli)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/Sacud.sponsoredai-credits?style=for-the-badge&logo=visualstudiocode&label=VS%20Code%20Marketplace&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=Sacud.sponsoredai-credits)
+[![Tests](https://img.shields.io/github/actions/workflow/status/TheSacud/sponsoredai-public/tests.yml?style=for-the-badge&label=tests&labelColor=1A1A1A)](https://github.com/TheSacud/sponsoredai-public/actions/workflows/tests.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-EEB200?style=for-the-badge&labelColor=1A1A1A)](LICENSE)
 
 </div>
@@ -38,6 +39,29 @@ SAI  ·  $0.42 today  ·  $7.11 spendable  ·  credits or cash
 
 No surveys, no tokens to buy, no video to sit through. You run your agent the way
 you already do.
+
+## 🚀 60-second start
+
+```bash
+npm install -g @sponsoredai/cli
+
+sai claude            # or: sai codex
+sai overlay both      # desktop overlay for Claude Desktop + Codex app
+sai wallet            # check your balance
+```
+
+No sign-up first — SAI creates its local install state when it is needed. It
+measures the *wait*, never the *work* (details in the next section). Turn the
+volume down or off whenever you want:
+
+```bash
+sai config set frequency low
+sai config set frequency off
+sai config kill-switch on --reason "incident"
+```
+
+Prefer VS Code? Install **[SAI Credits](https://marketplace.visualstudio.com/items?itemName=Sacud.sponsoredai-credits)**
+from the Marketplace for the sponsor view, wallet, and one-click agent launchers.
 
 ## 🔒 Your code never leaves your machine
 
@@ -78,9 +102,21 @@ the live schema yourself:
 sai privacy schema
 ```
 
-Full write-up: **[sponsoredai.dev/trust](https://sponsoredai.dev/trust)**.
+The full data-boundary contract lives in this repo as **[TRUST.md](TRUST.md)**,
+with the hosted copy at **[sponsoredai.dev/trust](https://sponsoredai.dev/trust)** —
+and `tests/` enforces it in CI.
 
 ## 💸 How the money works
+
+```mermaid
+flowchart LR
+    A["🕒 Your agent<br>thinks"] --> B["⬡ One sponsor line<br>on your screen"]
+    B --> C["Visible ≥ 5s in an<br>attended session"]
+    C --> D["Sponsor pays<br>1 QP"]
+    D --> E["60% credited<br>to you"]
+    E --> F["💳 AI credits via<br>the local gateway"]
+    E --> G["💵 Cash out via<br>Stripe Connect"]
+```
 
 - **Sponsors buy qualified placements.** The paid unit is fixed:
   `1 QP = 1 qualified five-second placement`.
@@ -114,29 +150,6 @@ Sponsor cards appear for interactive terminals or attended desktop overlays over
 supported apps. CI and headless runs are left alone, and the kill switch turns
 everything off instantly.
 
-## 🚀 Install
-
-```bash
-npm install -g @sponsoredai/cli
-```
-
-Then run your agent through SAI:
-
-```bash
-sai claude            # or: sai codex
-sai overlay both      # desktop overlay for Claude Desktop + Codex app
-sai wallet            # check your balance
-```
-
-You do not need to log in first; SAI creates its local install state when it is
-needed. Turn the volume down or off whenever you want:
-
-```bash
-sai config set frequency low
-sai config set frequency off
-sai config kill-switch on --reason "incident"
-```
-
 ## 📣 Want to sponsor?
 
 You are reaching the most technical audience there is, in the calmest format
@@ -156,6 +169,7 @@ vscode-extension/   the VS Code surface (launchers, wallet, sponsor view)
 npm/                the @sponsoredai/cli launcher + platform packages
 site-v3/            the public marketing + trust pages
 tests/              the suite that guards the trust boundary
+TRUST.md            the public data-boundary contract
 ```
 
 The hosted backend (sponsor server, billing, fraud, and payout engine) is a
@@ -183,7 +197,7 @@ calls without SAI ever seeing model traffic — the gateway requests a
 per-installation provider key whose spend limit equals your spendable balance,
 and calls go straight from your machine to the provider.
 
-**Build**
+**Build and test**
 
 ```bash
 python -m pip install -e ".[test]"
@@ -199,14 +213,18 @@ python -m PyInstaller --onedir --name sai --paths src \
 # Windows additionally needs `--collect-all winpty` for the ConPTY compositor.
 ```
 
-CI in `.github/workflows/` builds the Linux, macOS, and Windows binaries and
-publishes the npm launcher plus platform packages on tagged releases.
+CI in `.github/workflows/` runs the test suite on every push and builds the
+Linux, macOS, and Windows binaries plus the npm launcher and platform packages
+on tagged releases.
 
 The POSIX runner uses a real PTY and tracks output timing, not content. On
 Windows a ConPTY compositor pins the sponsor line via `pywinpty`; without it the
 runner falls back to passthrough execution. The desktop overlay is tested on
 Windows x64 and macOS arm64 with Claude Desktop and the Codex app; Linux is
 supported for the terminal CLI only in this release.
+
+Issues and pull requests are welcome — the privacy tests in `tests/` are the
+contract, so changes that touch the trust boundary must keep them green.
 
 ## 📜 License
 
