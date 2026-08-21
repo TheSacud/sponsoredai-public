@@ -13,6 +13,7 @@ permissions:
 jobs:
   pytest:
     name: pytest (${{ matrix.os }})
+    if: github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -30,6 +31,7 @@ jobs:
 
   python-package:
     name: wheel smoke
+    if: github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -48,7 +50,7 @@ jobs:
 
   version-guard:
     name: version guard
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') && github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -75,6 +77,7 @@ jobs:
 
   build:
     name: build ${{ matrix.platform }}-${{ matrix.arch }}
+    if: github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -142,9 +145,11 @@ jobs:
         with:
           name: sai-${{ matrix.platform }}-${{ matrix.arch }}
           path: release/*
+          retention-days: 1
 
   vscode-extension:
     name: VS Code extension
+    if: github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -158,8 +163,8 @@ jobs:
         working-directory: vscode-extension
         run: npm run package:smoke
       - name: Publish to VS Code Marketplace when configured
-        # Publish only from the public repo (the build/test/package steps above
-        # still run as CI in both repos); see publish-npm for the rationale.
+        # The job is public-only; retain the step guard as defence in depth if
+        # job routing changes later.
         if: github.repository == 'TheSacud/sponsoredai-public'
         working-directory: vscode-extension
         env:
@@ -186,6 +191,7 @@ jobs:
         with:
           name: sai-vscode-extension
           path: vscode-extension/*.vsix
+          retention-days: 1
 
   github-release:
     name: upload release assets
