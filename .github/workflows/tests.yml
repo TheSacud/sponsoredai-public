@@ -9,6 +9,7 @@ on:
 jobs:
   pytest:
     name: pytest (${{ matrix.os }}, py${{ matrix.python-version }})
+    if: github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,6 +28,7 @@ jobs:
 
   package-smoke:
     name: wheel smoke
+    if: github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -49,6 +51,7 @@ jobs:
 
   vscode-extension:
     name: VS Code extension
+    if: github.repository == 'TheSacud/sponsoredai-public'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
