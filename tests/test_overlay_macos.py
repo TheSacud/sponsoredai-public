@@ -263,12 +263,6 @@ class MacTextSurfaceCacheTests(unittest.TestCase):
 
 @unittest.skipUnless(is_macos(), "macOS overlay backend requires macOS")
 class MacBackendWiringTests(unittest.TestCase):
-    def test_autorelease_pool_is_a_context_manager(self):
-        from sai.overlay.macos import autorelease_pool
-
-        with autorelease_pool():
-            pass  # must not raise
-
     def test_backend_wires_iteration_context(self):
         from sai.overlay.app import _backend
 

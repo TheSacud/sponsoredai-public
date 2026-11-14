@@ -13,8 +13,8 @@ from dataclasses import dataclass
 from .win32 import Rect
 
 
-# Default gap between the banner and the target window edge, in physical pixels
-# at 96 DPI; the window module scales it by the target monitor's DPI.
+# Default gap between the banner and the target window edge, in physical pixels.
+# It is applied as-is (not scaled by the monitor's DPI).
 DEFAULT_MARGIN = 16
 
 

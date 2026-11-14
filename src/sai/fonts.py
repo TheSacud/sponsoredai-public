@@ -21,8 +21,6 @@ from pathlib import Path
 
 from .ansi import UNICODE_OK
 
-SPONSOR_ICON = "\uf0a1"  # nf-fa-bullhorn
-
 # Nerd Fonts abbreviate the GDI/Win32 family name (the long "... Nerd Font Mono"
 # overflows the classic name-table limit), so a patched face shows up as e.g.
 # "CaskaydiaMono NFM" / "JetBrainsMono NF" / "... NFP" - match those too.

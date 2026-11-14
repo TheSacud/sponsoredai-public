@@ -245,7 +245,7 @@ class RunnerTests(unittest.TestCase):
         with mock.patch("sai.runner._is_windows", return_value=True), \
                 mock.patch("sai.runner.interactive_terminal", return_value=True), \
                 mock.patch("sai.runner._winpty_available", return_value=False):
-            result = runner.run(["codex"], tool="codex")
+            result = runner.run(["claude"], tool="claude")
         self.assertEqual(result, "PASS")
         runner._run_windows_pty.assert_not_called()
 

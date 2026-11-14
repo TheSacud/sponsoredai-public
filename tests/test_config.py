@@ -7,7 +7,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from sai.config import DEFAULT_BACKEND_URL, load_config, runtime_paths, save_config, write_json_atomic
+from sai.config import (
+    DEFAULT_BACKEND_URL,
+    kill_switch_active,
+    load_config,
+    runtime_paths,
+    save_config,
+    write_json_atomic,
+)
 
 
 class ConfigTests(unittest.TestCase):
@@ -18,6 +25,19 @@ class ConfigTests(unittest.TestCase):
 
         self.assertEqual(config["backend_url"], DEFAULT_BACKEND_URL)
         self.assertEqual(config["frequency"], "normal")
+
+    def test_kill_switch_fails_closed_on_non_object_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            env = {"SAI_HOME": tmp, "SAI_KILL_SWITCH": ""}
+            with patch.dict(os.environ, env, clear=False):
+                path = runtime_paths().kill_switch_file
+                path.parent.mkdir(parents=True, exist_ok=True)
+                for raw in ("[]", "true", '"off"', "null"):
+                    with self.subTest(raw=raw):
+                        path.write_text(raw, encoding="utf-8")
+                        self.assertTrue(kill_switch_active())
+                path.write_text('{"active": false}', encoding="utf-8")
+                self.assertFalse(kill_switch_active())
 
     def test_default_backend_can_be_overridden_for_builds(self):
         with tempfile.TemporaryDirectory() as tmp:

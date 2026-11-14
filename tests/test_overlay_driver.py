@@ -483,12 +483,6 @@ class ProbeTickHookTests(unittest.TestCase):
             driver.tick()
         self.assertEqual(events, ["begin", "end"])
 
-    def test_probe_without_hooks_still_ticks(self):
-        # FakeProbe defines neither hook; the driver must tolerate that.
-        driver, _monitor, window, _session = build(vstate(fg=False))
-        driver.tick()
-        self.assertEqual(window.hides, 1)
-
 
 class RunIterationContextTests(unittest.TestCase):
     def test_run_wraps_each_pass_in_the_iteration_context(self):

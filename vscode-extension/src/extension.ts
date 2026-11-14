@@ -406,8 +406,7 @@ export class SaiExtensionController {
 
   // Passive nudge: the CLI auto-updates nowhere, so when the wallet read reports
   // a newer published version, surface it once (per version, per session) with a
-  // one-click path into the existing Install / Update CLI flow. Never modal, and
-  // tolerant of a host that lacks showInformationMessage (the unit-test fake).
+  // one-click path into the existing Install / Update CLI flow. Never modal.
   private maybeNotifyUpdate(snapshot: WalletSnapshot): void {
     const update = snapshot.update;
     if (!update?.available || !update.latest) {
@@ -417,14 +416,10 @@ export class SaiExtensionController {
       return;
     }
     this.notifiedUpdateVersion = update.latest;
-    const show = this.api.window.showInformationMessage;
-    if (typeof show !== "function") {
-      return;
-    }
     const action = "Update CLI";
     const current = update.current ? ` (you have ${update.current})` : "";
     void Promise.resolve(
-      show(`A new SAI CLI ${update.latest} is available${current}.`, action)
+      this.api.window.showInformationMessage(`A new SAI CLI ${update.latest} is available${current}.`, action)
     ).then((choice) => {
       if (choice === action) {
         void this.confirmInstallCli();

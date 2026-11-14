@@ -7,8 +7,9 @@ and every ``npm/platform/*/package.json`` match it, and that ``pyproject.toml`` 
 its version dynamically (so it cannot hold a stale literal).
 
 The VS Code extension is on its own version line and is intentionally NOT checked
-here. Used by ``tests.yml`` (PR-time drift guard), by the release workflow's
-version guard, and by ``sync_public.py`` before an export.
+here. Used by ``tests.yml`` (on tag pushes and manual runs in the public repo;
+no workflow runs it on pull requests), by the release workflow's version guard,
+by ``release.py``, and by ``sync_public.py`` before an export.
 """
 from __future__ import annotations
 

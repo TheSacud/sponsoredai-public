@@ -92,7 +92,7 @@ What reaches the server is one allowlisted event:
 ```
 
 Alongside it travel technical identifiers only (`install_id_hash`, `session_id`,
-`placement_id`, `campaign_id`, `signature`, `cli_version`). Desktop overlay
+`placement_id`, `campaign_id`, `signature`, `click_token`, `cli_version`). Desktop overlay
 events use the same shape with `surface: "desktop_overlay"`.
 
 This repo is the real client. You can read exactly what runs, and you can print
@@ -142,7 +142,7 @@ curl -fsS https://sponsoredai.dev/v1/metric-contract
 | Surface | Where | Needs |
 | --- | --- | --- |
 | **Terminal sponsor line** | Claude Code / Codex CLI wait | Any version |
-| **Pinned spinner line** | Claude Code / Codex CLI on Windows | `pywinpty` (ConPTY) |
+| **Pinned spinner line** | Claude Code on Windows | `pywinpty` (ConPTY) |
 | **Desktop overlay** | Claude Desktop, Codex app | Windows x64 or macOS arm64 |
 | **VS Code sponsor view** | Claude / Codex panels in VS Code | The SAI extension |
 

@@ -2,9 +2,9 @@
 target app without ever taking focus, and follows the target as it moves.
 
 This is the hard, durable part of the overlay. It is deliberately content-
-agnostic -- it paints by delegating to a ``Surface`` -- so the one-line text
-banner today and a richer WebView2-hosted ad later share the exact same window
-behaviour (topmost, click-through toggle, no-activate, DPI-correct positioning).
+agnostic -- it paints by delegating to a ``Surface`` -- so any surface shares the
+exact same window behaviour (topmost, click-through toggle, no-activate,
+DPI-correct positioning).
 
 Windows-only; everything ctypes is built lazily so the package imports on POSIX.
 """
@@ -43,10 +43,7 @@ WM_DPICHANGED = 0x02E0
 SW_HIDE = 0
 SW_SHOWNOACTIVATE = 4
 HWND_TOPMOST = -1
-SWP_NOSIZE = 0x0001
-SWP_NOMOVE = 0x0002
 SWP_NOACTIVATE = 0x0010
-SWP_SHOWWINDOW = 0x0040
 SRCCOPY = 0x00CC0020
 
 PM_REMOVE = 0x0001

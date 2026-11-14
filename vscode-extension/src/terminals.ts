@@ -51,13 +51,11 @@ const TERMINAL_SPECS: Record<SaiTerminalAction, TerminalSpec> = {
 
 export interface SaiTerminalLike {
   readonly name: string;
-  readonly exitStatus?: vscode.TerminalExitStatus;
   show(preserveFocus?: boolean): void;
   sendText(text: string, addNewLine?: boolean): void;
 }
 
 export interface SaiTerminalWindow {
-  readonly terminals: readonly SaiTerminalLike[];
   createTerminal(options: vscode.TerminalOptions): SaiTerminalLike;
 }
 
@@ -69,10 +67,6 @@ export function terminalCommandFor(action: SaiTerminalAction, options: SaiTermin
   const platform = options.platform ?? process.platform;
   const command = options.saiCommand?.trim() || defaultSaiCommand(platform);
   return [quoteTerminalCommand(command, platform), ...spec.args].join(" ");
-}
-
-export function terminalNameFor(action: SaiTerminalAction): string {
-  return TERMINAL_SPECS[action].name;
 }
 
 export function openSaiTerminal(

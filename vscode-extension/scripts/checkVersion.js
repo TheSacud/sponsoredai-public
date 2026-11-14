@@ -127,8 +127,5 @@ if (require.main === module) {
 }
 
 module.exports = {
-  EXPECTED_IDENTITY,
-  changelogVersionHeadings,
-  findVersionContractProblems,
-  findVersionContractProblemsForRoot
+  findVersionContractProblems
 };

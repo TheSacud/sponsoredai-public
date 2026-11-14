@@ -245,6 +245,9 @@ def kill_switch_active() -> bool:
     except json.JSONDecodeError:
         logger.warning("kill switch fail closed source=file error=json_decode")
         return True
+    if not isinstance(data, dict):
+        logger.warning("kill switch fail closed source=file error=not_object")
+        return True
     return bool(data.get("active", False))
 
 

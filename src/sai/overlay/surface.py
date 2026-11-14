@@ -4,8 +4,7 @@ The host window (``window.OverlayWindow``) owns the hard part -- a topmost,
 target-following layered window -- and is content-agnostic: it delegates "fill
 this rectangle" to a ``Surface``. ``TextSurface`` draws one GDI line: an optional
 brand logo (or an accent rail), the sponsor credit, and a dismiss affordance.
-When richer ads are wanted, a ``WebView2Surface`` hosting an Edge WebView2
-control in the same HWND slots in behind the same protocol.
+Any other content would implement the same ``Surface`` protocol.
 
 The brand logo is fetched asynchronously (off the paint loop) through the
 SSRF-guarded ``branding`` module and decoded/drawn with GDI+. Import-safe on

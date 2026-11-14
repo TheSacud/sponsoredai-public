@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 from . import __version__
-from .ansi import DIM, style
+from .ansi import DIM, UNICODE_OK, style
 from .config import USER_AGENT, runtime_paths, write_json_atomic
 
 logger = logging.getLogger(__name__)
@@ -175,7 +175,7 @@ def check_for_update(
 
 def update_notice(info: UpdateInfo) -> str:
     """One-line, dim notice for a terminal."""
-    arrow = "→" if _unicode_ok() else "->"
+    arrow = "→" if UNICODE_OK else "->"
     return style(
         f"A new sai is available: {info.current} {arrow} {info.latest}. "
         f"Update with: {UPDATE_COMMAND}",
@@ -211,15 +211,4 @@ def _stream_is_tty(stream) -> bool:
     try:
         return bool(stream.isatty())
     except (AttributeError, ValueError):
-        return False
-
-
-def _unicode_ok() -> bool:
-    # Lazy import so the module loads even if ansi's unicode probe is heavy; the
-    # arrow is cosmetic and the ASCII fallback is always correct.
-    try:
-        from .ansi import UNICODE_OK
-
-        return bool(UNICODE_OK)
-    except Exception:  # pragma: no cover - cosmetic fallback only
         return False

@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import signal
 import sys
-from typing import Optional
 
 from ..browser import open_url
 from ..config import ensure_config_saved
@@ -216,10 +215,6 @@ def _backend() -> dict:
             "iteration_context": autorelease_pool,
         }
     raise RuntimeError("unsupported overlay platform")
-
-
-def _default_probe():
-    return _backend()["default_probe"]()
 
 
 def _install_stop_handlers(handler) -> None:

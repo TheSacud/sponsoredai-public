@@ -32,7 +32,6 @@ def _console_unicode() -> bool:
 
 UNICODE_OK = _console_unicode()
 ELLIPSIS = "…" if UNICODE_OK else "..."
-DASH = "—" if UNICODE_OK else "-"
 RAIL = "▌" if UNICODE_OK else "|"   # left accent bar marking the sponsored zone
 MIDDOT = "·" if UNICODE_OK else "-"  # compact separator
 ARROW = "↗" if UNICODE_OK else ""    # clickable-link hint (dropped without Unicode)

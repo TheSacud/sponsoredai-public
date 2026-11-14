@@ -14,8 +14,10 @@ placement only counts while ALL of these hold (mirroring the terminal's
   * the user has touched input recently (the GUI analogue of the terminal's
     stdin-presence AFK guard).
 
-This module is pure logic over a ``SystemProbe``; the driver maps ``live``
-transitions onto ``SponsorSession.maybe_card``/``mark_cards_hidden``/``settle``.
+This module is pure logic over a ``SystemProbe``. The driver reads the
+components directly: ``target_foreground`` and ``user_present`` gate showing the
+card, and ``overlay_visible``/``same_monitor`` gate the billing integrity check;
+it maps those onto ``SponsorSession.maybe_card``/``mark_cards_hidden``/``settle``.
 """
 
 from __future__ import annotations
@@ -42,8 +44,10 @@ OverlayHandle = Union[int, Callable[[], Optional[int]], None]
 
 @dataclass(frozen=True)
 class VisibilityState:
-    """A single tick's reading. ``live`` is the only value the driver acts on;
-    the components are kept for diagnostics, logging and tests."""
+    """A single tick's reading. The driver acts on the components
+    (``target_foreground``, ``user_present``, ``overlay_visible``,
+    ``same_monitor``); ``live`` summarises them for diagnostics, logging and
+    tests."""
 
     target_hwnd: int
     target_path: Optional[str]

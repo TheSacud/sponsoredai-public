@@ -7,7 +7,6 @@ import logging
 import math
 import os
 import secrets
-import subprocess
 import sys
 import threading
 import time
@@ -449,10 +448,13 @@ def refresh_spend_key(timeout: float = 6.0) -> dict[str, Any] | None:
             response = rotated
     key = response.get("key")
     if isinstance(key, str) and key.strip():
-        config["spend_api_key"] = key.strip()
-        config["spend_base_url"] = str(response.get("base_url") or WALLET_SPEND_BASE_URL)
-        config["spend_key_hash"] = str(response.get("key_hash") or "")
-        save_config(config)
+        # Re-load right before saving: the backend calls above can take seconds,
+        # and saving the earlier snapshot would revert concurrent config writes.
+        latest = load_config()
+        latest["spend_api_key"] = key.strip()
+        latest["spend_base_url"] = str(response.get("base_url") or WALLET_SPEND_BASE_URL)
+        latest["spend_key_hash"] = str(response.get("key_hash") or "")
+        save_config(latest)
     logger.info(
         "spend key refresh completed provisioned=%s rotated=%s reason=%s key_hash=%s limit_micros=%s",
         bool(response.get("provisioned")),
@@ -1050,54 +1052,6 @@ class GatewayHandler(BaseHTTPRequestHandler):
         return
 
 
-def gateway_running(host: str = "127.0.0.1", port: int = 8787, timeout: float = 0.2) -> bool:
-    """True when an SAI gateway answers /healthz on the given address."""
-    try:
-        with urllib.request.urlopen(f"http://{host}:{port}/healthz", timeout=timeout) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-    except (OSError, ValueError):
-        return False
-    return isinstance(payload, dict) and payload.get("status") == "ok"
-
-
-def start_gateway_in_background(host: str = "127.0.0.1", port: int = 8787, wait_seconds: float = 8.0) -> bool:
-    """Spawn `sai gateway serve` detached from this process and wait for /healthz.
-
-    The live agent-wrapper autostart is the copy in cli.py (kept urllib-free for
-    a cheap `sai claude` startup); keep this one's behaviour in step with it.
-    """
-    if getattr(sys, "frozen", False):
-        command = [sys.executable, "gateway", "serve", "--host", host, "--port", str(port)]
-    else:
-        command = [sys.executable, "-m", "sai", "gateway", "serve", "--host", host, "--port", str(port)]
-    # Drop the PyInstaller onefile marker so the detached child unpacks its own
-    # runtime instead of binding to (and being orphaned by) the parent's temp
-    # extraction dir. See cli._gateway_child_env.
-    child_env = dict(os.environ)
-    child_env.pop("_MEIPASS2", None)
-    kwargs: dict[str, Any] = {
-        "stdin": subprocess.DEVNULL,
-        "stdout": subprocess.DEVNULL,
-        "stderr": subprocess.DEVNULL,
-        "env": child_env,
-    }
-    if os.name == "nt":
-        kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-    else:
-        kwargs["start_new_session"] = True
-    try:
-        subprocess.Popen(command, **kwargs)
-    except OSError:
-        logger.exception("Failed to start gateway process in background")
-        return False
-    deadline = time.monotonic() + wait_seconds
-    while time.monotonic() < deadline:
-        if gateway_running(host, port):
-            return True
-        time.sleep(0.1)
-    return False
-
-
 def maybe_refresh_spend_key_in_background() -> None:
     if resolve_upstream_config() is not None or wallet_spend_disabled():
         return
@@ -1109,9 +1063,18 @@ def _refresh_spend_key_best_effort() -> None:
     _maybe_refresh_spend_key_inline(force=True)
 
 
-def serve_gateway(host: str = "127.0.0.1", port: int = 8787, open_browser: bool = False) -> None:
+def serve_gateway(host: str = "127.0.0.1", port: int = 8787, open_browser: bool = False) -> int:
     configure_logging(service="gateway")
-    server = ThreadingHTTPServer((host, port), GatewayHandler)
+    try:
+        server = ThreadingHTTPServer((host, port), GatewayHandler)
+    except OSError as exc:
+        logger.warning("Gateway bind failed host=%s port=%s errno=%s", host, port, exc.errno)
+        print(
+            f"sai: cannot listen on {host}:{port} ({exc.strerror or exc}). "
+            "Is another SAI gateway already running? Use --port to pick another port.",
+            file=sys.stderr,
+        )
+        return 1
     url = f"http://{host}:{server.server_address[1]}"
     logger.info("Gateway listening url=%s log=%s", url, log_destination_label())
     print(f"SAI gateway listening on {url}/v1")
@@ -1129,3 +1092,4 @@ def serve_gateway(host: str = "127.0.0.1", port: int = 8787, open_browser: bool 
         print("\nSAI gateway stopped.")
     finally:
         server.server_close()
+    return 0

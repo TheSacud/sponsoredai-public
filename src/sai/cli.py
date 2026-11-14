@@ -212,10 +212,10 @@ def provider_catalog() -> list[dict]:
     return _provider_catalog()
 
 
-def serve_gateway(host: str = "127.0.0.1", port: int = 8787, open_browser: bool = False) -> None:
+def serve_gateway(host: str = "127.0.0.1", port: int = 8787, open_browser: bool = False) -> int:
     from .gateway import serve_gateway as _serve_gateway
 
-    _serve_gateway(host=host, port=port, open_browser=open_browser)
+    return _serve_gateway(host=host, port=port, open_browser=open_browser)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -595,8 +595,7 @@ def _main(argv: Sequence[str] | None = None) -> int:
         config = ensure_config_saved()
         if not config.get("api_key"):
             login()
-        serve_gateway(host=args.host, port=args.port, open_browser=not args.no_open)
-        return 0
+        return serve_gateway(host=args.host, port=args.port, open_browser=not args.no_open)
 
     if args.command_name == "link":
         ensure_config_saved()
@@ -1307,8 +1306,6 @@ def handle_config(args: argparse.Namespace) -> int:
         if args.key == "backend-url":
             config = ensure_config_saved()
             config["backend_url"] = None if args.value.lower() in {"none", "off", "null"} else args.value.rstrip("/")
-            from .config import save_config
-
             save_config(config)
             print(f"backend_url={config['backend_url']}")
             return 0
@@ -1343,8 +1340,7 @@ def handle_gateway(args: argparse.Namespace) -> int:
     if args.gateway_command == "serve":
         if not config.get("api_key"):
             config = login()
-        serve_gateway(host=args.host, port=args.port)
-        return 0
+        return serve_gateway(host=args.host, port=args.port)
     if args.gateway_command == "key":
         if not config.get("api_key"):
             config = login()

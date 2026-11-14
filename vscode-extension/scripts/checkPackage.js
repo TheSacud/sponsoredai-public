@@ -277,10 +277,3 @@ if (require.main === module) {
     process.exitCode = 1;
   }
 }
-
-module.exports = {
-  checkSourceContract,
-  checkVsixPackage,
-  expectedVsixName,
-  parseZip
-};

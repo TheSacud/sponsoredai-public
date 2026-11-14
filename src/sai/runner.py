@@ -287,7 +287,6 @@ class CommandRunner:
         import fcntl
         import pty
         import select
-        import signal
         import struct
         import termios
         import tty
@@ -361,6 +360,8 @@ class CommandRunner:
                 pass
 
         with StatusRenderer(enabled=True) as status:
+            slave_fd = None
+            region_reserved = False
             try:
                 master_fd, slave_fd = pty.openpty()
                 resolved_command = resolve_command(command)
@@ -375,6 +376,7 @@ class CommandRunner:
                     # child starts at the top and overdraws on its first frame.
                     fcntl.ioctl(master_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows - 1, cols, 0, 0))
                     os.write(sys.stdout.fileno(), clear_screen())
+                    region_reserved = True
                     os.write(sys.stdout.fileno(), reserve_region(rows - 1))
                     os.write(sys.stdout.fileno(), park_cursor(rows - 1))
                 process = subprocess.Popen(
@@ -387,11 +389,19 @@ class CommandRunner:
                 )
                 os.close(slave_fd)
             except FileNotFoundError:
-                if master_fd is not None:
+                if region_reserved:
+                    # Give the terminal back its full height before reporting.
                     try:
-                        os.close(master_fd)
+                        os.write(sys.stdout.fileno(), release_region())
+                        os.write(sys.stdout.fileno(), clear_row(pin["rows"]))
                     except OSError:
                         pass
+                for fd in (slave_fd, master_fd):
+                    if fd is not None:
+                        try:
+                            os.close(fd)
+                        except OSError:
+                            pass
                 print(command_not_found_message(command[0]), file=sys.stderr)
                 return RunReceipt(127, 0.0, 0, 0.0, self._wallet().balance(), "")
 

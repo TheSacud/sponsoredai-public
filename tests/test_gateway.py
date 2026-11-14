@@ -22,7 +22,6 @@ from sai.gateway import (
     mock_chat_completion,
     maybe_refresh_spend_key_in_background,
     refresh_spend_key,
-    start_gateway_in_background,
     start_install_link,
     upstream_url,
     usage_cost,
@@ -160,6 +159,25 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(config["spend_api_key"], "sk-or-new")
         self.assertEqual(config["spend_base_url"], "https://openrouter.ai/api/v1")
         self.assertEqual(config["spend_key_hash"], "kh_1")
+
+    def test_refresh_spend_key_keeps_concurrent_config_writes(self):
+        self._temp_home()
+        save_config(load_config())
+        response = {"provisioned": True, "key": "sk-or-new", "key_hash": "kh_1"}
+
+        def provision(*_args, **_kwargs):
+            # Another writer updates the config while the backend call runs.
+            latest = load_config()
+            latest["frequency"] = "low"
+            save_config(latest)
+            return response
+
+        with mock.patch("sai.gateway._post_backend_json", side_effect=provision):
+            refresh_spend_key()
+
+        config = load_config()
+        self.assertEqual(config["spend_api_key"], "sk-or-new")
+        self.assertEqual(config["frequency"], "low")
 
     def test_refresh_spend_key_rotates_when_secret_lost(self):
         self._temp_home()
@@ -555,20 +573,24 @@ class GatewayTests(unittest.TestCase):
         record.assert_not_called()
 
     def test_gateway_autostart_uses_python_module_in_source(self):
-        with mock.patch("sai.gateway.gateway_running", return_value=True), \
-                mock.patch("sai.gateway.subprocess.Popen") as popen, \
-                mock.patch("sai.gateway.sys.executable", "/usr/bin/python"), \
-                mock.patch("sai.gateway.sys.frozen", False, create=True):
+        from sai.cli import start_gateway_in_background
+
+        with mock.patch("sai.cli.gateway_running", return_value=True), \
+                mock.patch("subprocess.Popen") as popen, \
+                mock.patch("sai.cli.sys.executable", "/usr/bin/python"), \
+                mock.patch("sai.cli.sys.frozen", False, create=True):
             self.assertTrue(start_gateway_in_background())
 
         command = popen.call_args.args[0]
         self.assertEqual(command[:4], ["/usr/bin/python", "-m", "sai", "gateway"])
 
     def test_gateway_autostart_uses_cli_args_when_frozen(self):
-        with mock.patch("sai.gateway.gateway_running", return_value=True), \
-                mock.patch("sai.gateway.subprocess.Popen") as popen, \
-                mock.patch("sai.gateway.sys.executable", "C:\\Program Files\\sai\\sai.exe"), \
-                mock.patch("sai.gateway.sys.frozen", True, create=True):
+        from sai.cli import start_gateway_in_background
+
+        with mock.patch("sai.cli.gateway_running", return_value=True), \
+                mock.patch("subprocess.Popen") as popen, \
+                mock.patch("sai.cli.sys.executable", "C:\\Program Files\\sai\\sai.exe"), \
+                mock.patch("sai.cli.sys.frozen", True, create=True):
             self.assertTrue(start_gateway_in_background())
 
         command = popen.call_args.args[0]
@@ -593,6 +615,32 @@ class GatewayTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=5)
+
+
+class GatewayServeTests(unittest.TestCase):
+    def test_serve_gateway_reports_port_in_use_without_traceback(self):
+        import io
+        import socket
+        from contextlib import redirect_stderr
+
+        from sai.gateway import serve_gateway
+
+        blocker = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            blocker.bind(("127.0.0.1", 0))
+            blocker.listen(1)
+            port = blocker.getsockname()[1]
+            stderr = io.StringIO()
+            with tempfile.TemporaryDirectory() as tmp, \
+                    mock.patch.dict(os.environ, {"SAI_HOME": tmp}), \
+                    mock.patch("sai.gateway.configure_logging"), \
+                    redirect_stderr(stderr):
+                code = serve_gateway(port=port)
+        finally:
+            blocker.close()
+
+        self.assertEqual(code, 1)
+        self.assertIn(f"cannot listen on 127.0.0.1:{port}", stderr.getvalue())
 
 
 class BackendRequestHeaderTests(unittest.TestCase):

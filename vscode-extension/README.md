@@ -4,11 +4,11 @@ Launch SAI from VS Code and keep your wallet status visible while Claude Code an
 
 ## Features
 
-- Status bar wallet state: `SAI: checking...`, `SAI: 3.420 credits eligible` (backend confirmed), `SAI: 3.420 credits (unconfirmed)` (local only), `SAI: CLI not found`, or `SAI: wallet unavailable`.
+- Status bar wallet state: `SAI: checking...`, `SAI: 3.420 credits eligible` (backend confirmed), `SAI: 3.420 credits (unconfirmed)` (local only), `SAI: CLI not found`, `SAI: wallet unavailable`, `SAI: wallet unreadable` (the CLI returned an unexpected shape; update the CLI), or `SAI: refresh failed`.
 - The eligible figure is the backend-authoritative spendable balance (available + settled AI credits). When the backend cannot be confirmed, the status bar shows the local display balance and labels it `(unconfirmed)`.
-- Command Palette commands for starting Codex, Claude, the SAI overlay, the wallet view, dashboard, refresh, and CLI install.
+- Command Palette commands for starting Codex, Claude, the SAI overlay, the wallet view, dashboard, refresh, CLI install, diagnostics, the status-bar menu, and opening the current sponsor.
 - Integrated terminal launchers for `sai codex`, `sai claude`, `sai overlay both`, and `sai dashboard`.
-- Wallet refresh through `sai wallet --json` with a timeout. The status bar refreshes automatically once when VS Code finishes starting, and whenever you run a wallet command.
+- Wallet refresh through `sai wallet --json` with a timeout. The status bar refreshes automatically once when VS Code finishes starting, after each qualified sponsor impression, and whenever you run a wallet command.
 - Sponsor banner (the **SAI** activity-bar view): while Claude or Codex is waiting on the model, a sponsor placement appears in the side panel. It earns real credits when the wait qualifies (the card is held for at least five seconds while you are attending). This is the in-editor equivalent of the terminal/overlay sponsor card - VS Code does not let an extension change another extension's "thinking" spinner, so SAI shows the ad in its own view.
 - VSIX packaging with `@vscode/vsce`.
 
@@ -23,6 +23,9 @@ Launch SAI from VS Code and keep your wallet status visible while Claude Code an
 | `SAI: Refresh Wallet` | Refreshes the status bar wallet state. |
 | `SAI: Open Dashboard` | Opens a VS Code integrated terminal and runs `sai dashboard`. |
 | `SAI: Install CLI` | Asks for confirmation, then opens a visible terminal with `npm install -g @sponsoredai/cli`. |
+| `SAI: Diagnostics` | Shows the CLI version, local placement transport state (gateway endpoint, CLI fallback, last errors), and command latency. |
+| `SAI: Show Menu` | Opens the same menu as clicking the status bar. |
+| `SAI: Open Current Sponsor` | Opens the current sponsor card's backend-issued HTTPS click URL, if there is one. |
 
 Clicking the status bar opens:
 
@@ -33,6 +36,7 @@ Start Overlay
 Wallet
 Open Dashboard
 Install / Update CLI
+Diagnostics
 ```
 
 ## Install SAI CLI
@@ -57,8 +61,8 @@ The extension is a launcher, wallet, and sponsor surface only.
 - It does not read prompts, source code, model responses, logs, shell history, or repository URLs.
 - It does not send telemetry.
 - It does not run commands built from user-provided text.
-- The wallet command is `sai wallet --json`, run with a timeout. It runs automatically once at startup and on wallet refresh. To locate `sai`, on Windows the extension also runs the system `where.exe sai` (and `cmd.exe` to invoke a resolved `sai.cmd`); the resolved path must be an absolute file under a trusted install location (your npm global directory or a system program directory) or it is not run. The extension may inspect candidate executable paths from `PATH` only to verify the CLI location. The optional `sai.cliPath` override is machine-scoped and workspace settings are ignored.
-- For the sponsor banner, the extension polls the local SAI gateway's `http://127.0.0.1:8787/v1/status` for an in-flight request count only (never request content), and runs `sai placement next`/`sai placement event` to fetch a sponsor card and report a billable impression. Gateway host/port settings are machine-scoped, and the extension only connects to loopback hosts (`127.0.0.1`, `localhost`, or `::1`). The banner does not load remote sponsor images; sponsor clicks open only backend-issued HTTPS redirect URLs. Like the terminal and desktop-overlay surfaces, attendance is client-attested: credit only accrues when the window is focused, the banner is visible, and you produced genuine keyboard/mouse activity in the last 30 seconds (programmatic editor events and the agent's own file edits do not count). The backend independently enforces the five-second hold, surface pinning, and per-install caps, so the worst a spoofed client can do is bounded by those caps.
+- The wallet command is `sai wallet --json`, run with a timeout. It runs automatically once at startup, after each qualified sponsor impression, and on wallet refresh. To locate `sai`, on Windows the extension also runs the system `where.exe sai` (and `cmd.exe` to invoke a resolved `sai.cmd`); the resolved path must be an absolute file under a trusted install location (your npm global directory or a system program directory) or it is not run. The extension may inspect candidate executable paths from `PATH` only to verify the CLI location. The optional `sai.cliPath` override is machine-scoped and workspace settings are ignored.
+- For the sponsor banner, the extension polls the local SAI gateway's `http://127.0.0.1:8787/v1/status` for an in-flight request count only (never request content), and fetches a sponsor card and reports a billable impression through the gateway's local `POST /v1/sai/placements/next` and `/v1/sai/placements/event` endpoints, falling back to running `sai placement next`/`sai placement event` when the gateway endpoints are unavailable. Gateway host/port settings are machine-scoped, and the extension only connects to loopback hosts (`127.0.0.1`, `localhost`, or `::1`). The banner does not load remote sponsor images; sponsor clicks open only backend-issued HTTPS redirect URLs. Like the terminal and desktop-overlay surfaces, attendance is client-attested: credit only accrues when the window is focused, the banner is visible, and you produced genuine keyboard/mouse activity in the last 30 seconds (programmatic editor events and the agent's own file edits do not count). The backend independently enforces the five-second hold, surface pinning, and per-install caps, so the worst a spoofed client can do is bounded by those caps.
 - CLI installation always requires confirmation and runs in a visible integrated terminal, started in your home directory so a workspace `.npmrc` cannot redirect the install.
 
 SAI itself is designed to measure wait time, not your work. See the [SAI trust boundary](https://sponsoredai.dev/trust) for the full client behavior.

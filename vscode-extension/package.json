@@ -81,53 +81,43 @@
     "commands": [
       {
         "command": "sai.showMenu",
-        "title": "SAI: Show Menu",
-        "category": "SAI"
+        "title": "SAI: Show Menu"
       },
       {
         "command": "sai.startCodex",
-        "title": "SAI: Start Codex",
-        "category": "SAI"
+        "title": "SAI: Start Codex"
       },
       {
         "command": "sai.startClaude",
-        "title": "SAI: Start Claude",
-        "category": "SAI"
+        "title": "SAI: Start Claude"
       },
       {
         "command": "sai.startOverlay",
-        "title": "SAI: Start Overlay",
-        "category": "SAI"
+        "title": "SAI: Start Overlay"
       },
       {
         "command": "sai.wallet",
-        "title": "SAI: Wallet",
-        "category": "SAI"
+        "title": "SAI: Wallet"
       },
       {
         "command": "sai.refreshWallet",
-        "title": "SAI: Refresh Wallet",
-        "category": "SAI"
+        "title": "SAI: Refresh Wallet"
       },
       {
         "command": "sai.openDashboard",
-        "title": "SAI: Open Dashboard",
-        "category": "SAI"
+        "title": "SAI: Open Dashboard"
       },
       {
         "command": "sai.installCli",
-        "title": "SAI: Install CLI",
-        "category": "SAI"
+        "title": "SAI: Install CLI"
       },
       {
         "command": "sai.diagnostics",
-        "title": "SAI: Diagnostics",
-        "category": "SAI"
+        "title": "SAI: Diagnostics"
       },
       {
         "command": "sai.openSponsor",
-        "title": "SAI: Open Current Sponsor",
-        "category": "SAI"
+        "title": "SAI: Open Current Sponsor"
       }
     ]
   },

@@ -172,7 +172,7 @@ test("safeHttpsUrl only allows SAI https click redirects", () => {
   assert.equal(ad.safeHttpsUrl("not a url"), undefined);
 });
 
-function makeEngine() {
+function makeEngine(options: { distinctPlacements?: boolean } = {}) {
   const calls = {
     fetch: 0,
     qualified: 0,
@@ -186,6 +186,9 @@ function makeEngine() {
   const engine = new ad.AdEngine({
     fetchPlacement: async () => {
       calls.fetch += 1;
+      if (options.distinctPlacements) {
+        return ad.parsePlacement(placement({ placement_id: `plc_${calls.fetch}`, sponsor: `Sponsor ${calls.fetch}` }));
+      }
       return card;
     },
     recordQualified: async () => {
@@ -299,4 +302,17 @@ test("AdEngine rotates to a new placement only after the rotate interval", async
   // Past the rotate window -> a fresh placement is fetched.
   await engine.update({ activeRequests: 1, attended: true, viewVisible: true, nowMs: ad.ROTATE_MS + ad.MIN_FETCH_GAP_MS + 10 });
   assert.equal(calls.fetch, 2);
+});
+
+test("AdEngine updates the status sponsor when a new placement rotates in mid-wait", async () => {
+  const { engine, calls } = makeEngine({ distinctPlacements: true });
+  await engine.update({ activeRequests: 1, attended: true, viewVisible: true, nowMs: 0 });
+  assert.deepEqual(calls.statusShown, ["plc_1"]);
+  await engine.update({ activeRequests: 1, attended: true, viewVisible: true, nowMs: ad.MIN_VISIBLE_MS + 1 });
+  assert.equal(calls.qualified, 1);
+  // Rotation inside the same wait -> the status bar follows the new placement.
+  await engine.update({ activeRequests: 1, attended: true, viewVisible: true, nowMs: ad.ROTATE_MS + ad.MIN_FETCH_GAP_MS + 10 });
+  assert.equal(calls.fetch, 2);
+  assert.deepEqual(calls.statusShown, ["plc_1", "plc_2"]);
+  assert.equal(calls.statusCleared, 0);
 });

@@ -122,10 +122,11 @@ jobs:
       - name: Install build tools
         run: python -m pip install -e . pyinstaller
       - name: Build binary
-        # --exclude-module sai.backend: the sponsor server is server-only and must
-        # never ship inside the client binary. In the public client repo the module
-        # is absent anyway; this keeps the build clean (and any source-repo build
-        # client-only too). The VPS runs the backend from source, not this binary.
+        # --exclude-module sai.backend / sai.dev_mock: the sponsor server and the
+        # local mock lab are server/dev-only and must never ship inside the client
+        # binary. In the public client repo those modules are absent anyway; this
+        # keeps the build clean (and any source-repo build client-only too). The
+        # VPS runs the backend from source, not this binary.
         run: python -m PyInstaller ${{ matrix.pyinstaller_mode }} --name sai --paths src --exclude-module sai.backend --exclude-module sai.dev_mock ${{ matrix.collect }} scripts/pyinstaller_entry.py
       - name: Package binary
         run: python scripts/package_binary.py --source "${{ matrix.pyinstaller_output }}" --output-dir release --platform "${{ matrix.platform }}" --arch "${{ matrix.arch }}"

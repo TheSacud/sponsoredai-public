@@ -12,7 +12,6 @@ export interface WalletLedgerEntry {
 export interface WalletBackendSummary {
   readonly spendable: number;
   readonly pending: number;
-  readonly authoritative: number;
 }
 
 // A newer published CLI is available. The CLI has no auto-update, so this is the
@@ -216,13 +215,9 @@ function parseBackendSummary(value: unknown): WalletBackendSummary | undefined {
     return undefined;
   }
 
-  const reconciledAuthoritative = reconcile ? readFiniteNumber(reconcile.authoritative_balance) : undefined;
-  const authoritative = reconciledAuthoritative !== undefined ? reconciledAuthoritative : spendable + pending;
-
   return {
     spendable: roundCredits(spendable),
-    pending: roundCredits(pending),
-    authoritative: roundCredits(authoritative)
+    pending: roundCredits(pending)
   };
 }
 

@@ -100,7 +100,9 @@ export class AdEngine {
   private current?: ActiveCard;
   private busy = false;
   private lastFetchMs = Number.NEGATIVE_INFINITY;
-  private statusShown = false;
+  // Placement id the status bar currently shows, so a placement that rotates
+  // in mid-wait replaces the old sponsor instead of leaving it stale.
+  private statusPlacementId?: string;
   private waiting = false;
 
   public constructor(private readonly deps: AdEngineDeps) {}
@@ -124,14 +126,12 @@ export class AdEngine {
       this.waiting = true;
     }
     const want = waitActive && signal.attended && this.current !== undefined;
-    if (want && !this.statusShown) {
-      if (this.current) {
-        this.deps.showStatus?.(this.current.placement);
-      }
-      this.statusShown = true;
-    } else if (!want && this.statusShown) {
+    if (want && this.current && this.statusPlacementId !== this.current.placement.placement_id) {
+      this.deps.showStatus?.(this.current.placement);
+      this.statusPlacementId = this.current.placement.placement_id;
+    } else if (!want && this.statusPlacementId !== undefined) {
       this.deps.clearStatus?.();
-      this.statusShown = false;
+      this.statusPlacementId = undefined;
     }
     // A finished wait retires its placement, so the next wait fetches a fresh
     // one and an already-billed card is never re-shown or kept holding the
@@ -144,10 +144,6 @@ export class AdEngine {
         this.deps.clearCard?.();
       }
     }
-  }
-
-  public get currentPlacement(): SponsorPlacement | undefined {
-    return this.current?.placement;
   }
 
   private async maybeQualify(signal: AdSignal): Promise<boolean> {
@@ -276,7 +272,6 @@ export function renderAdHtml(placement: SponsorPlacement | undefined): string {
     + "body{font-family:var(--vscode-font-family);color:var(--vscode-foreground);background:transparent;margin:0;padding:12px;font-size:13px;}"
     + ".tag{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--vscode-descriptionForeground);}"
     + ".card{border:1px solid var(--vscode-panel-border);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px;}"
-    + ".row{display:flex;align-items:center;gap:8px;}"
     + ".brandRow{display:flex;align-items:center;gap:10px;min-width:0;}"
     + ".brandIcon{width:28px;height:28px;border-radius:6px;object-fit:contain;flex:0 0 auto;}"
     + ".brandText{min-width:0;display:flex;flex-direction:column;gap:2px;}"

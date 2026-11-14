@@ -182,7 +182,13 @@ async function flushAsync(): Promise<void> {
   }
 }
 
-function sampleWalletPayload(now = "2026-06-16T10:00:00.000Z") {
+// Wallet "earned today" compares LOCAL calendar days, so fixtures are built from
+// local-time Date constructors to keep the tests timezone-independent.
+const LOCAL_TODAY_10AM = new Date(2026, 5, 16, 10, 0, 0).toISOString();
+const LOCAL_YESTERDAY_2330 = new Date(2026, 5, 15, 23, 30, 0).toISOString();
+const localTodayNoon = () => new Date(2026, 5, 16, 12, 0, 0);
+
+function sampleWalletPayload(now = LOCAL_TODAY_10AM) {
   return {
     balance: 3.42,
     backend_confirmed: true,
@@ -204,7 +210,7 @@ function sampleWalletPayload(now = "2026-06-16T10:00:00.000Z") {
         source: "sponsor:test"
       },
       {
-        timestamp: "2026-06-15T23:30:00.000Z",
+        timestamp: LOCAL_YESTERDAY_2330,
         kind: "spend",
         amount: -0.2,
         source: "gateway:test"
@@ -540,7 +546,7 @@ test("opens Windows agent terminals outside the Python workspace activation path
 });
 
 test("parses wallet JSON and surfaces the backend spendable balance as eligible", () => {
-  const snapshot = parseSaiWalletPayload(sampleWalletPayload(), new Date("2026-06-16T12:00:00.000Z"));
+  const snapshot = parseSaiWalletPayload(sampleWalletPayload(), localTodayNoon());
 
   assert.equal(snapshot.localBalance, 3.42);
   assert.equal(snapshot.backendConfirmed, true);
@@ -567,7 +573,7 @@ test("falls back to the local display balance and labels it unconfirmed without 
     backend_confirmed: false,
     recent_entries: []
   };
-  const snapshot = parseSaiWalletPayload(payload, new Date("2026-06-16T12:00:00.000Z"));
+  const snapshot = parseSaiWalletPayload(payload, localTodayNoon());
 
   assert.equal(snapshot.backend, undefined);
   assert.equal(formatWalletStatus(snapshot), "SAI: 3.420 credits (unconfirmed)");
@@ -578,14 +584,14 @@ test("falls back to the local display balance and labels it unconfirmed without 
 
 test("marks earned today approximate when the ledger window is full", () => {
   const entries = Array.from({ length: 8 }, (_value, index) => ({
-    timestamp: "2026-06-16T10:00:00.000Z",
+    timestamp: LOCAL_TODAY_10AM,
     kind: "earn",
     amount: 1,
     source: `sponsor:${index}`
   }));
   const snapshot = parseSaiWalletPayload(
     { balance: 10, backend_confirmed: false, recent_entries: entries },
-    new Date("2026-06-16T12:00:00.000Z")
+    localTodayNoon()
   );
 
   assert.equal(snapshot.earnedToday, 8);

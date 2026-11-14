@@ -57,8 +57,6 @@ export interface ReadSaiOptions {
   readonly trustCommand?: boolean;
 }
 
-export type ReadSaiWalletOptions = ReadSaiOptions;
-
 // Characters that cmd.exe may interpret even inside a quoted argument (%VAR%,
 // !DELAYED!, ^escape) plus chaining/redirection metacharacters and control
 // characters. Parentheses and spaces are allowed: they appear in legitimate
@@ -694,6 +692,9 @@ export function readGatewayStatus(options: GatewayStatusOptions = {}): Promise<G
       response.on("data", (chunk) => {
         body += chunk;
         if (body.length > 16 * 1024) {
+          // Settle before destroying: "end" never fires after destroy(), so an
+          // unresolved promise here would stall the gateway poller for good.
+          resolve(undefined);
           request.destroy();
         }
       });

@@ -12,7 +12,7 @@ from __future__ import annotations
 import ctypes
 import os
 from dataclasses import dataclass
-from typing import Optional, Protocol, runtime_checkable
+from typing import Optional, Protocol
 
 
 # PROCESS_QUERY_LIMITED_INFORMATION: the least-privileged right that still lets a
@@ -43,7 +43,6 @@ class Rect:
         return self.bottom - self.top
 
 
-@runtime_checkable
 class SystemProbe(Protocol):
     """The OS queries the visibility predicate is built from. Implemented for
     real by ``Win32Probe`` and faked in tests."""
@@ -294,8 +293,8 @@ class Win32Probe:
 
 
 def default_probe() -> SystemProbe:
-    """The live probe on Windows. Raises elsewhere, since the overlay only runs
-    on Windows; tests construct their own fake probe instead of calling this."""
+    """The live probe on Windows. Raises elsewhere (macOS has its own probe in
+    ``macos``); tests construct their own fake probe instead of calling this."""
     if not is_windows():
         raise RuntimeError("The Win32 system probe is only available on Windows")
     return Win32Probe()

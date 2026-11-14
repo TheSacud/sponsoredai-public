@@ -58,15 +58,24 @@ class SitePreviewTests(unittest.TestCase):
                 server.server_close()
 
     def test_homepage_command_chips_are_atomic_and_use_fresh_styles(self):
-        homepage = (ROOT / "site-v3" / "index.html").read_text(encoding="utf-8")
         stylesheet = (ROOT / "site-v3" / "sai-core-v4.css").read_text(encoding="utf-8")
 
-        self.assertIn('href="sai-core-v4.css?v=20260718-1"', homepage)
         self.assertIn(".step code{display:inline-block", stylesheet)
         self.assertIn(
             ".step code,.kill code,.doc-prose code,.cl-bubble code{white-space:nowrap}",
             stylesheet,
         )
+
+    def test_every_page_uses_cache_busted_stylesheet(self):
+        # The versioned query defeats stale CDN/browser caches of the shared
+        # stylesheet; every page must carry the same version or a visitor can
+        # mix fresh HTML with an old cached sai-core-v4.css.
+        pages = sorted((ROOT / "site-v3").glob("*.html"))
+        self.assertTrue(pages)
+        for page in pages:
+            with self.subTest(page=page.name):
+                html = page.read_text(encoding="utf-8")
+                self.assertIn('href="sai-core-v4.css?v=20260718-1"', html)
 
     def test_path_traversal_does_not_escape_site_dir(self):
         with tempfile.TemporaryDirectory() as tmp:
